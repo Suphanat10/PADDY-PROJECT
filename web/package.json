@@ -1,0 +1,28 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@line/liff": "^2.27.1",
+    "js-cookie": "^3.0.5",
+    "lucide-react": "^0.542.0",
+    "next": "15.5.2",
+    "npx": "^10.2.2",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "sweetalert2": "^11.22.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.2",
+    "tailwindcss": "^4"
+  }
+}
