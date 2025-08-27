@@ -4,14 +4,14 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:80
 export async function apiFetch(path, options = {}) {
   const url = `${API_BASE}${path}`;
 
-  // defaults
+
   const method = (options.method || "GET").toUpperCase();
 
-  // เตรียม headers + body
+
   const headers = { ...(options.headers || {}) };
   let body = options.body;
 
-  // ถ้ามี body และไม่ใช่ FormData → แปลงเป็น JSON และใส่ Content-Type ให้อัตโนมัติ
+ 
   if (body !== undefined && !(body instanceof FormData)) {
     if (typeof body !== "string") {
       body = JSON.stringify(body);
@@ -23,12 +23,12 @@ export async function apiFetch(path, options = {}) {
 
   const res = await fetch(url, {
     method,
-    credentials: "include",     // ส่งคุกกี้ไปด้วย
+    credentials: "include",    
     headers,
     body: method === "GET" || method === "HEAD" ? undefined : body,
   });
 
-  // อ่าน response (รองรับทั้ง JSON/ข้อความ)
+  
   const text = await res.text();
   let data = null;
   try {
