@@ -10,11 +10,8 @@ datasource db {
 
 model account {
   account_id           Int                    @id @default(autoincrement())
-  prefix               String?                @db.VarChar(50)
   first_name           String?                @db.VarChar(100)
   last_name            String?                @db.VarChar(100)
-  birth_date           DateTime?              @db.Date
-  gender               String?                @db.VarChar(10)
   phone_number         String?                @db.VarChar(20)
   user_id_line         String?                @db.VarChar(100)
   username             String?                @unique @db.VarChar(100)

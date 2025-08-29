@@ -71,97 +71,62 @@ exports.login = async (req, res) => {
 
 exports.register = async (req, res) => {
   try {
-    const { 
-      prefix, first_name, last_name, birth_date, gender, phone_number, 
-      user_id_line, username, password, position, 
-      plot_name, area, rice_variety, planting_method,
-      soil_type, water_management, is_baac_member,  
-      address, sub_district_id 
-    } = req.body || {};
 
-    if (
-      prefix == null || first_name == null || last_name == null || birth_date == null ||
-      gender == null || phone_number == null || user_id_line == null ||
-      username == null || password == null || position == null ||
-      plot_name == null || area == null || rice_variety == null ||
-      planting_method == null || soil_type == null || water_management == null ||
-      is_baac_member == null || address == null || sub_district_id == null
-    ) {
-      return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
-    }
+    const { username, password, first_name, last_name, phone_number, user_id_line } = req.body;
 
-
-    if (password.length < 8) {
-      return res.status(400).json({ message: "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร" });
-    }
-    if (!/^[0-9]+$/.test(phone_number) || phone_number.length < 10) {
-      return res.status(400).json({ message: "หมายเลขโทรศัพท์ต้องเป็นตัวเลขและมีความยาวอย่างน้อย 10 ตัว" });
-    }
-
-   
-    const existingUser = await prisma.account.findUnique({
-      where: { username }
-    });
-    if (existingUser) {
-      return res.status(400).json({ message: "ชื่อผู้ใช้งานนี้มีในระบบแล้ว" });
-    }
-
-   
-    const existingLineId = await prisma.account.findFirst({
-      where: { user_id_line }
-    });
-    if (existingLineId) {
-      return res.status(400).json({ message: "User ID Line นี้มีในระบบแล้ว" });
-    }
-
+      const phone_number_raw = String(req.body.phone_number ?? "");
+    const phone_number_ = phone_number_raw.replace(/\D/g, "");
  
-    const birthDate = new Date(birth_date);
-    const passwordHash = bcrypt.hashSync(password, 10);
-    const subDistrictIdNum = parseInt(sub_district_id, 10);
-    const areaNum = typeof area === "string" ? parseFloat(area) : area;
 
-    if (Number.isNaN(subDistrictIdNum)) {
-      return res.status(400).json({ message: "sub_district_id ต้องเป็นตัวเลข" });
+     const user = await prisma.account.findUnique({
+       where: {
+         username: username
+       }
+     });
+
+     if (user) {
+       return res.status(400).json({ message: "ชื่อผู้ใช้งานนี้มีอยู่แล้ว" });
+     }
+
+     const phone_exists = await prisma.account.findFirst({
+       where: {
+         phone_number: phone_number_ 
+       }
+     });
+
+     if (phone_exists) {
+       return res.status(400).json({ message: "หมายเลขโทรศัพท์นี้มีอยู่แล้ว" });
+     }
+
+
+  if(user_id_line!= null){
+    const line_user = await prisma.lineUser.findUnique({
+      where: {
+        user_id: user_id_line
+      }
+    });
+
+    if (!line_user) {
+      return res.status(400).json({ message: "ไม่พบผู้ใช้ LINE" });
     }
-    if (Number.isNaN(areaNum)) {
-      return res.status(400).json({ message: "พื้นที่ (area) ต้องเป็นตัวเลข" });
-    }
+    return;
+  }
+  
 
-    const isBascMember = (typeof is_baac_member === "string")
-      ? is_baac_member.trim().toLowerCase() === "true"
-      : Boolean(is_baac_member);
+    const hashedPassword = bcrypt.hashSync(password, 8);
 
- 
     const created_account = await prisma.account.create({
-      data: {  
-        prefix,
-        first_name,
-        last_name,
-        birth_date: birthDate,
-        gender,
-        phone_number,
-        user_id_line,
-        username,
-        password: passwordHash,
-        position,
-        agriculture_info: {
-          create: {
-            plot_name,
-            area: areaNum,
-            rice_variety,
-            planting_method,
-            soil_type,
-            water_management,
-            is_basc_member: isBascMember,    
-            address,
-            sub_district_id: subDistrictIdNum
-          }
-        }
-      },
-      include: { agriculture_info: true }
+      data: {
+        username: username,
+        password: hashedPassword,
+        first_name: first_name,
+        last_name: last_name,
+        phone_number: phone_number_,
+        position: "Agriculture",
+        user_id_line: user_id_line
+      }
     });
-
-   
+  
     await prisma.logs.create({
       data: {
         user_id: created_account.account_id,
@@ -171,10 +136,25 @@ exports.register = async (req, res) => {
       }
     });
 
-    return res.status(200).json({ message: "สมัครสมาชิกสำเร็จ", user: created_account });
+    return res.status(200).json({ message: "สมัครสมาชิกสำเร็จ", success: true });
 
   } catch (error) {
     console.error("Error signing up:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+exports.logout = (req, res) => {
+   try {
+    const token = req.cookies.accessToken;
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    res.clearCookie("accessToken");
+
+    return res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    console.error("Error logging out:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

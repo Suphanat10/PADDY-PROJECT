@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
-import { LogIn, Eye, EyeOff , Sprout } from 'lucide-react';
-import liff from '@line/liff';
+import { LogIn, Eye, EyeOff, Sprout } from "lucide-react";
+import liff from "@line/liff";
 import Cookies from "js-cookie";
-import Swal  from "sweetalert2";
+import Swal from "sweetalert2";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -14,51 +14,48 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  try {
-    if (!username || !password) {
-      Swal.fire({
-        icon: "warning",
-        title: "กรุณากรอกข้อมูลให้ครบถ้วน",
-      });
-      return;
-    }
-
-    const data = await apiFetch("/api/auth/login", {
-      method: "POST",
-      body: { username, password }, // ไม่ stringify
-    });
-
-    // สำเร็จ
-    Swal.fire({
-      icon: "success",
-      title: data.message || "เข้าสู่ระบบสำเร็จ",
-    }).then(() => {
-      const params = new URLSearchParams(window.location.search);
-      const next = params.get("next") || "/Paddy/agriculture/dashboard";
-      window.location.replace(next);
-    });
-  } catch (error) {
-    // ตรงนี้จะมาทุกครั้งที่ backend ส่ง error (400/401/500)
-    Swal.fire({
-      icon: "error",
-      title: "เข้าสู่ระบบไม่สำเร็จ",
-      text: error.message || "เกิดข้อผิดพลาด",
-    });
-    console.error("Login failed:", error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
-
- async function handleLogin() {
     try {
-      await liff.init({ liffId: '2007854586-9ogoEj2j' });
+      if (!username || !password) {
+        Swal.fire({
+          icon: "warning",
+          title: "กรุณากรอกข้อมูลให้ครบถ้วน",
+        });
+        return;
+      }
+
+      const data = await apiFetch("/api/auth/login", {
+        method: "POST",
+        body: { username, password }, 
+      });
+
+      // สำเร็จ
+      Swal.fire({
+        icon: "success",
+        title: data.message || "เข้าสู่ระบบสำเร็จ",
+      }).then(() => {
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get("next") || "/Paddy/agriculture/dashboard";
+        window.location.replace(next);
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "เข้าสู่ระบบไม่สำเร็จ",
+        text: error.message || "เกิดข้อผิดพลาด",
+      });
+      console.error("Login failed:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  async function handleLogin() {
+    try {
+      await liff.init({ liffId: "2007854586-9ogoEj2j" });
       if (!liff.isLoggedIn()) {
         liff.login();
         return;
@@ -69,7 +66,7 @@ const handleSubmit = async (e) => {
     } catch (error) {
       console.error("LIFF initialization failed:", error);
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-gray-100">
@@ -78,10 +75,9 @@ const handleSubmit = async (e) => {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex items-center mb-8">
-           <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
-      <Sprout className="text-white w-6 h-6" />
-    </div>
-        
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
+              <Sprout className="text-white w-6 h-6" />
+            </div>
           </div>
 
           {/* Login Header */}
@@ -106,7 +102,7 @@ const handleSubmit = async (e) => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 placeholder="กรุณาใส่ชื่อผู้ใช้งาน"
                 required
               />
@@ -125,7 +121,7 @@ const handleSubmit = async (e) => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   placeholder="กรุณาใส่รหัสผ่าน"
                   required
                 />
@@ -134,7 +130,11 @@ const handleSubmit = async (e) => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -200,15 +200,12 @@ const handleSubmit = async (e) => {
         </div>
       </div>
 
-    
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 relative overflow-hidden">
-   
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/90 to-emerald-900/90"></div>
-        
-    
+
         <div className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 left-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-      
+
         <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-emerald-900 to-transparent"></div>
         <div className="absolute bottom-0 left-0 w-20 h-32 bg-emerald-400/60 rounded-t-lg"></div>
         <div className="absolute bottom-0 left-16 w-16 h-40 bg-emerald-400/70 rounded-t-lg"></div>
@@ -217,7 +214,6 @@ const handleSubmit = async (e) => {
         <div className="absolute bottom-0 right-24 w-20 h-32 bg-emerald-400/70 rounded-t-lg"></div>
         <div className="absolute bottom-0 right-16 w-16 h-44 bg-emerald-400/50 rounded-t-lg"></div>
 
-   
         <div className="relative z-10 flex flex-col justify-center p-12 text-white">
           <div className="mb-8">
             <h2 className="text-4xl font-bold mb-4 drop-shadow-lg">
@@ -225,9 +221,12 @@ const handleSubmit = async (e) => {
             </h2>
             <div className="w-16 h-1 bg-white/60 mb-6"></div>
           </div>
-          
+
           <p className="text-lg leading-relaxed opacity-95 mb-8">
-            Smart Paddy คือระบบเทคโนโลยีเกษตรอัจฉริยะที่ถูกออกแบบมาเพื่อเพิ่มประสิทธิภาพในการจัดการและดำเนินงานด้านเกษตรกรรม ระบบนี้ผสานรวมเทคโนโลยีสมัยใหม่ เช่น ระบบเซ็นเซอร์ IoT เพื่อช่วยให้เกษตรกรสามารถตรวจสอบและควบคุมสภาพแวดล้อมในแปลงเพาะปลูกได้อย่างแม่นยำและรวดเร็ว
+            Smart Paddy
+            คือระบบเทคโนโลยีเกษตรอัจฉริยะที่ถูกออกแบบมาเพื่อเพิ่มประสิทธิภาพในการจัดการและดำเนินงานด้านเกษตรกรรม
+            ระบบนี้ผสานรวมเทคโนโลยีสมัยใหม่ เช่น ระบบเซ็นเซอร์ IoT
+            เพื่อช่วยให้เกษตรกรสามารถตรวจสอบและควบคุมสภาพแวดล้อมในแปลงเพาะปลูกได้อย่างแม่นยำและรวดเร็ว
           </p>
 
           <div className="flex space-x-4">
