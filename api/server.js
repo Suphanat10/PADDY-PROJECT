@@ -27,3 +27,4 @@ app.listen(PORT, () => {
 
 require("./app/routes/auth.routes")(app);
 require("./app/routes/data.routes")(app);
+require("./app/routes/agriculture.routes")(app);

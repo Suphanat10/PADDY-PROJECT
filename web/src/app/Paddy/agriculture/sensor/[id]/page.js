@@ -41,13 +41,17 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { useParams } from "next/navigation";
 
-import Header from '../components/Header';
+import Header from '../../components/Header';
 
 
 export default function SensorDetailPage() {
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
   const [selectedMetric, setSelectedMetric] = useState('all');
+    const { id } = useParams();
+    console.log(id);
+    
 
   // Sample sensor data
   const sensorInfo = {
