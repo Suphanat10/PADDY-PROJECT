@@ -57,6 +57,58 @@ exports.register_device = async (req, res) => {
 };
 
 
+exports.getDevice_data_byID = async (req, res) => {
+  try {
+    const device_code = req.params.id;
+    const user_id = 11; 
+
+    if (!device_code) {
+      return res.status(400).json({ error: 'กรุณาระบุรหัสอุปกรณ์' });
+    }
+
+    const deviceForUser = await prisma.devices.findFirst({
+      where: {
+        device_code,
+        device_registrations: {
+          some: { user_id } 
+        }
+      },
+      select: { device_id: true }
+    });
+
+    if (!deviceForUser) {
+      return res.status(403).json({ error: 'ไม่พบการลงทะเบียนอุปกรณ์นี้' });
+    }
+
+    const deviceData = await prisma.devices.findUnique({
+      where: { device_code },
+      include: {
+        device_registrations: {
+          include: {
+            sensor_readings: {
+              include: { sensor_type: true },
+              orderBy: { measured_at: 'desc' },
+            }
+          },
+          orderBy: { registered_at: 'desc' }
+        }
+      }
+    });
+
+    if (!deviceData) {
+      return res.status(404).json({ error: 'ไม่พบข้อมูลอุปกรณ์' });
+    }
+
+
+
+    return res.json(deviceData);
+  } catch (err) {
+    console.error('getDevice_data_byID error:', err);
+    return res.status(500).json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' });
+  }
+};
+
+
 exports.getDevice_data = async (req, res) => {
   try {
     const user_id = 11 
@@ -131,3 +183,5 @@ exports.getDevice_data = async (req, res) => {
     return res.status(500).json({ error: "ไม่สามารถดึงข้อมูลอุปกรณ์ได้" });
   }
 };
+
+
