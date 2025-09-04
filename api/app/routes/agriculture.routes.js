@@ -13,4 +13,5 @@ module.exports = function (app) {
   app.post("/api/agriculture/register-device", controller.register_device);
   app.get("/api/agriculture/data/device", controller.getDevice_data);
   app.get("/api/agriculture/data/device/:id", controller.getDevice_data_byID);
+  app.post("/api/agriculture/disconnect-device", controller.disconnected_device);
 };

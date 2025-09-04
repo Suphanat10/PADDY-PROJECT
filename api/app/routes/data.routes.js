@@ -13,4 +13,6 @@ module.exports = function (app) {
   app.get("/api/data/provinces", controller.getDataProvinces);
   app.get("/api/data/districts/:province_id", controller.getDataDistricts);
   app.get("/api/data/sub-districts/:district_id", controller.getDataSubDistricts);
+  app.get("/api/data/farms/:user_id", controller.get_farm);
+  app.get("/api/data/farm-plots/:farm_id", controller.get_farm_plots);
 };

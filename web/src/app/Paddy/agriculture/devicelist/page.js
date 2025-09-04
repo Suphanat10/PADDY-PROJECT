@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Thermometer,
@@ -21,38 +21,14 @@ import Header from '../components/Header';
 import { apiFetch } from "@/lib/api";
 import Swal from "sweetalert2";
 
-// ข้อมูลตัวอย่าง (fallback) ตามที่คุณให้มา
-const SAMPLE_DEVICES = [
-  {
-    id: "VC2548-60",
-    name: "อุปกรณ์ พื้นที่ A",
-    status: "connected",
-    description: "อุปกรณ์ IoT สำหรับเก็บข้อมูลแปลงนา",
-    lastUpdate: "30 สิงหาคม 2568",
-    sensor: []
-  },
-  {
-    id: "VC2548-59",
-    name: "อุปกรณ์ พื้นที่ B",
-    status: "connected",
-    description: "อุปกรณ์ IoT สำหรับเก็บข้อมูลแปลงนา",
-    lastUpdate: "1 กันยายน 2568",
-    sensor: [
-      { type: "K Sensor", unit: "mg/kg", currentValue: "10", lastUpdate: "1 กันยายน 2568" },
-      { type: "Water Level Sensor", unit: "cm", currentValue: "20", lastUpdate: "1 กันยายน 2568" },
-      { type: "Moisture Sensor", unit: "%", currentValue: "32", lastUpdate: "1 กันยายน 2568" },
-      { type: "N Sensor", unit: "mg/kg", currentValue: "15", lastUpdate: "1 กันยายน 2568" },
-      { type: "P Sensor", unit: "mg/kg", currentValue: "7",  lastUpdate: "1 กันยายน 2568" }
-    ]
-  }
-];
 
-// --- Helpers ---
+
+// ---------------- Helpers ----------------
 const getStatusBadge = (status) => {
   const statusConfig = {
     connected:    { text: 'เชื่อมต่อแล้ว',   color: 'bg-green-100 text-green-800',  icon: CheckCircle },
     disconnected: { text: 'ไม่ได้เชื่อมต่อ', color: 'bg-red-100 text-red-800',      icon: XCircle },
-    warning:      { text: 'มีปัญหา',         color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle }
+   
   };
   const config = statusConfig[status] || statusConfig.disconnected;
   const IconComponent = config.icon;
@@ -65,13 +41,7 @@ const getStatusBadge = (status) => {
   );
 };
 
-const getBatteryColor = (level) => {
-  if (level > 60) return 'bg-green-500';
-  if (level > 30) return 'bg-yellow-500';
-  return 'bg-red-500';
-};
 
-// ไอคอนตามประเภทเซ็นเซอร์ (รองรับ NPK)
 const getSensorIcon = (type = '') => {
   const t = type.toLowerCase();
   if (t.includes('npk'))        return { icon: Thermometer, color: 'text-emerald-700', bgColor: 'bg-emerald-50' };
@@ -128,16 +98,18 @@ function combineNPK(sensors = []) {
   return sensors;
 }
 
-// --- Page ---
 export default function SensorDevicesPage() {
-  const [selectedDevice, setSelectedDevice] = useState('VC2548-59');
+  const [selectedDevice, setSelectedDevice] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sensorDevices, setSensorDevices] = useState([]);
+
+  const [statusFilter, setStatusFilter] = useState('all');       
+  const [farmFilter, setFarmFilter] = useState('ทั้งหมด');
+  const [areaFilter, setAreaFilter] = useState('ทั้งหมด');
 
   useEffect(() => {
     const fetchSensorDevices = async () => {
       try {
-        // apiFetch คืน data (parsed) หรือ throw เมื่อ error
         const data = await apiFetch('/api/agriculture/data/device', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -145,27 +117,152 @@ export default function SensorDevicesPage() {
 
         if (Array.isArray(data) && data.length) {
           setSensorDevices(data);
+          setSelectedDevice(data[0].id); 
         } else {
-          setSensorDevices(SAMPLE_DEVICES);
+          setSensorDevices([]);
         }
       } catch (error) {
         console.error('Error fetching sensor devices:', error);
-        setSensorDevices(SAMPLE_DEVICES);
+        setSensorDevices([]);
       }
     };
 
     fetchSensorDevices();
   }, []);
 
-  const filteredDevices = sensorDevices.filter(device => {
-    const name = (device?.name || '').toLowerCase();
-    const id = (device?.id || '').toLowerCase();
-    const type = (device?.type || '').toLowerCase();       // บาง payload ไม่มี
-    const location = (device?.location || '').toLowerCase();// บาง payload ไม่มี
-    const desc = (device?.description || '').toLowerCase();
+  // รายชื่อฟาร์มแบบไดนามิก
+  const farmOptions = useMemo(() => {
+    const s = new Set();
+    sensorDevices.forEach(d => {
+      const name = d?.farm?.name;
+      if (name) s.add(name);
+    });
+    return ['ทั้งหมด', ...Array.from(s)];
+  }, [sensorDevices]);
+
+  const areaOptions = useMemo(() => {
+    const s = new Set();
+    const source =
+      farmFilter === 'ทั้งหมด'
+        ? sensorDevices
+        : sensorDevices.filter(d => d?.farm?.name === farmFilter);
+
+    source.forEach(d => {
+      const loc = d?.farm?.location || d?.location;
+      if (loc) s.add(loc);
+    });
+
+    return ['ทั้งหมด', ...Array.from(s)];
+  }, [sensorDevices, farmFilter]);
+
+
+  const handleFarmChange = (e) => {
+    const value = e.target.value;
+    setFarmFilter(value);
+    setAreaFilter('ทั้งหมด');
+  };
+
+
+  const filteredDevices = useMemo(() => {
     const q = (searchTerm || '').toLowerCase();
-    return name.includes(q) || id.includes(q) || type.includes(q) || location.includes(q) || desc.includes(q);
-  });
+
+    return sensorDevices.filter(device => {
+      const name = (device?.name || '').toLowerCase();
+      const id = (device?.id || '').toLowerCase();
+      const type = (device?.type || '').toLowerCase();
+      const desc = (device?.description || '').toLowerCase();
+      const farmName = (device?.farm?.name || '').toLowerCase();
+      const area = (device?.farm?.location || device?.location || '').toLowerCase();
+
+      const matchesSearch =
+        name.includes(q) ||
+        id.includes(q) ||
+        type.includes(q) ||
+        desc.includes(q) ||
+        farmName.includes(q) ||
+        area.includes(q);
+
+      
+      const matchesStatus =
+        statusFilter === 'all'
+          ? true
+          : (statusFilter === 'warning'
+              ? (device.status === 'warning' || device.status === 'problem')
+              : device.status === statusFilter);
+
+  
+      const matchesFarm =
+        farmFilter === 'ทั้งหมด'
+          ? true
+          : (device?.farm?.name === farmFilter);
+
+     
+      const matchesArea =
+        areaFilter === 'ทั้งหมด'
+          ? true
+          : ((device?.farm?.location || device?.location) === areaFilter);
+
+      return matchesSearch && matchesStatus && matchesFarm && matchesArea;
+    });
+  }, [sensorDevices, searchTerm, statusFilter, farmFilter, areaFilter]);
+
+  useEffect(() => {
+    if (filteredDevices.length === 0) {
+      setSelectedDevice('');
+      return;
+    }
+    setSelectedDevice(prev =>
+      filteredDevices.some(d => d.id === prev) ? prev : filteredDevices[0].id
+    );
+  }, [filteredDevices]);
+
+
+  const handleDisconnect = async (device_code , user_id = 11) => {
+    console.log("Disconnecting device:", device_code, "for user:", user_id);
+    
+    try {
+     if(!device_code || !user_id){
+      return Swal.fire('ข้อผิดพลาด', 'ไม่พบรหัสอุปกรณ์หรือรหัสผู้ใช้', 'error');
+     }
+     Swal.fire({
+      title: 'ยืนยันการยกเลิกการเชื่อมต่อ',
+      text: `คุณต้องการยกเลิกการเชื่อมต่ออุปกรณ์ ${device_code} ใช่หรือไม่?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'ใช่, ยกเลิกการเชื่อมต่อ',
+      cancelButtonText: 'ยกเลิก',
+      reverseButtons: true
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          const payload = { device_code, user_id };
+          const response = await apiFetch('/api/agriculture/disconnect-device', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (response && response.success) {
+            Swal.fire('สำเร็จ', response.message || 'ยกเลิกการเชื่อมต่ออุปกรณ์สำเร็จ', 'success');
+  
+            const updatedDevices = await apiFetch('/api/agriculture/data/device', {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+            });
+            if (Array.isArray(updatedDevices)) {
+              setSensorDevices(updatedDevices);
+            }
+          } else {
+            Swal.fire('ข้อผิดพลาด', response.message || 'ยกเลิกการเชื่อมต่ออุปกรณ์ล้มเหลว', 'error');
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error disconnecting device:', error);
+      Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการยกเลิกการเชื่อมต่ออุปกรณ์', 'error');
+    }
+
+      
+    
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200">
@@ -192,34 +289,53 @@ export default function SensorDevicesPage() {
             </div>
           </div>
 
-          {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="ค้นหาด้วยรหัสอุปกรณ์, ชื่อ, ประเภท, ตำแหน่ง หรือคำอธิบาย..."
+                placeholder="ค้นหา: รหัส/ชื่อ/ประเภท/ฟาร์ม/พื้นที่/คำอธิบาย"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
               />
             </div>
-            <select className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
-              <option>สถานะทั้งหมด</option>
-              <option>เชื่อมต่อแล้ว</option>
-              <option>ไม่ได้เชื่อมต่อ</option>
-              <option>มีปัญหา</option>
+
+      
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+            >
+              <option value="all">สถานะทั้งหมด</option>
+              <option value="connected">เชื่อมต่อแล้ว</option>
+              <option value="disconnected">ไม่ได้เชื่อมต่อ</option>
+            >
             </select>
-            <select className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
-              <option>พื้นที่ทั้งหมด</option>
-              <option>นาข้าว A1</option>
-              <option>นาข้าว A2</option>
-              <option>นาข้าว A3</option>
+
+            <select
+              value={farmFilter}
+              onChange={handleFarmChange}
+              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+            >
+              {farmOptions.map(opt => (
+                <option key={`farm-${opt}`} value={opt}>{opt}</option>
+              ))}
+            </select>
+
+            <select
+              value={areaFilter}
+              onChange={(e) => setAreaFilter(e.target.value)}
+              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+            >
+              {areaOptions.map(opt => (
+                <option key={`area-${opt}`} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
         </div>
 
-        {/* Device Selection Tabs */}
+        
         <div className="mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2">
             <div className="flex flex-wrap gap-2">
@@ -251,7 +367,6 @@ export default function SensorDevicesPage() {
             );
           }
 
-          const derivedBattery = typeof device.batteryLevel === 'number' ? device.batteryLevel : 70; // fallback
 
           return (
             <div className="mb-8">
@@ -285,46 +400,52 @@ export default function SensorDevicesPage() {
                               <span className="text-sm text-gray-600">อัปเดตล่าสุด</span>
                             </div>
                             <span className="text-sm font-medium text-gray-800">{device.lastUpdate || '-'}</span>
+                            
+                          </div>
+
+                          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                             <div className="flex items-center">
+                              <span className="text-sm text-gray-600">ฟาร์ม</span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-800">{device?.farm?.name || '-'}</span>
                           </div>
 
                           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                             <div className="flex items-center">
-                              <Zap className="w-5 h-5 text-gray-500 mr-3" />
-                              <span className="text-sm text-gray-600">แบตเตอรี่</span>
+                              <span className="text-sm text-gray-600">พื้นที่</span>
                             </div>
-                            <div className="flex items-center">
-                              <div className="w-16 h-2 bg-gray-200 rounded-full mr-2">
-                                <div
-                                  className={`h-full rounded-full ${getBatteryColor(derivedBattery)}`}
-                                  style={{ width: `${derivedBattery}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-sm font-medium text-gray-800">{derivedBattery}%</span>
-                            </div>
+                            <span className="text-sm font-medium text-gray-800">{device?.farm?.location || device?.location || '-'}</span>
                           </div>
+
+                          
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <div className="flex flex-col sm:flex-row gap-3">
-                    <Link
-  href={`/Paddy/agriculture/sensor/${selectedDevice}`}
-  className="flex-1 py-3 px-4 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-medium text-center"
->
-  ดูรายละเอียดข้อมูล
-</Link>
+                      <Link
+                        href={`/Paddy/agriculture/sensor/${selectedDevice}`}
+                        className="flex-1 py-3 px-4 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-medium text-center"
+                      >
+                        ดูรายละเอียดข้อมูล
+                      </Link>
 
                       <button className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
                         <Settings className="w-4 h-4 inline mr-2" />
                         ตั้งค่าอุปกรณ์
                       </button>
-                      <button className="py-3 px-4 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium">
+                      {(device.status === 'connected') && (
+                      <button
+                        onClick={() => handleDisconnect(device.id, device.user_id)}
+                        className="py-3 px-4 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium"
+                      >
                         <Trash2 className="w-4 h-4 inline mr-2" />
-                        ลบอุปกรณ์
+                        ยกเลิกการเชื่อมต่อ
                       </button>
+
+                      )}
                     </div>
                   </div>
                 </div>
