@@ -310,7 +310,7 @@ export default function SensorDevicesPage() {
               <option value="all">สถานะทั้งหมด</option>
               <option value="connected">เชื่อมต่อแล้ว</option>
               <option value="disconnected">ไม่ได้เชื่อมต่อ</option>
-            >
+            
             </select>
 
             <select
