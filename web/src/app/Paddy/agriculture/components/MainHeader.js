@@ -20,7 +20,7 @@ export default function MainHeader() {
         
           <div className="text-white text-left lg:text-right">
             <div className="text-xs sm:text-sm opacity-90">บัญชีส่วนตัว</div>
-            <div className="font-medium text-sm sm:text-base">บัญชีสำนักศึกษา : 1056028157</div>
+            <div className="font-medium text-sm sm:text-base"></div>
           </div>
         </div>
 

@@ -25,7 +25,7 @@ export default function DeviceRegistrationPage() {
   const [data, setData] = useState(null);
 
 
-  const userId = 11;
+
 
 
   const extractList = (res) => {
@@ -38,11 +38,25 @@ export default function DeviceRegistrationPage() {
   useEffect(() => {
     const fetchFarms = async () => {
       setLoadingFarms(true);
+    
       try {
-        const res = await apiFetch(`/api/data/farms/${userId}`, {
+        const res = await apiFetch(`/api/data/farms`, {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+           headers: {
+  "Content-Type": "application/json",
+ 
+}
         });
+
+        if(res.status == 404){
+         setAlertMessage({
+          title: "ไม่มีฟาร์ม",
+          message: "คุณยังไม่มีฟาร์มในระบบ โปรดสร้างฟาร์มก่อนลงทะเบียนอุปกรณ์",
+          type: "warning",
+        });
+          return;
+        }
+
         const list = extractList(res);
         setFarms(list);
 
@@ -60,7 +74,7 @@ export default function DeviceRegistrationPage() {
       }
     };
     fetchFarms();
-  }, [userId]);
+  }, []);
 
 
   useEffect(() => {
@@ -142,7 +156,6 @@ export default function DeviceRegistrationPage() {
     try {
       const payload = {
         device_code: deviceCode.trim(),
-        user_id: Number(userId),
         farm_plot_id: farmPlotId 
       };
 

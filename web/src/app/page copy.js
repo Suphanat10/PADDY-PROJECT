@@ -5,7 +5,10 @@ import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { LogIn, Eye, EyeOff, Sprout } from "lucide-react";
 import Login from "@/lib/login/handleSubmit";
-import LineLogin from "@/lib/login/handleLineLogin";
+import handleLoginLINE from "@/lib/login/handleLineLogin";
+
+
+
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -13,11 +16,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
  
-   const handleLogin = (e) =>
-    LineLogin(setIsLoading);
-
-  const handleSubmit = (e) =>
-   Login(e, username, password, setIsLoading);
+    const handleSubmit = (e) =>
+    Login(e, username, password, setIsLoading);
+    
+  const handleLogin = () =>
+    handleLoginLINE(setIsLoading);  
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-gray-100">

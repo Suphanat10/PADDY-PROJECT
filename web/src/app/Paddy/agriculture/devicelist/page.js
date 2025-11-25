@@ -23,7 +23,6 @@ import Swal from "sweetalert2";
 
 
 
-// ---------------- Helpers ----------------
 const getStatusBadge = (status) => {
   const statusConfig = {
     connected:    { text: 'เชื่อมต่อแล้ว',   color: 'bg-green-100 text-green-800',  icon: CheckCircle },
@@ -40,7 +39,6 @@ const getStatusBadge = (status) => {
     </span>
   );
 };
-
 
 const getSensorIcon = (type = '') => {
   const t = type.toLowerCase();
@@ -107,28 +105,58 @@ export default function SensorDevicesPage() {
   const [farmFilter, setFarmFilter] = useState('ทั้งหมด');
   const [areaFilter, setAreaFilter] = useState('ทั้งหมด');
 
+
   useEffect(() => {
-    const fetchSensorDevices = async () => {
-      try {
-        const data = await apiFetch('/api/agriculture/data/device', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
+  const fetchSensorDevices = async () => {
+    try {
+      const data = await apiFetch(`/api/agriculture/data/device`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-        if (Array.isArray(data) && data.length) {
-          setSensorDevices(data);
-          setSelectedDevice(data[0].id); 
-        } else {
-          setSensorDevices([]);
-        }
-      } catch (error) {
-        console.error('Error fetching sensor devices:', error);
+      console.log("📦 Raw data:", data);
+
+      if (Array.isArray(data) && data.length > 0) {
+        setSensorDevices(data);
+        setSelectedDevice(data[0].id);
+      } else if (Array.isArray(data?.data) && data.data.length > 0) {
+        setSensorDevices(data.data);
+        setSelectedDevice(data.data[0].id);
+      } else {
         setSensorDevices([]);
+        Swal.fire({
+          icon: "info",
+          title: "ไม่พบอุปกรณ์",
+          text: "ยังไม่มีอุปกรณ์ที่ลงทะเบียนในระบบสำหรับบัญชีนี้",
+          confirmButtonText: "ตกลง",
+        });
       }
-    };
+    } catch (error) {
+      console.error("❌ Error fetching sensor devices:", error);
 
-    fetchSensorDevices();
-  }, []);
+      if (error.status === 404) {
+        Swal.fire({
+          icon: "warning",
+          title: "ไม่พบข้อมูล (404)",
+          text: "ไม่พบข้อมูลอุปกรณ์ในระบบ หรืออุปกรณ์อาจถูกลบแล้ว",
+          confirmButtonText: "ตกลง",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาด",
+          text: "ไม่สามารถดึงข้อมูลจากเซิร์ฟเวอร์ได้ในขณะนี้",
+          confirmButtonText: "ตกลง",
+        });
+      }
+
+      setSensorDevices([]);
+    }
+  };
+
+  fetchSensorDevices();
+}, []);
+
 
   // รายชื่อฟาร์มแบบไดนามิก
   const farmOptions = useMemo(() => {
@@ -473,6 +501,7 @@ export default function SensorDevicesPage() {
             return (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sensors.map((sensor, idx) => {
+                  console.log("Rendering sensor:", sensor);
                   const sensorIconConfig = getSensorIcon(sensor.type);
                   const IconComponent = sensorIconConfig.icon;
                   const isNPK = sensor.type?.toLowerCase().includes('npk');
