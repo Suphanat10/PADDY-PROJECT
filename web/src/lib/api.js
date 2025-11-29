@@ -1,60 +1,51 @@
-// /src/lib/api.js
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE || "http://192.168.1.35:8000";
 
 export async function apiFetch(path, options = {}) {
   const url = `${API_BASE}${path}`;
-
-
   const method = (options.method || "GET").toUpperCase();
 
-
-  const headers = { ...(options.headers || {}) };
   let body = options.body;
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
- 
+  const headers = {
+    ...(options.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
   if (body !== undefined && !(body instanceof FormData)) {
-    if (typeof body !== "string") {
-      body = JSON.stringify(body);
-    }
-    if (!headers["Content-Type"] && !headers["content-type"]) {
-      headers["Content-Type"] = "application/json";
-    }
+    body = JSON.stringify(body);
+    headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(url, {
-    method,
-    credentials: "include",    
-    headers,
-    body: method === "GET" || method === "HEAD" ? undefined : body,
-  });
-
-  
-  const text = await res.text();
-  let data = null;
   try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: method === "GET" ? undefined : body,
+    });
+
+    const text = await res.text();
+    let data;
+
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        status: res.status,
+        data,
+        message: data?.message || "Request failed",
+      };
+    }
+
+    return { ok: true, status: res.status, data };
+  } catch (err) {
+    // Network error (API ล่ม / WIFI หลุด)
+    throw new Error("Network error: " + err.message);
   }
-
-  if (!res.ok) {
-    const message =
-      (data && typeof data === "object" && data.message) ||
-      (typeof data === "string" ? data : null) ||
-      res.statusText ||
-      "Request failed";
-
-    const err = new Error(message);
-    err.status = res.status;
-    err.data = data;
-    throw err;
-  }
-
-  return data;
 }
-
-// helper (ถ้าชอบเรียกแบบสั้น)
-export const get = (p, h) => apiFetch(p, { method: "GET", headers: h });
-export const post = (p, b, h) => apiFetch(p, { method: "POST", body: b, headers: h });
-export const put  = (p, b, h) => apiFetch(p, { method: "PUT",  body: b, headers: h });
-export const del  = (p, h)    => apiFetch(p, { method: "DELETE", headers: h });

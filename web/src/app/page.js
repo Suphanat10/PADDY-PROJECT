@@ -1,14 +1,12 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
-import { apiFetch } from "@/lib/api";
-import { LogIn, Eye, EyeOff, Sprout } from "lucide-react";
+import {  Eye, EyeOff, Sprout } from "lucide-react";
 import Login from "@/lib/login/handleSubmit";
 import LineLogin from "@/lib/login/handleLineLogin";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +15,7 @@ export default function LoginPage() {
     LineLogin(setIsLoading);
 
   const handleSubmit = (e) =>
-   Login(e, username, password, setIsLoading);
+   Login(e, email, password, setIsLoading);
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-gray-100">
@@ -51,8 +49,8 @@ export default function LoginPage() {
               <input
                 id="email"
                 type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 placeholder="กรุณาใส่ชื่อผู้ใช้งาน"
                 required

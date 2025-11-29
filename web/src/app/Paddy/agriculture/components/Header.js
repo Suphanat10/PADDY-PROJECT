@@ -128,6 +128,12 @@ export default function Header() {
             >
               ลงทะเบียนอุปกรณ์
             </Link>
+              <Link
+              href="/Paddy/agriculture/FarmManagement"
+              className="text-gray-500 hover:text-emerald-600 text-sm xl:text-base"
+            >
+              การจัดการพื้นที่
+            </Link>
             <Link
               href="/Paddy/agriculture/devicelist"
               className="text-gray-500 hover:text-emerald-600 text-sm xl:text-base"
@@ -162,11 +168,11 @@ export default function Header() {
                     <div className="px-4 py-2 text-sm font-medium text-gray-700 border-b border-gray-100">
                       การตั้งค่า
                     </div>
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    {/* <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       ตั้งค่าโปรไฟล์
-                    </Link>
+                    </Link> */}
                     <Link href="/settings/notifications" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      ตั้งค่าการแจ้งเตือน
+                      ตั้งค่าระดับน้ำในแปลงนา
                     </Link>
                     <Link href="/settings/security" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       ตั้งค่าความปลอดภัย
@@ -268,13 +274,13 @@ export default function Header() {
                       <p className="text-sm font-medium text-gray-900">{displayName}</p>
                       <p className="text-xs text-gray-500">{user?.username || ""}</p>
                     </div>
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Link href="/Paddy/agriculture/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       โปรไฟล์ของฉัน
                     </Link>
-                    <Link href="/activity" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Link href="/Paddy/agriculture/activity" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       ประวัติการใช้งาน
                     </Link>
-                    <Link href="/membership" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Link href="/Paddy/agriculture/membership" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       การสมัครสมาชิก
                     </Link>
                     <div className="border-t border-gray-100 mt-2">

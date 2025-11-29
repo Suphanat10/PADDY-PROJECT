@@ -3,7 +3,7 @@ import { apiFetch } from "@/lib/api";
 
 export default async function handleSubmit(
   e,
-  username,
+  email,
   password,
   setIsLoading
 ) {
@@ -11,32 +11,48 @@ export default async function handleSubmit(
   setIsLoading(true);
 
   try {
-    if (!username || !password) {
+    if (!email || !password) {
       Swal.fire({
         icon: "warning",
         title: "กรุณากรอกข้อมูลให้ครบถ้วน",
       });
       return;
     }
-    const data = await apiFetch("/api/auth/login", {
+
+    const result = await apiFetch("/api/auth/login", {
       method: "POST",
-      body: { username, password },
+      body: { email, password }
     });
+
+
+    if (!result.ok) {
+      Swal.fire({
+        icon: "error",
+        title: "เข้าสู่ระบบไม่สำเร็จ",
+        text: result.message || "Invalid email or password",
+      });
+      return;
+    }
+
+    const payload = result.data;
+
+    localStorage.setItem("token", payload.user.Token);
 
     Swal.fire({
       icon: "success",
-      title: data.message || "เข้าสู่ระบบสำเร็จ",
+      title: payload.message || "เข้าสู่ระบบสำเร็จ",
     }).then(() => {
       const next =
         new URLSearchParams(window.location.search).get("next") ||
         "/Paddy/agriculture/dashboard";
       window.location.replace(next);
     });
+
   } catch (err) {
     Swal.fire({
       icon: "error",
-      title: "เข้าสู่ระบบไม่สำเร็จ",
-      text: err.message || "เกิดข้อผิดพลาด",
+      title: "เกิดข้อผิดพลาด",
+      text: err.message || "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้",
     });
   } finally {
     setIsLoading(false);
