@@ -45,7 +45,11 @@ export async function apiFetch(path, options = {}) {
 
     return { ok: true, status: res.status, data };
   } catch (err) {
-    // Network error (API ล่ม / WIFI หลุด)
-    throw new Error("Network error: " + err.message);
+    return {
+      ok: false,
+      status: 500,
+      message: err.message || "Network error",
+    };
+
   }
 }

@@ -1,150 +1,130 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { 
-  CheckCircle, Wifi, QrCode, MapPin, Sprout, ArrowRight, 
-  Loader2, AlertTriangle, Home, LayoutDashboard, ChevronDown, PlusCircle
+import {
+  CheckCircle,
+  Wifi,
+  QrCode,
+  MapPin,
+  Sprout,
+  ArrowRight,
+  Loader2,
+  AlertTriangle,
+  Home,
+  LayoutDashboard,
+  ChevronDown,
+  PlusCircle,
+  User,
 } from "lucide-react";
 
-// import AlertBox from "@/app/components/AlertBox";
 import Header from "../components/Header";
-import { apiFetch } from "@/lib/api";
-
-
+import Footer from "../../../components/Footer";
+import getFarmArea from "@/lib/registerdevice/getFarmArea";
+import reghandleSubmit from "@/lib/registerdevice/reghandleSubmit";
 
 const AlertBox = ({ title, message, type, onClose }) => {
-  const bg = type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 
-             type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-800' : 
-             'bg-red-50 border-red-200 text-red-800';
-  const icon = type === 'success' ? <CheckCircle size={20} className="text-green-600"/> :
-               type === 'warning' ? <AlertTriangle size={20} className="text-amber-600"/> :
-               <AlertTriangle size={20} className="text-red-600"/>;
-  
+  const bg =
+    type === "success"
+      ? "bg-green-50 border-green-200 text-green-800"
+      : type === "warning"
+      ? "bg-amber-50 border-amber-200 text-amber-800"
+      : "bg-red-50 border-red-200 text-red-800";
+  const icon =
+    type === "success" ? (
+      <CheckCircle size={20} className="text-green-600" />
+    ) : type === "warning" ? (
+      <AlertTriangle size={20} className="text-amber-600" />
+    ) : (
+      <AlertTriangle size={20} className="text-red-600" />
+    );
+
   return (
-    <div className={`p-4 rounded-xl border flex gap-3 items-start ${bg} mb-6 animate-fadeIn`}>
+    <div
+      className={`p-4 rounded-xl border flex gap-3 items-start ${bg} mb-6 animate-fadeIn`}
+    >
       <div className="mt-0.5">{icon}</div>
       <div className="flex-1">
         <h4 className="font-semibold text-sm">{title}</h4>
         <p className="text-sm opacity-90 mt-1">{message}</p>
       </div>
-      {onClose && <button onClick={onClose}><span className="sr-only">Close</span>&times;</button>}
+      {onClose && (
+        <button onClick={onClose}>
+          <span className="sr-only">Close</span>&times;
+        </button>
+      )}
     </div>
   );
 };
 
-// Mock API Fetch
-
-
-// Mock Swal
-const Swal = {
-  fire: (config) => alert(`${config.title}\n${config.text || ''}`)
-};
-// ----------------------------------------------------
 
 export default function DeviceRegistrationPage() {
   const [currentStep, setCurrentStep] = useState(1);
 
   const [deviceCode, setDeviceCode] = useState("");
-  const [farmId, setFarmId] = useState("");       
+  const [farmId, setFarmId] = useState("");
   const [farmPlotId, setFarmPlotId] = useState("");
 
-  const [farms, setFarms] = useState([]);           
-  const [farmPlots, setFarmPlots] = useState([]);    
+  const [farms, setFarms] = useState([]);
 
-  const [loadingFarms, setLoadingFarms] = useState(false);
-  const [loadingPlots, setLoadingPlots] = useState(false);
-
-  const [isLoading, setIsLoading] = useState(false); 
+  const [loadingData, setLoadingData] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
   const [data, setData] = useState(null);
 
-  const extractList = (res) => {
-    if (Array.isArray(res)) return res;
-    if (res && Array.isArray(res.data)) return res.data;
-    return [];
-  };
-  
+  // 1. Fetch ครั้งเดียวตอนโหลดหน้าเว็บ
   useEffect(() => {
-    const fetchFarms = async () => {
-      setLoadingFarms(true);
+    const fetchData = async () => {
       try {
-        const res = await apiFetch(`/api/data/farms`, { method: "GET" });
-        if(res.status == 404){
-         setAlertMessage({ title: "ไม่มีฟาร์ม", message: "คุณยังไม่มีฟาร์มในระบบ โปรดสร้างฟาร์มก่อนลงทะเบียนอุปกรณ์", type: "warning" });
-          return;
-        }
-        const list = extractList(res);
-        setFarms(list);
-        if (list.length === 1) setFarmId(String(list[0].farm_id));
+        getFarmArea(setLoadingData, setFarms, setAlertMessage, setFarmId);
       } catch (err) {
-        setAlertMessage({ title: "โหลดรายชื่อฟาร์มไม่สำเร็จ", message: "โปรดลองใหม่อีกครั้ง", type: "error" });
+        console.error(err);
+        setAlertMessage({
+          title: "โหลดข้อมูลไม่สำเร็จ",
+          message: "โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่",
+          type: "error",
+        });
       } finally {
-        setLoadingFarms(false);
+        setLoadingData(false);
       }
     };
-    fetchFarms();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    if (!farmId) {
-      setFarmPlots([]);
-      setFarmPlotId("");
-      return;
-    }
-    const fetchPlots = async () => {
-      setLoadingPlots(true);
-      try {
-        const res = await apiFetch(`/api/data/farm-plots/${farmId}`, { method: "GET" });
-        const list = extractList(res);
-        setFarmPlots(list);
-        if (list.length === 1) setFarmPlotId(String(list[0].farm_plot_id));
-      } catch (err) {
-        setAlertMessage({ title: "โหลดรายชื่อแปลงไม่สำเร็จ", message: "โปรดลองใหม่อีกครั้ง", type: "error" });
-      } finally {
-        setLoadingPlots(false);
-      }
-    };
-    fetchPlots();
-  }, [farmId]);
+  // 2. คำนวณ Farm ที่เลือก
+  const selectedFarm = useMemo(
+    () => farms.find((f) => String(f.farm_id) === String(farmId)),
+    [farms, farmId]
+  );
 
-  const selectedFarm = useMemo(() => farms.find((f) => String(f.farm_id) === String(farmId)), [farms, farmId]);
-  const selectedPlot = useMemo(() => farmPlots.find((p) => String(p.farm_plot_id) === String(farmPlotId)), [farmPlots, farmPlotId]);
+  const availablePlots = useMemo(() => {
+    if (!selectedFarm || !selectedFarm.sub_areas) return [];
+    return selectedFarm.sub_areas; // แสดงทุก sub_area
+  }, [selectedFarm]);
+
+  // 4. คำนวณ Plot ที่เลือก (เพื่อใช้แสดงชื่อตอน success)
+  const selectedPlot = useMemo(
+    () => availablePlots.find((p) => String(p.area_id) === String(farmPlotId)),
+    [availablePlots, farmPlotId]
+  );
+
+  // Reset Plot ID เมื่อเปลี่ยน Farm
+  useEffect(() => {
+    if (availablePlots.length === 1) {
+      setFarmPlotId(String(availablePlots[0].area_id));
+    } else {
+      setFarmPlotId("");
+    }
+  }, [farmId, availablePlots]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setAlertMessage(null);
 
-    if (!deviceCode?.trim() || !farmId) {
-      setAlertMessage({ title: "กรอกข้อมูลไม่ครบถ้วน", message: "กรุณากรอกรหัสอุปกรณ์และเลือกฟาร์ม", type: "warning" });
-      return;
-    }
-    if (farmPlots.length > 0 && !farmPlotId) {
-      setAlertMessage({ title: "กรอกข้อมูลไม่ครบถ้วน", message: "กรุณาเลือกแปลงในฟาร์ม", type: "warning" });
-      return;
-    }
+    reghandleSubmit(deviceCode, farmPlotId, setIsLoading , setData , setCurrentStep);
 
-    setIsLoading(true);
-    try {
-      const payload = { device_code: deviceCode.trim(), farm_plot_id: farmPlotId };
-      const res = await apiFetch("/api/agriculture/register-device", { method: "POST", body: JSON.stringify(payload) });
 
-      if (res?.success) {
-        // Mock Success Data
-        setData({
-            device_code: deviceCode,
-            registered_at: new Date().toISOString(),
-            farm_name: selectedFarm?.farm_name,
-            plot_name: selectedPlot?.plot_name
-        });
-        setCurrentStep(2);
-      } else {
-        setAlertMessage({ title: "ลงทะเบียนไม่สำเร็จ", message: res?.message || "กรุณาลองใหม่อีกครั้ง", type: "error" });
-      }
-    } catch (err) {
-      setAlertMessage({ title: "เกิดข้อผิดพลาด", message: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", type: "error" });
-    } finally {
-      setIsLoading(false);
-    }
+   
+
   };
 
   // ---------- Render Step 1 ----------
@@ -180,7 +160,8 @@ export default function DeviceRegistrationPage() {
           {/* Device Code Input */}
           <div className="group">
             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-              <QrCode size={18} className="text-emerald-500" /> รหัสอุปกรณ์ (Device Code)
+              <QrCode size={18} className="text-emerald-500" /> รหัสอุปกรณ์
+              (Device Code)
             </label>
             <div className="relative transition-all duration-300 transform group-focus-within:-translate-y-1">
               <input
@@ -201,68 +182,84 @@ export default function DeviceRegistrationPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Farm Dropdown */}
             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <Home size={18} className="text-emerald-500" /> เลือกฟาร์ม
-                </label>
-                <div className="relative">
-                    <select
-                    value={farmId}
-                    onChange={(e) => {
-                        setFarmId(e.target.value);
-                        setFarmPlotId(""); 
-                    }}
-                    className="w-full px-4 py-3.5 bg-white border border-gray-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all appearance-none cursor-pointer text-gray-700"
-                    disabled={isLoading || loadingFarms}
-                    >
-                    <option value="">
-                        {loadingFarms ? "กำลังโหลด..." : "-- เลือกฟาร์ม --"}
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <Home size={18} className="text-emerald-500" /> เลือกฟาร์ม
+              </label>
+              <div className="relative">
+                <select
+                  value={farmId}
+                  onChange={(e) => setFarmId(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-white border border-gray-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all appearance-none cursor-pointer text-gray-700"
+                  disabled={isLoading || loadingData}
+                >
+                  <option value="">
+                    {loadingData ? "กำลังโหลดข้อมูล..." : "-- เลือกฟาร์ม --"}
+                  </option>
+                  {farms.map((f, idx) => (
+                    <option key={f?.farm_id ?? idx} value={String(f.farm_id)}>
+                      {f.farm_name}
                     </option>
-                    {farms.map((f, idx) => (
-                        <option key={f?.farm_id ?? idx} value={String(f.farm_id)}>
-                        {f.farm_name}
-                        </option>
-                    ))}
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                </div>
-                {!loadingFarms && farms.length === 0 && (
-                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                        <AlertTriangle size={12}/> ยังไม่มีฟาร์ม (ต้องสร้างก่อน)
-                    </p>
-                )}
+                  ))}
+                </select>
+                <ChevronDown
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  size={20}
+                />
+              </div>
+              {!loadingData && farms.length === 0 && (
+                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                  <AlertTriangle size={12} /> ยังไม่มีฟาร์ม (ต้องสร้างก่อน)
+                </p>
+              )}
             </div>
 
-            {/* Plot Dropdown */}
-            <div className={`${!farmId ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'} transition-all duration-300`}>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <Sprout size={18} className="text-emerald-500" /> เลือกแปลง
-                </label>
-                <div className="relative">
-                    <select
-                        value={farmPlotId}
-                        onChange={(e) => setFarmPlotId(e.target.value)}
-                        className="w-full px-4 py-3.5 bg-white border border-gray-300 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all appearance-none cursor-pointer text-gray-700"
-                        disabled={isLoading || loadingPlots || !farmId}
+            {/* Plot Dropdown (Derived from Sub Areas) */}
+            <div
+              className={`${
+                !farmId
+                  ? "opacity-50 pointer-events-none grayscale"
+                  : "opacity-100"
+              } transition-all duration-300`}
+            >
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <Sprout size={18} className="text-emerald-500" /> เลือกแปลง
+              </label>
+              <div className="relative">
+                <select
+                  value={farmPlotId}
+                  onChange={(e) => setFarmPlotId(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-white border border-gray-300 rounded-2xl 
+             focus:outline-none focus:border-emerald-500 focus:ring-4 
+             focus:ring-emerald-500/10 transition-all appearance-none cursor-pointer text-gray-700"
+                  disabled={isLoading || !farmId}
+                >
+                  <option value="">-- เลือกแปลง --</option>
+
+                  {availablePlots.map((p) => (
+                    <option
+                      key={p.area_id}
+                      value={String(p.area_id)}
+                      disabled={p.disabled} 
+                      className={
+                        p.disabled
+                          ? "text-gray-400 bg-gray-100"
+                          : "text-gray-800"
+                      }
                     >
-                        <option value="">
-                        {loadingPlots
-                            ? "กำลังโหลด..."
-                            : farmPlots.length === 0
-                            ? "-- ไม่มีแปลง --"
-                            : "-- เลือกแปลง --"}
-                        </option>
-                        {farmPlots.map((p, idx) => (
-                        <option key={p?.farm_plot_id ?? idx} value={String(p.farm_plot_id)}>
-                            {p.plot_name}
-                        </option>
-                        ))}
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                </div>
+                      {p.area_name} {p.disabled ? "(ลงทะเบียนอุปกรณ์แล้ว)" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                <ChevronDown
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                  size={20}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Submit Button - Redesigned */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
@@ -273,13 +270,13 @@ export default function DeviceRegistrationPage() {
             }`}
           >
             {isLoading ? (
-                <>
-                    <Loader2 className="animate-spin" /> กำลังตรวจสอบ...
-                </>
+              <>
+                <Loader2 className="animate-spin" /> กำลังตรวจสอบ...
+              </>
             ) : (
-                <>
-                    ลงทะเบียนอุปกรณ์ <ArrowRight className="w-5 h-5" />
-                </>
+              <>
+                ลงทะเบียนอุปกรณ์ <ArrowRight className="w-5 h-5" />
+              </>
             )}
           </button>
         </form>
@@ -294,80 +291,102 @@ export default function DeviceRegistrationPage() {
       <div className="bg-white rounded-3xl p-8 shadow-2xl shadow-emerald-100 border border-emerald-50 overflow-hidden relative">
         {/* Confetti Background (Simulated) */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500"></div>
-        
+
         <div className="w-28 h-28 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 relative">
-            <div className="absolute inset-0 bg-emerald-200 rounded-full animate-ping opacity-20"></div>
-            <CheckCircle className="w-14 h-14 text-emerald-600 relative z-10" />
+          <div className="absolute inset-0 bg-emerald-200 rounded-full animate-ping opacity-20"></div>
+          <CheckCircle className="w-14 h-14 text-emerald-600 relative z-10" />
         </div>
-        
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">ลงทะเบียนสำเร็จ!</h2>
-        <p className="text-gray-500 mb-8">อุปกรณ์พร้อมใช้งานและเริ่มเก็บข้อมูลแล้ว</p>
+
+        <h2 className="text-3xl font-bold text-gray-800 mb-2">
+          ลงทะเบียนสำเร็จ!
+        </h2>
+        <p className="text-gray-500 mb-8">
+          อุปกรณ์พร้อมใช้งานและเริ่มเก็บข้อมูลแล้ว
+        </p>
 
         {/* Ticket/Info Section */}
-        <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 text-left mb-8 relative">
-            <div className="absolute -left-3 top-1/2 -mt-3 w-6 h-6 bg-white rounded-full border-r border-gray-100"></div>
-            <div className="absolute -right-3 top-1/2 -mt-3 w-6 h-6 bg-white rounded-full border-l border-gray-100"></div>
-            
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">รายละเอียดอุปกรณ์</h3>
-            
-            <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500 flex items-center gap-2"><QrCode size={16}/> รหัสอุปกรณ์</span>
-                    <span className="font-mono font-bold text-lg text-gray-800 tracking-wide">{data?.device_code}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500 flex items-center gap-2"><Home size={16}/> ฟาร์ม</span>
-                    <span className="font-medium text-gray-800">{data?.farm_name || selectedFarm?.farm_name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500 flex items-center gap-2"><MapPin size={16}/> แปลง</span>
-                    <span className="font-medium text-gray-800">{data?.plot_name || selectedPlot?.plot_name}</span>
-                </div>
-            </div>
-            
-            <div className="mt-6 pt-4 border-t border-dashed border-gray-300 text-center">
-                <p className="text-xs text-emerald-600 font-medium flex items-center justify-center gap-1">
-                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> สถานะ: เชื่อมต่อแล้ว (Online)
-                </p>
-            </div>
-        </div>
+        {/* <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 text-left mb-8 relative">
+          <div className="absolute -left-3 top-1/2 -mt-3 w-6 h-6 bg-white rounded-full border-r border-gray-100"></div>
+          <div className="absolute -right-3 top-1/2 -mt-3 w-6 h-6 bg-white rounded-full border-l border-gray-100"></div> */}
 
-        {/* Actions - Redesigned Buttons */}
+          {/* <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
+            รายละเอียดอุปกรณ์
+          </h3> */}
+
+          {/* <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500 flex items-center gap-2">
+                <QrCode size={16} /> รหัสอุปกรณ์
+              </span>
+              <span className="font-mono font-bold text-lg text-gray-800 tracking-wide">
+                {data?.device_code}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500 flex items-center gap-2">
+                <Home size={16} /> ฟาร์ม
+              </span>
+              <span className="font-medium text-gray-800">
+                {data?.farm_name}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500 flex items-center gap-2">
+                <MapPin size={16} /> แปลง
+              </span>
+              <span className="font-medium text-gray-800">
+                
+              </span>
+            </div>
+          </div> */}
+
+          {/* <div className="mt-6 pt-4 border-t border-dashed border-gray-300 text-center">
+            <p className="text-xs text-emerald-600 font-medium flex items-center justify-center gap-1">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>{" "}
+              สถานะ: เชื่อมต่อแล้ว (Online)
+            </p>
+          </div> */}
+        {/* </div> */}
+
+        {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4">
-            <button
+          <button
             onClick={() => (window.location.href = "/dashboard")}
             className="flex-1 py-4 px-6 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all font-bold text-lg shadow-lg shadow-emerald-200 hover:shadow-xl flex items-center justify-center gap-2 transform hover:-translate-y-0.5 active:scale-[0.98]"
-            >
+          >
             <LayoutDashboard size={20} /> ไปที่แดชบอร์ด
-            </button>
+          </button>
 
-            <button
+          <button
             onClick={() => {
-                setCurrentStep(1);
-                setDeviceCode("");
-                setFarmId("");
-                setFarmPlotId("");
-                setData(null);
+              setCurrentStep(1);
+              setDeviceCode("");
+              setFarmId("");
+              setFarmPlotId("");
+              setData(null);
             }}
             className="flex-1 py-4 px-6 bg-white border-2 border-gray-100 text-gray-600 rounded-2xl hover:border-emerald-200 hover:text-emerald-600 hover:bg-emerald-50 transition-all font-bold text-lg flex items-center justify-center gap-2 active:scale-[0.98]"
-            >
+          >
             <PlusCircle size={20} /> ลงทะเบียนเพิ่ม
-            </button>
+          </button>
         </div>
       </div>
     </div>
   );
 
   return (
+    <>
     <div className="min-h-screen bg-[#F8FAFC] pb-12">
-      
       <Header />
-      
+
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           {currentStep === 1 ? renderStepOne() : renderStepTwo()}
         </div>
       </div>
+      <Footer />
     </div>
+    
+    </>
   );
 }
