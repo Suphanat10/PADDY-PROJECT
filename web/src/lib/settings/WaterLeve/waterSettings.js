@@ -36,7 +36,6 @@ export async function waterSettings( minLevel, maxLevel, selectedDeviceId, setLo
       Water_level_max: maxLevel,
     };
 
-    console.log("Payload for water settings:", payload);
 
     const result = await apiFetch("/api/setting/update", {
       method: "POST",
