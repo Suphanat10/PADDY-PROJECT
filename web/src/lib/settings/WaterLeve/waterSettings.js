@@ -33,7 +33,7 @@ export async function waterSettings( minLevel, maxLevel, selectedDeviceId, setLo
     const payload = {
       device_id: selectedDeviceId,
       Water_level_min: minLevel,
-      Water_level_mxm: maxLevel,
+      Water_level_max: maxLevel,
     };
 
     console.log("Payload for water settings:", payload);
@@ -44,6 +44,16 @@ export async function waterSettings( minLevel, maxLevel, selectedDeviceId, setLo
         ...payload,
       }
     });
+
+    if (!result.ok) {
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาดในการบันทึกการตั้งค่าระดับน้ำ",
+        text: result.message || "กรุณาลองใหม่อีกครั้งภายหลัง",
+      });
+      return;
+    }
+
 
     if (result.ok) {
       Swal.fire({
