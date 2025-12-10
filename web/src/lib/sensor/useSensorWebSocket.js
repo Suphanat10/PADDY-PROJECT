@@ -8,22 +8,49 @@ export function useSensorWebSocket(deviceId) {
 
   const socketRef = useRef(null);
   const reconnectTimerRef = useRef(null);
-  const isPageActiveRef = useRef(true);  // ⬅️ ตัวบอกว่าหน้านี้ยังเปิดอยู่ไหม
+  const isPageActiveRef = useRef(true);
+
+  // ⭐ ฟังก์ชันส่งข้อมูลแบบปลอดภัย
+  const safeSend = (msg) => {
+    const socket = socketRef.current;
+
+    if (!socket) return;
+
+    // ถ้า WebSocket พร้อม → ส่งเลย
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(msg);
+      return;
+    }
+
+    // ถ้ายัง CONNECTING → รอให้ open ก่อนถึงส่งได้
+    if (socket.readyState === WebSocket.CONNECTING) {
+      console.warn("WS still connecting… queue send");
+
+      const interval = setInterval(() => {
+        if (socket.readyState === WebSocket.OPEN) {
+          clearInterval(interval);
+          socket.send(msg);
+        }
+      }, 50);
+    }
+  };
 
   useEffect(() => {
     if (!deviceId) return;
 
-    isPageActiveRef.current = true; // หน้านี้เปิดแล้ว
+    isPageActiveRef.current = true;
 
     const connectSocket = () => {
-      if (!isPageActiveRef.current) return; // ถ้าหน้าถูกปิด → หยุดทันที
+      if (!isPageActiveRef.current) return;
 
       socketRef.current = new WebSocket("ws://localhost:8000");
 
       socketRef.current.onopen = () => {
+        console.log("WS Connected");
         setIsSocketConnected(true);
 
-        socketRef.current.send(
+        // ⭐ ใช้ safeSend แทน send โดยตรง
+        safeSend(
           JSON.stringify({
             action: "SUBSCRIBE",
             deviceIds: [deviceId],
@@ -56,9 +83,7 @@ export function useSensorWebSocket(deviceId) {
 
         if (!isPageActiveRef.current) return;
 
-        reconnectTimerRef.current = setTimeout(() => {
-          connectSocket();
-        }, 2000);
+        reconnectTimerRef.current = setTimeout(connectSocket, 2000);
       };
 
       socketRef.current.onerror = () => {
@@ -71,13 +96,13 @@ export function useSensorWebSocket(deviceId) {
     return () => {
       console.log("Page closed → WebSocket disconnected!");
 
-      isPageActiveRef.current = false;   
+      isPageActiveRef.current = false;
 
       if (socketRef.current) {
         socketRef.current.close();
       }
 
-      clearTimeout(reconnectTimerRef.current); 
+      clearTimeout(reconnectTimerRef.current);
     };
   }, [deviceId]);
 

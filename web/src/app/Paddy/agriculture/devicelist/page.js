@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo  } from "react";
+import { router } from "next/navigation";
 import {
   Thermometer,
   Droplets,
@@ -23,18 +24,14 @@ import {
   Clock,
   Loader2
 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "@/app/components/Footer";
+import { closeSensorWebSocket } from "@/lib/devices/sensorWebSocket";
+import { loadDevicesService } from "@/lib/devices/loadDevices";
+import { createSensorWebSocket } from "@/lib/devices/sensorWebSocket";
 
-// ==============================
-// CONFIG
-// ==============================
-const WEBSOCKET_URL = "ws://localhost:8000";
 
-// ==============================
-// HELPERS
-// ==============================
 const getStatusBadge = (status) => {
   const map = {
     connected: {
@@ -104,18 +101,14 @@ function combineNPK(sensor) {
       current: val(sensor?.soil_moisture),
       unit: "%",
     },
-    {
-      type: "battery",
-      label: "แบตเตอรี่",
-      current: val(sensor?.battery),
-      unit: "V",
-    },
+
   ];
 }
 
-// ==============================
-// MAIN COMPONENT
-// ==============================
+
+
+
+
 export default function DeviceListPage() {
   const [sensorDevices, setSensorDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -130,139 +123,70 @@ export default function DeviceListPage() {
   const wsRef = useRef(null);
   const latestSensorData = useRef({});
 
-  // 1️⃣ LOAD DEVICES
+
+
   useEffect(() => {
-    const loadDevices = async () => {
-      try {
-        setLoading(true);
-        const res = await apiFetch("/api/data/devices");
-        
-        // Handle response format
-        let list = [];
-        if (res && Array.isArray(res.data)) {
-            list = res.data;
-        } else if (Array.isArray(res)) {
-            list = res;
-        }
+  const fetchDevices = async () => {
+    try {
+      setLoading(true);
 
-        const mapped = list.map((d) => ({
-          device_code: d.id,
-          farm: d.farm?.name || "-",
-          area: d.farm?.location || "-",
-          description: d.description || "ไม่มีรายละเอียด",
-          status: "disconnected",
-          battery: 0,
-          lastUpdate: "-",
-          sensor: {},
-        }));
+      const mapped = await loadDevicesService();
 
-        setSensorDevices(mapped);
+      setSensorDevices(mapped);
 
-        if (mapped.length > 0) {
-          setSelectedDevice(mapped[0].device_code);
-        }
-      } catch (err) {
-        console.error("Load devices error:", err);
-      } finally {
-        setLoading(false);
+      if (mapped.length > 0) {
+        setSelectedDevice(mapped[0].device_code);
       }
-    };
 
-    loadDevices();
-  }, []);
+    } catch (err) {
+      console.error("Load devices error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // 2️⃣ WEBSOCKET REALTIME
-  useEffect(() => {
-    if (sensorDevices.length === 0) return;
-    if (wsRef.current) return;
+  fetchDevices();
+}, []);
 
-    console.log(`Connecting to ${WEBSOCKET_URL}`);
-    const ws = new WebSocket(WEBSOCKET_URL);
-    wsRef.current = ws;
+  
 
-    ws.onopen = () => {
-      console.log("WebSocket Connected");
-      setIsWsConnected(true);
-      const deviceIds = sensorDevices.map((d) => d.device_code);
 
-      ws.send(
-        JSON.stringify({
-          action: "SUBSCRIBE",
-          device_ids: deviceIds,
-        })
+  const [hasFirstData, setHasFirstData] = useState(false);
+
+
+useEffect(() => {
+  if (sensorDevices.length === 0) return;
+
+  const deviceIds = sensorDevices.map(d => d.device_code);
+
+  createSensorWebSocket({
+    url: "ws://localhost:8000/",
+    deviceIds,
+    onConnected: () => setIsWsConnected(true),
+    onDisconnected: () => setIsWsConnected(false),
+
+    onSensorUpdate: (deviceId, data, timestamp) => {
+      setHasFirstData(true);
+
+      setSensorDevices(prev =>
+        prev.map(dev =>
+          dev.device_code === deviceId
+            ? { ...dev, sensor: data, lastUpdate: timestamp, status: "connected" }
+            : dev
+        )
       );
-    };
+    },
 
-    ws.onmessage = (event) => {
-      try {
-               setLoading(true);
+    onError: () => setIsWsConnected(false),
+  });
 
-        const msg = JSON.parse(event.data);
+  return () => {
+    closeSensorWebSocket();
+  };
+}, [sensorDevices.length]);
 
-        
-        const deviceId = msg.deviceId || msg.device_id;
 
-        if (!deviceId && msg.type !== "SENSOR_UPDATE") return;
 
-        const sensorData = {
-          N: msg.npk?.N ?? msg.data?.N,
-          P: msg.npk?.P ?? msg.data?.P,
-          K: msg.npk?.K ?? msg.data?.K,
-          water_level: msg.water_level ?? msg.data?.water_level,
-          soil_moisture: msg.soil_moisture ?? msg.data?.soil_moisture,
-          battery: msg.battery ?? msg.data?.battery,
-        };
-
-        const batteryLevel = msg.battery ?? msg.data?.battery ?? 0;
-        const timestamp = new Date().toLocaleString("th-TH", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
-
-        latestSensorData.current[deviceId] = sensorData;
-
-        setSensorDevices((prev) =>
-          prev.map((dev) =>
-            dev.device_code === deviceId
-              ? {
-                  ...dev,
-                  status: "connected",
-                  sensor: sensorData,
-                  battery: batteryLevel,
-                  lastUpdate: timestamp,
-                }
-              : dev
-          )
-        );
-
-           setLoading(false);
-      } catch (err) {
-        console.error("WS Parse Error:", err);
-      }
-    };
-
-    ws.onclose = () => {
-      console.log("WS Closed");
-      setIsWsConnected(false);
-        
-
-      wsRef.current = null;
-    };
-
-    ws.onerror = (err) => {
-      // console.error("WS Error:", err);
-      setIsWsConnected(false);
-    };
-
-    return () => {
-      if (wsRef.current) wsRef.current.close();
-      wsRef.current = null;
-    };
-
-  }, [sensorDevices]);
-
-  // =====================================================
-  // FILTER LOGIC (เพิ่มเพื่อให้การค้นหาทำงานได้จริง)
   // =====================================================
   const filteredDevices = useMemo(() => {
     return sensorDevices.filter((device) => {
@@ -307,9 +231,7 @@ export default function DeviceListPage() {
     }
   }, [filteredDevices, selectedDevice]);
 
-  // =====================================================
-  // SELECTED DEVICE HELPER
-  // =====================================================
+  
   const selected = sensorDevices.find((d) => d.device_code === selectedDevice);
 
   return (
@@ -370,7 +292,9 @@ export default function DeviceListPage() {
               ))}
             </select>
           </div>
-        </div>
+        </div>  
+
+       
 
         {/* DEVICE LIST (TABS - FILTERED) */}
         <div className="mb-6 bg-white p-2 rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
@@ -402,20 +326,13 @@ export default function DeviceListPage() {
           </div>
         </div>
 
-        {/* LOADING INDICATOR FOR WEBSOCKET */}
-        {/* แสดงเฉพาะตอนที่ยังเชื่อมต่อ WS ไม่สำเร็จ และมีอุปกรณ์ให้แสดง */}
-        {!isWsConnected && sensorDevices.length > 0 && !loading && (
-          <div className="mb-6 flex items-center justify-center p-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 animate-pulse shadow-sm">
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            <span className="text-sm font-medium">กำลังเชื่อมต่อระบบ Real-time...</span>
-          </div>
-        )}
+   
 
         {/* SELECTED DEVICE CONTENT */}
-        {loading ? (
+        {!hasFirstData ? (
            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-2" />
-             <p className="text-gray-400">กำลังโหลดข้อมูล...</p>
+             <p className="text-gray-400">กำลังเชื่อมต่อระบบ Real-time...</p>
            </div>
         ) : !selected ? (
           sensorDevices.length > 0 && (
@@ -460,25 +377,7 @@ export default function DeviceListPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <Battery className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between mb-1">
-                          <p className="text-xs text-gray-500">แบตเตอรี่</p>
-                          <p className="text-xs font-bold text-emerald-600">
-                            {selected.battery}%
-                          </p>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(selected.battery || 0, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
+            
                   </div>
                   <div className="mt-4 flex gap-4 text-sm text-gray-500">
                     <div className="flex items-center gap-1">
@@ -493,12 +392,15 @@ export default function DeviceListPage() {
 
               {/* Actions Footer */}
               <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
-                <button className="flex-1 bg-emerald-500 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-200">
-                  ดูข้อมูลเซ็นเซอร์
-                </button>
-                <button className="flex items-center justify-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+             <Link
+  href={`/Paddy/agriculture/sensor/${selected.device_code}`}
+  className="flex-1 bg-emerald-500 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-200 text-center block"
+>
+  ดูข้อมูลเซ็นเซอร์
+</Link>
+                {/* <button className="flex items-center justify-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
                   <Settings className="w-4 h-4" /> ตั้งค่าอุปกรณ์
-                </button>
+                </button> */}
                 <button className="flex items-center justify-center gap-2 px-6 py-2.5 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors">
                   <Trash2 className="w-4 h-4" /> ลบอุปกรณ์
                 </button>
@@ -585,6 +487,7 @@ export default function DeviceListPage() {
             </div>
           </>
         )}
+   
       </main>
       <Footer />
     </div>
