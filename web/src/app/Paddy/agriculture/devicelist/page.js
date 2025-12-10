@@ -198,10 +198,7 @@ export default function DeviceListPage() {
                setLoading(true);
 
         const msg = JSON.parse(event.data);
-        
-        // ถ้าเป็น message ข้อมูลเซ็นเซอร์ ให้แสดง loading ชั่วคราว (หรือจัดการตามต้องการ)
-        // หมายเหตุ: การ set loading ทุกครั้งที่ข้อมูลมาอาจทำให้หน้าจอกระพริบ 
-        // ปกติ loading จะใช้เฉพาะตอนรอข้อมูลครั้งแรก
+
         
         const deviceId = msg.deviceId || msg.device_id;
 

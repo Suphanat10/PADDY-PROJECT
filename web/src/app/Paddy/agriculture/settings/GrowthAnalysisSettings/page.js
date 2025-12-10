@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Settings,
   Save,
-  RefreshCw,
   CheckCircle2,
   Database,
   Camera,
@@ -16,11 +15,6 @@ import {
   PlayCircle,
   MapPin,
   Cpu,
-  Signal,
-  Bell,
-  User,
-  Sprout,
-  Droplets,
 } from "lucide-react";
 
 import Header from "../../components/Header";
