@@ -31,7 +31,7 @@ export async function waterSettings( minLevel, maxLevel, selectedDeviceId, setLo
     setLoading(true);
 
     const payload = {
-      device_id: selectedDeviceId,
+      device_registrations_id: selectedDeviceId,
       Water_level_min: minLevel,
       Water_level_max: maxLevel,
     };

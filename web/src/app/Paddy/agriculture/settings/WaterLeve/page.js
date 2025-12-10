@@ -24,6 +24,7 @@ import Header from "../../components/Header";
 import Footer from "../../../../components/Footer";
 import waterPlots from "@/lib/settings/WaterLeve/waterPlots";
 import { waterSettings } from "@/lib/settings/WaterLeve/waterSettings";
+import Swal from "sweetalert2";
 
 export default function WaterLevelSettings() {
   const [devices, setDevices] = useState([]);
@@ -97,31 +98,49 @@ export default function WaterLevelSettings() {
   };
 
   const handleReset = () => {
-    if (confirm("คืนค่าเริ่มต้นแนะนำสำหรับการปลูกข้าว?")) {
-      setSettings((prev) => ({
-        ...prev,
-        minLevel: 5,
-        maxLevel: 10,
-        dataSendInterval: 1,
-      }));
-    }
-  };
+     Swal.fire({
+       title: "คืนค่าแนะนำ?",
+       text: "คุณต้องการคืนค่าระดับน้ำเป็นค่าแนะนำหรือไม่?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "ใช่, คืนค่า",
+        cancelButtonText: "ยกเลิก",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setSettings((prev) => ({
+            ...prev,
+            minLevel: 5,
+            maxLevel: 20,
+          }));
+          Swal.fire({
+            icon: "success",
+            title: "คืนค่าเรียบร้อย",
+            text: "ตั้งค่าระดับน้ำถูกคืนเป็นค่าแนะนำแล้ว",
+          });
+        }
+      });
+    
+  }
+
+
 
   if (!currentDevice)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="animate-spin text-green-600" />
-      </div>
+      <>
+             <Header />
+             <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center">
+                 <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
+                     <div className="w-12 h-12 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-4 shadow-sm"></div>
+                     <p className="text-gray-500 text-sm font-medium animate-pulse">กำลังโหลดข้อมูล...</p>
+                 </div>
+             </div>
+             <Footer />
+           </>
     );
 
   return (
     <div
-      className="min-h-screen bg-gray-50 text-gray-900"
-      style={{ fontFamily: "'Prompt', sans-serif" }}
-    >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
-      `}</style>
+      className="min-h-screen bg-gray-50 text-gray-900">
 
       <Header />
 

@@ -1,5 +1,5 @@
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "http://192.168.1.35:8000";
+  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 export async function apiFetch(path, options = {}) {
   const url = `${API_BASE}${path}`;

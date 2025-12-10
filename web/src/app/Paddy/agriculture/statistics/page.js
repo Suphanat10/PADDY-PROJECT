@@ -32,24 +32,24 @@ export default function StatisticsPage() {
     };
 
     fetchAllData();
-  }, []); // Empty dependency array = run once on mount
+  }, []); 
 
-  // Effect: เลือกอุปกรณ์ตัวแรกเป็นค่าเริ่มต้นเมื่อข้อมูลมาแล้ว
+
   useEffect(() => {
     if (allData.length > 0 && !selectedDeviceId) {
       setSelectedDeviceId(allData[0].device_ID.toString());
     }
   }, [allData, selectedDeviceId]);
 
-  // หาข้อมูลอุปกรณ์ที่ถูกเลือกจาก State (Client-side)
+
   const currentDevice = useMemo(() => {
     return allData.find(d => d.device_ID.toString() === selectedDeviceId);
   }, [allData, selectedDeviceId]);
 
-  // ดึง object stats ออกมา
+
   const apiStats = currentDevice ? currentDevice.stats : null;
 
-  // แปลงข้อมูลสำหรับกราฟ (Client-side Processing)
+
   const displayData = useMemo(() => {
     if (!apiStats) return [];
 
@@ -83,7 +83,6 @@ export default function StatisticsPage() {
       }
     });
 
-    // เรียงลำดับตามเวลา
     return Array.from(dataMap.values()).sort((a, b) => a.timestamp - b.timestamp);
   }, [apiStats, selectedPeriod]);
 
@@ -134,11 +133,11 @@ export default function StatisticsPage() {
                 ) : allData.length > 0 ? (
                   allData.map(device => (
                     <option key={device.device_ID} value={device.device_ID}>
-                      {device.area_name} (ID: {device.device_ID})
+                       {device.area_name} -รหัสอุปกรณ์: {device.device_ID}
                     </option>
                   ))
                 ) : (
-                  <option>ไม่พบข้อมูลอุปกรณ์</option>
+                  <option value="" disabled></option>
                 )}
               </select>
             </div>
@@ -208,7 +207,7 @@ export default function StatisticsPage() {
               ลองใหม่อีกครั้ง
             </button>
           </div>
-        ) : (
+        ) : currentDevice  ? (
           <>
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -344,7 +343,7 @@ export default function StatisticsPage() {
               </div>
             </div>
           </>
-        )}
+        ) : null}
       </div>
       <Footer />
     </div>
