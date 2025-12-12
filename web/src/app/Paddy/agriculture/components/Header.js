@@ -35,7 +35,7 @@ export default function Header() {
     { name: "ลงทะเบียนอุปกรณ์", href: "/Paddy/agriculture/registerdevice", icon: PlusCircle },
     { name: "จัดการพื้นที่", href: "/Paddy/agriculture/FarmManagement", icon: Map },
     { name: "ข้อมูลอุปกรณ์", href: "/Paddy/agriculture/devicelist", icon: Database },
-    { name: "สถิติ", href: "/Paddy/agriculture/statistics", icon: BarChart3 },
+    // { name: "สถิติ", href: "/Paddy/agriculture/statistics", icon: BarChart3 },
   ];
 
   // --- Helper Functions ---
@@ -210,12 +210,12 @@ export default function Header() {
                 <Settings className="w-5 h-5" />
               </button>
               {isSettingsOpen && (
-                <div className="absolute right-0 mt-3 w-64 bg-white border border-gray-100 rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 py-2 origin-top-right animate-in fade-in zoom-in-95 duration-100">
+<div className="absolute right-0 mt-3 w-64 bg-white border border-gray-100 rounded-xl shadow-xl py-2 origin-top-right animate-in fade-in zoom-in-95 duration-100">
                    <div className="px-4 py-2 border-b border-gray-50 text-xs font-semibold text-gray-400 uppercase tracking-wider">การตั้งค่าระบบ</div>
                    <Link href="/Paddy/agriculture/settings/WaterLeve" onClick={() => setIsSettingsOpen(false)} className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"><Activity className="w-4 h-4 mr-3 text-gray-400" /> ระดับน้ำในแปลงนา</Link>
-                   <Link href="/Paddy/agriculture/settings/GrowthAnalysisSettings" onClick={() => setIsSettingsOpen(false)} className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"><Shield className="w-4 h-4 mr-3 text-gray-400" /> ตั้งค่าการวิเคราะห์การเจริญเติบโตข้าว
+                   <Link href="/Paddy/agriculture/settings/GrowthAnalysisSettings" onClick={() => setIsSettingsOpen(false)} className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"><Shield className="w-4 h-4 mr-3 text-gray-400" /> ตั้งค่าการส่งข้อมูล/วิเคราะห์การเจริญเติบโต
 </Link>
-                   <Link href="/settings/system" onClick={() => setIsSettingsOpen(false)} className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"><Database className="w-4 h-4 mr-3 text-gray-400" /> ตั้งค่าระบบ</Link>
+                   {/* <Link href="/settings/system" onClick={() => setIsSettingsOpen(false)} className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"><Database className="w-4 h-4 mr-3 text-gray-400" /> ตั้งค่าระบบ</Link> */}
                 </div>
               )}
             </div>
@@ -233,7 +233,7 @@ export default function Header() {
               </button>
 
               {isNotificationOpen && (
-                <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-gray-100 rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 overflow-hidden origin-top-right animate-in fade-in zoom-in-95 duration-100">
+<div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden origin-top-right animate-in fade-in zoom-in-95 duration-100">
                   <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-900">การแจ้งเตือน</h3>
                     {unreadCount > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">{unreadCount} ใหม่</span>}
@@ -259,9 +259,9 @@ export default function Header() {
                         ))
                     )}
                   </div>
-                  <Link href="/notifications" onClick={() => setIsNotificationOpen(false)} className="block px-4 py-3 text-center text-sm font-medium text-emerald-600 hover:text-emerald-800 hover:bg-gray-50 transition-colors">
+                  {/* <Link href="/notifications" onClick={() => setIsNotificationOpen(false)} className="block px-4 py-3 text-center text-sm font-medium text-emerald-600 hover:text-emerald-800 hover:bg-gray-50 transition-colors">
                     ดูทั้งหมด
-                  </Link>
+                  </Link> */}
                 </div>
               )}
             </div>
@@ -285,7 +285,7 @@ export default function Header() {
               </button>
 
               {isUserMenuOpen && (
-                <div className="absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 py-1 origin-top-right animate-in fade-in zoom-in-95 duration-100">
+<div className="absolute right-0 mt-3 w-56 bg-white border border-gray-100 rounded-xl shadow-xl py-1 origin-top-right animate-in fade-in zoom-in-95 duration-100">
                   <div className="px-4 py-3 border-b border-gray-50">
                     <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
                     <p className="text-xs text-gray-500 truncate">{user?.email}</p>
@@ -353,7 +353,8 @@ export default function Header() {
                  <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">บัญชีและการตั้งค่า</p>
                  <MobileNavItem href="/Paddy/agriculture/profile" icon={User} onClick={() => setIsMobileMenuOpen(false)}>โปรไฟล์</MobileNavItem>
                  <MobileNavItem href="/Paddy/agriculture/settings/WaterLeve" icon={Activity} onClick={() => setIsMobileMenuOpen(false)}>ระดับน้ำในแปลงนา</MobileNavItem>
-                 <MobileNavItem href="/settings/system" icon={Settings} onClick={() => setIsMobileMenuOpen(false)}>ตั้งค่าระบบ</MobileNavItem>
+                  <MobileNavItem href="/Paddy/agriculture/settings/GrowthAnalysisSettings" icon={Shield} onClick={() => setIsMobileMenuOpen(false)}>ตั้งค่าการการส่งข้อมูล/วิเคราะห์การเจริญเติบโต</MobileNavItem>
+                 {/* <MobileNavItem href="/settings/system" icon={Settings} onClick={() => setIsMobileMenuOpen(false)}>ตั้งค่าระบบ</MobileNavItem> */}
               </div>
 
               <div className="pt-4 mt-4 border-t border-gray-100">

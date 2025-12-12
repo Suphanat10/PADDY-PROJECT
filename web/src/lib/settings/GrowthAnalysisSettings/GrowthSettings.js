@@ -1,6 +1,16 @@
 import { apiFetch } from "@/lib/api";
 import Swal from "sweetalert2";
 
+
+// config.waterMin,
+//       config.waterMax,
+//       selectedRegID,
+
+//       setIsLoading,
+//       setSuccessMessage,
+//       setConfig,
+//       config.imageCaptureIntervalHours, 
+//       dataDaysToSend 
 export default async function GrowthSettings(
   waterMin,
   waterMax,
@@ -8,7 +18,8 @@ export default async function GrowthSettings(
    setIsLoading,
   setSuccessMessage,
   setConfig
-  ,imageCaptureIntervalHours
+  ,imageCaptureIntervalHours  ,
+   dataDaysToSend
 ) {
   try {
     if (!waterMin || !waterMax) {
@@ -40,8 +51,10 @@ export default async function GrowthSettings(
     const payload = {
       device_registrations_id: selectedRegID,
       Water_level_min: waterMin,
-      data_send_interval_days: imageCaptureIntervalHours,
+      data_send_interval_days: dataDaysToSend,
       Water_level_max: waterMax,
+      growth_analysis_period : imageCaptureIntervalHours,
+      
     };
 
     const result = await apiFetch("/api/setting/update", {

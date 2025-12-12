@@ -304,14 +304,10 @@ export default function DeviceRegistrationPage() {
           อุปกรณ์พร้อมใช้งานและเริ่มเก็บข้อมูลแล้ว
         </p>
 
-        {/* Ticket/Info Section */}
-        {/* <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 text-left mb-8 relative">
-          <div className="absolute -left-3 top-1/2 -mt-3 w-6 h-6 bg-white rounded-full border-r border-gray-100"></div>
-          <div className="absolute -right-3 top-1/2 -mt-3 w-6 h-6 bg-white rounded-full border-l border-gray-100"></div> */}
 
-          {/* <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-            รายละเอียดอุปกรณ์
-          </h3> */}
+       
+
+           
 
           {/* <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -338,7 +334,7 @@ export default function DeviceRegistrationPage() {
                 
               </span>
             </div>
-          </div> */}
+          </div>
 
           {/* <div className="mt-6 pt-4 border-t border-dashed border-gray-300 text-center">
             <p className="text-xs text-emerald-600 font-medium flex items-center justify-center gap-1">
@@ -351,7 +347,7 @@ export default function DeviceRegistrationPage() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4">
           <button
-            onClick={() => (window.location.href = "/dashboard")}
+            onClick={() => (window.location.href = "/Paddy/agriculture/dashboard")}
             className="flex-1 py-4 px-6 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all font-bold text-lg shadow-lg shadow-emerald-200 hover:shadow-xl flex items-center justify-center gap-2 transform hover:-translate-y-0.5 active:scale-[0.98]"
           >
             <LayoutDashboard size={20} /> ไปที่แดชบอร์ด

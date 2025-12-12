@@ -1,5 +1,5 @@
 let wsInstance = null; // ⭐ ป้องกัน WebSocket ถูกสร้างซ้ำ
-
+import Swal from "sweetalert2";
 export function createSensorWebSocket({
   url,
   deviceIds,
@@ -8,7 +8,7 @@ export function createSensorWebSocket({
   onSensorUpdate,
   onError,
 }) {
-  // ถ้ามี WebSocket อยู่แล้ว → ไม่สร้างใหม่
+  
   if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
     console.log("WS already connected. Reuse instance.");
     return wsInstance;
@@ -45,7 +45,6 @@ export function createSensorWebSocket({
         K: msg.npk?.K ?? msg.data?.K,
         water_level: msg.water_level ?? msg.data?.water_level,
         soil_moisture: msg.soil_moisture ?? msg.data?.soil_moisture,
-        battery: msg.battery ?? msg.data?.battery ?? 0,
       };
 
       const timestamp = new Date().toLocaleString("th-TH", {
@@ -63,7 +62,7 @@ export function createSensorWebSocket({
   ws.onclose = () => {
     console.log("WebSocket Closed");
     onDisconnected?.();
-    wsInstance = null;       // ⭐ ป้องกัน zombie connection
+    wsInstance = null;       
   };
 
   ws.onerror = (err) => {

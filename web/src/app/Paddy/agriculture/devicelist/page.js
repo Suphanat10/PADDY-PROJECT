@@ -151,39 +151,39 @@ export default function DeviceListPage() {
   
 
 
-  const [hasFirstData, setHasFirstData] = useState(false);
+  const [hasFirstData, setHasFirstData] = useState(true);
 
 
-useEffect(() => {
-  if (sensorDevices.length === 0) return;
+// useEffect(() => {
+//   if (sensorDevices.length === 0) return;
 
-  const deviceIds = sensorDevices.map(d => d.device_code);
+//   const deviceIds = sensorDevices.map(d => d.device_code);
 
-  createSensorWebSocket({
-    url: "ws://localhost:8000/",
-    deviceIds,
-    onConnected: () => setIsWsConnected(true),
-    onDisconnected: () => setIsWsConnected(false),
+//   createSensorWebSocket({
+//     url: "ws://localhost:8000/",
+//     deviceIds,
+//     onConnected: () => setIsWsConnected(true),
+//     onDisconnected: () => setIsWsConnected(false),
 
-    onSensorUpdate: (deviceId, data, timestamp) => {
-      setHasFirstData(true);
+//     onSensorUpdate: (deviceId, data, timestamp) => {
+//       setHasFirstData(true);
 
-      setSensorDevices(prev =>
-        prev.map(dev =>
-          dev.device_code === deviceId
-            ? { ...dev, sensor: data, lastUpdate: timestamp, status: "connected" }
-            : dev
-        )
-      );
-    },
+//       setSensorDevices(prev =>
+//         prev.map(dev =>
+//           dev.device_code === deviceId
+//             ? { ...dev, sensor: data, lastUpdate: timestamp, status: "connected" }
+//             : dev
+//         )
+//       );
+//     },
 
-    onError: () => setIsWsConnected(false),
-  });
+//     onError: () => setIsWsConnected(false),
+//   });
 
-  return () => {
-    closeSensorWebSocket();
-  };
-}, [sensorDevices.length]);
+//   return () => {
+//     closeSensorWebSocket();
+//   };
+// }, [sensorDevices.length]);
 
 
 
@@ -398,9 +398,14 @@ useEffect(() => {
 >
   ดูข้อมูลเซ็นเซอร์
 </Link>
-                {/* <button className="flex items-center justify-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
-                  <Settings className="w-4 h-4" /> ตั้งค่าอุปกรณ์
-                </button> */}
+               
+<Link
+  href={`/Paddy/agriculture/DeviceTransfer`}
+  className="flex items-center justify-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+>
+  <Settings className="w-4 h-4" />
+  ย้ายตำแหน่งอุปกรณ์
+</Link>
                 <button className="flex items-center justify-center gap-2 px-6 py-2.5 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors">
                   <Trash2 className="w-4 h-4" /> ลบอุปกรณ์
                 </button>
