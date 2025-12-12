@@ -35,7 +35,7 @@ export default function Header() {
     { name: "ลงทะเบียนอุปกรณ์", href: "/Paddy/agriculture/registerdevice", icon: PlusCircle },
     { name: "จัดการพื้นที่", href: "/Paddy/agriculture/FarmManagement", icon: Map },
     { name: "ข้อมูลอุปกรณ์", href: "/Paddy/agriculture/devicelist", icon: Database },
-    // { name: "สถิติ", href: "/Paddy/agriculture/statistics", icon: BarChart3 },
+    { name: "การวิเคราะห์การเจริญเติบโต", href: "/Paddy/agriculture/growthAnalysis", icon: BarChart3 },
   ];
 
   // --- Helper Functions ---

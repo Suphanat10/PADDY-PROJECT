@@ -19,7 +19,7 @@ import {
   Trash2,
   Calendar,
   ScanQrCode,
-  Battery,
+  ArrowLeftRight ,
   MapPin,
   Clock,
   Loader2
@@ -29,6 +29,7 @@ import Header from "../components/Header";
 import Footer from "@/app/components/Footer";
 import { closeSensorWebSocket } from "@/lib/devices/sensorWebSocket";
 import { loadDevicesService } from "@/lib/devices/loadDevices";
+import { deleteDeviceByCode } from "@/lib/devices/deleteDevice";
 import { createSensorWebSocket } from "@/lib/devices/sensorWebSocket";
 
 
@@ -148,42 +149,59 @@ export default function DeviceListPage() {
   fetchDevices();
 }, []);
 
+
+const handleDelete = async (deviceCode) => {
+  // เรียกใช้ฟังก์ชันลบอุปกรณ์
+  await deleteDeviceByCode({
+    deviceCode,
+    onSuccess: () => {
+      // รีเฟรชรายการอุปกรณ์หลังจากลบสำเร็จ
+      setSensorDevices((prev) => prev.filter((d) => d.device_code !== deviceCode));
+      setSelectedDevice(null);
+    },
+    onError: (err) => {
+      console.error("Delete device failed:", err);
+    },
+  });
+};
+
+
   
 
 
-  const [hasFirstData, setHasFirstData] = useState(true);
+  const [hasFirstData, setHasFirstData] = useState(false);
 
 
-// useEffect(() => {
-//   if (sensorDevices.length === 0) return;
+useEffect(() => {
+  if (sensorDevices.length === 0) return;
 
-//   const deviceIds = sensorDevices.map(d => d.device_code);
+  const deviceIds = sensorDevices.map(d => d.device_code);
 
-//   createSensorWebSocket({
-//     url: "ws://localhost:8000/",
-//     deviceIds,
-//     onConnected: () => setIsWsConnected(true),
-//     onDisconnected: () => setIsWsConnected(false),
+  createSensorWebSocket({
+    url: "ws://localhost:8000/",
+    deviceIds,
+    onConnected: () => setIsWsConnected(true),
+    onDisconnected: () => setIsWsConnected(false),
 
-//     onSensorUpdate: (deviceId, data, timestamp) => {
-//       setHasFirstData(true);
+    onSensorUpdate: (deviceId, data, timestamp) => {
+      setHasFirstData(true);
 
-//       setSensorDevices(prev =>
-//         prev.map(dev =>
-//           dev.device_code === deviceId
-//             ? { ...dev, sensor: data, lastUpdate: timestamp, status: "connected" }
-//             : dev
-//         )
-//       );
-//     },
+      setSensorDevices(prev =>
+        prev.map(dev =>
+          dev.device_code === deviceId
+            ? { ...dev, sensor: data, lastUpdate: timestamp, status: "connected" }
+            : dev
+        )
+      );
+    },
 
-//     onError: () => setIsWsConnected(false),
-//   });
+    onError: () => setIsWsConnected(false),
+  });
 
-//   return () => {
-//     closeSensorWebSocket();
-//   };
-// }, [sensorDevices.length]);
+  return () => {
+    closeSensorWebSocket();
+  };
+}, [sensorDevices.length]);
 
 
 
@@ -192,19 +210,17 @@ export default function DeviceListPage() {
     return sensorDevices.filter((device) => {
       const term = searchTerm.toLowerCase();
 
-      // 1. Filter by Search Term
+  
       const matchesSearch =
         (device.device_code || "").toLowerCase().includes(term) ||
         (device.farm || "").toLowerCase().includes(term) ||
         (device.area || "").toLowerCase().includes(term) ||
         (device.description || "").toLowerCase().includes(term);
 
-      // 2. Filter by Status dropdown
       let matchesStatus = true;
       if (filterStatus === "เชื่อมต่อแล้ว") matchesStatus = device.status === "connected";
       else if (filterStatus === "ขาดการเชื่อมต่อ") matchesStatus = device.status === "disconnected";
 
-      // 3. Filter by Area dropdown
       let matchesArea = true;
       if (filterArea !== "พื้นที่ทั้งหมด") {
         matchesArea = device.farm === filterArea || device.area === filterArea;
@@ -403,11 +419,13 @@ export default function DeviceListPage() {
   href={`/Paddy/agriculture/DeviceTransfer`}
   className="flex items-center justify-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
 >
-  <Settings className="w-4 h-4" />
+  <ArrowLeftRight  className="w-4 h-4" />
   ย้ายตำแหน่งอุปกรณ์
 </Link>
-                <button className="flex items-center justify-center gap-2 px-6 py-2.5 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors">
-                  <Trash2 className="w-4 h-4" /> ลบอุปกรณ์
+                <button className="flex items-center justify-center gap-2 px-6 py-2.5 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors"
+                 onClick={() => handleDelete(selected.device_code)}
+                >
+                  <Trash2 className="w-4 h-4" /> ยกเลิกการลงทะเบียน
                 </button>
               </div>
             </div>
