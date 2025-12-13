@@ -5,11 +5,10 @@ export async function loadGrowthAnalysis(fetcher) {
   const historyList = [];
 
   data.forEach(device => {
-    // =========================
-    // 1) Device List
-    // =========================
+
     devicesList.push({
       reg_id: device.device_registrations_id,
+      device_id : device.device_id,
       device_code: device.device_code,
       area_name: device.area_name,
       farm_name: device.farm_name,
@@ -17,17 +16,12 @@ export async function loadGrowthAnalysis(fetcher) {
         Array.isArray(device.growth_analysis) &&
         device.growth_analysis.length > 0
     });
-
-    // =========================
-    // 2) Growth Analysis
-    // =========================
     if (
       !Array.isArray(device.growth_analysis) ||
       device.growth_analysis.length === 0
     ) {
       return;
     }
-
     device.growth_analysis.forEach(ga => {
       historyList.push({
         analysis_id: ga.analysis_id,

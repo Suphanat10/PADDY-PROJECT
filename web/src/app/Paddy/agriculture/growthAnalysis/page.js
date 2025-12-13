@@ -114,7 +114,7 @@ useEffect(() => {
              >
                 <option value="all">แสดงทุกอุปกรณ์</option>
                 {devicesList.map(dev => (
-                   <option key={dev.device_code} value={dev.device_code}>
+                   <option key={dev.reg_id} value={dev.reg_id}>
                       {dev.device_code} - {dev.farm_name} - ({dev.area_name})
                    </option>
                 ))}
