@@ -77,7 +77,7 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
                 subItems={[
                   { 
                     text: 'เพิ่ม/ลบ เเก้ไขอุปกรณ์', 
-                    href: '/Paddy/admin/manage-devices', 
+                    href: '/Paddy/admin/devices', 
                     active: activeMenu === 'manageDevices-List',
                     onClick: () => setActiveMenu('manageDevices-List')
                   },

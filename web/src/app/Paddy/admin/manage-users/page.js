@@ -505,7 +505,6 @@ const deleteSubArea = (areaId) => {
       const success = await deleteSubAreaAPI(areaId);
       if (!success) return;
 
-      // ✅ update state
       const updatedSubAreas = currentFarmForSubArea.areas.filter(
         (a) => a.area_id !== areaId
       );
