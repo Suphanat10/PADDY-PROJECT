@@ -220,83 +220,77 @@ export const  updateUserList = async (userData, setUsers) => {
 
   
 
-
-export const createFarm = async ({
-      user_ID, farmFormData
-}) => {
+export const createFarm = async (user_ID, farmFormData) => {
   try {
+    console.log("Creating farm for user ID:", user_ID);
+    console.log("Farm data:", farmFormData);
 
-   console.log("Creating farm for user ID:", user_ID, "with data:", farmFormData);
     if (
-      !user_ID ||
-      !farmData.farm_name ||
-      !farmData.area ||
-      !farmData.rice_variety ||
-      !farmData.planting_method ||
-      !farmData.soil_type ||
-      !farmData.water_management ||
-      !farmData.address
+      !farmFormData.farm_name ||
+      !farmFormData.area ||
+      !farmFormData.rice_variety ||
+      !farmFormData.planting_method ||
+      !farmFormData.soil_type ||
+      !farmFormData.water_management ||
+      !farmFormData.address
     ) {
       Swal.fire({
         icon: "warning",
         title: "ข้อมูลไม่ครบถ้วน",
         text: "กรุณากรอกข้อมูลฟาร์มให้ครบถ้วน",
       });
-      return;
+      return null;
     }
 
-    // =============================
-    // 2) ยิง API จริง
-    // =============================
+    if (!user_ID) {
+      Swal.fire({
+        icon: "warning",
+        title: "ข้อมูลไม่ครบถ้วน",
+        text: "ไม่พบรหัสผู้ใช้สำหรับสร้างฟาร์ม",
+      });
+      return null;
+    }
+
+
+    // ยิง API จริง
     const res = await apiFetch("/api/admin/farm/create", {
       method: "POST",
       body: {
-        user_ID: user_ID,
+         user_id: user_ID,
         ...farmFormData,
       },
     });
+         if (!res.ok) {
+        Swal.fire({
+          icon: "error",
+          title: "สร้างฟาร์มล้มเหลว",
+          text: result.message || "เกิดข้อผิดพลาดในการสร้างข้อมูล",
+        });
+        return;
+      } 
 
-    if (!res || res.status >= 400 || res.error) {
-      Swal.fire({
-        icon: "error",
-        title: "สร้างฟาร์มไม่สำเร็จ",
-        text: res?.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
-      });
-      return;
-    }
-
-    // backend ส่ง farm กลับมา
-    const createdFarm = {
-      ...res.farm,
-      areas: res.farm?.areas || [],
-    };
-
-    // =============================
-    // 3) Update state (UI)
-    // =============================
-    const newFarms = [...(userFormData.Farm || []), createdFarm];
-
-    setUserFormData({
-      ...userFormData,
-      Farm: newFarms,
-    });
-
-    setUsers(
-      users.map((u) =>
-        u.user_ID === userId
-          ? { ...u, Farm: newFarms }
-          : u
-      )
-    );
+      if(!res || res.error || res.status >= 400){
+        Swal.fire({
+          icon: "error",
+          title: "ไม่สามารถสร้างฟาร์มได้",
+          text: res?.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
+        });
+        return null;
+      }
 
     Swal.fire({
       icon: "success",
       title: "สร้างฟาร์มสำเร็จ",
-      text: "เพิ่มแปลงเกษตรเรียบร้อยแล้ว",
+      text: "บันทึกข้อมูลแล้ว",
     });
 
 
-    return createdFarm;
+      
+    
+    return {
+      ...res.data.farmArea,
+      areas: res.data.farmArea?.areas || [],
+    };
 
   } catch (err) {
     console.error("CREATE FARM ERROR:", err);
@@ -305,6 +299,248 @@ export const createFarm = async ({
       title: "ข้อผิดพลาด",
       text: err.message || "ไม่สามารถสร้างฟาร์มได้",
     });
-  } finally {
+    return null;
+  }
+};
+
+
+export const deleteFarm = async (farm_id) => {
+  try {
+    if (!farm_id) {
+      Swal.fire({
+        icon: "warning",
+        title: "ไม่พบรหัสฟาร์ม",
+        text: "กรุณาระบุรหัสฟาร์มที่ต้องการลบ",
+      });
+      return false;
+    }
+
+    const res = await apiFetch("/api/farm-area/delete", {
+      method: "POST",
+      body: { farm_id },
+    });
+
+    if (!res.ok) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถลบฟาร์มได้",
+        text: res?.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
+      });
+      return false;
+    }
+
+    Swal.fire({
+      icon: "success",
+      title: "ลบฟาร์มสำเร็จ",
+      text: "ข้อมูลฟาร์มถูกลบแล้ว",
+    });
+
+    return true;
+
+  } catch (err) {
+    console.error("DELETE FARM ERROR:", err);
+    Swal.fire({
+      icon: "error",
+      title: "ข้อผิดพลาด",
+      text: err.message || "ไม่สามารถลบฟาร์มได้",
+    });
+    return false;
+  }
+};
+
+
+export const updateFarm = async (farm_id, farmFormData) => {
+  try {
+    if (
+      !farm_id ||
+      !farmFormData?.farm_name ||
+      !farmFormData?.area ||
+      !farmFormData?.rice_variety ||
+      !farmFormData?.planting_method ||
+      !farmFormData?.soil_type ||
+      !farmFormData?.water_management ||
+      !farmFormData?.address
+    ) {
+      Swal.fire({
+        icon: "warning",
+        title: "ข้อมูลไม่ครบถ้วน",
+        text: "กรุณากรอกข้อมูลฟาร์มให้ครบถ้วน",
+      });
+      return null;
+    }
+
+    const res = await apiFetch("/api/admin/farm/update", {
+      method: "POST",
+      body: {
+        farm_id,
+        ...farmFormData,
+      },
+    });
+
+    if (!res.ok) {
+      Swal.fire({
+        icon: "error",
+        title: "แก้ไขฟาร์มไม่สำเร็จ",
+        text: res?.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
+      });
+      return null;
+    }
+
+    Swal.fire({
+      icon: "success",
+      title: "แก้ไขฟาร์มสำเร็จ",
+      text: "ข้อมูลฟาร์มถูกอัปเดตแล้ว",
+    });
+
+    return res.data.farmArea;
+
+  } catch (err) {
+    console.error("UPDATE FARM ERROR:", err);
+    Swal.fire({
+      icon: "error",
+      title: "ข้อผิดพลาด",
+      text: err.message || "ไม่สามารถแก้ไขฟาร์มได้",
+    });
+    return null;
+  }
+};
+
+
+
+export const createSubArea = async (farm_id, area_name) => {
+  try {
+    if (!farm_id || !area_name?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "ข้อมูลไม่ครบถ้วน",
+        text: "กรุณาระบุชื่อพื้นที่ย่อย",
+      });
+      return null;
+    }
+
+    const res = await apiFetch("/api/admin/area/create", {
+      method: "POST",
+      body: {
+        farm_id,
+        area_name,
+      },
+    });
+
+    if (!res.ok || res.error) {
+      Swal.fire({
+        icon: "error",
+        title: "เพิ่มพื้นที่ย่อยไม่สำเร็จ",
+        text: res?.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
+      });
+      return null;
+    }
+
+    Swal.fire({
+      icon: "success",
+      title: "เพิ่มพื้นที่ย่อยสำเร็จ",
+      text: "พื้นที่ย่อยถูกเพิ่มเรียบร้อยแล้ว",
+    });
+
+    return res.data.sub_area;
+
+  } catch (err) {
+    console.error("CREATE SUB AREA ERROR:", err);
+    Swal.fire({
+      icon: "error",
+      title: "ข้อผิดพลาด",
+      text: err.message || "ไม่สามารถเพิ่มพื้นที่ย่อยได้",
+    });
+    return null;
+  }
+};
+
+
+export const updateSubArea = async (area_id, area_name) => {
+  try {
+    if (!area_id || !area_name?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "ข้อมูลไม่ครบถ้วน",
+        text: "กรุณาระบุชื่อพื้นที่ย่อย",
+      });
+      return null;
+    }
+
+    const res = await apiFetch("/api/admin/area/update", {
+      method: "POST",
+      body: {
+        area_id,
+        area_name,
+      },
+    });
+
+    if (!res.ok || res.error) {
+      Swal.fire({
+        icon: "error",
+        title: "แก้ไขพื้นที่ย่อยไม่สำเร็จ",
+        text: res?.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
+      });
+      return null;
+    }
+
+    Swal.fire({
+      icon: "success",
+      title: "แก้ไขพื้นที่ย่อยสำเร็จ",
+      text: "ชื่อพื้นที่ย่อยถูกอัปเดตแล้ว",
+    });
+
+    return res.data.subArea;
+
+  } catch (err) {
+    console.error("UPDATE SUB AREA ERROR:", err);
+    Swal.fire({
+      icon: "error",
+      title: "ข้อผิดพลาด",
+      text: err.message || "ไม่สามารถแก้ไขพื้นที่ย่อยได้",
+    });
+    return null;
+  }
+};
+
+export const deleteSubAreaAPI = async (area_id) => {
+  try {
+    if (!area_id) {
+      Swal.fire({
+        icon: "warning",
+        title: "ไม่พบรหัสพื้นที่ย่อย",
+        text: "กรุณาระบุพื้นที่ย่อยที่ต้องการลบ",
+      });
+      return false;
+    }
+
+    const res = await apiFetch("/api/admin/area/delete", {
+      method: "POST",
+      body: { area_id },
+    });
+
+    if (!res.ok || res.error) {
+      Swal.fire({
+        icon: "error",
+        title: "ลบพื้นที่ย่อยไม่สำเร็จ",
+        text: res?.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
+      });
+      return false;
+    }
+
+    Swal.fire({
+      icon: "success",
+      title: "ลบพื้นที่ย่อยสำเร็จ",
+      text: "พื้นที่ย่อยถูกลบเรียบร้อยแล้ว",
+    });
+
+    return true;
+  } catch (err) {
+    console.error("DELETE SUB AREA ERROR:", err);
+    Swal.fire({
+      icon: "error",
+      title: "ข้อผิดพลาด",
+      text: err.message || "ไม่สามารถลบพื้นที่ย่อยได้",
+    });
+    return false;
   }
 };
