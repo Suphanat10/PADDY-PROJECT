@@ -358,50 +358,7 @@ export default function AdminDashboardPage() {
   const [aiContent, setAiContent] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  // ฟังก์ชันเรียกใช้งาน Gemini API
-  const generateGeminiInsight = async () => {
-    setIsAiModalOpen(true);
-    setIsAiLoading(true);
-    setAiContent('');
 
-    const apiKey = ""; // ในระบบจริงควรใช้ Environment Variable หรือ API Proxy
-    
-    // ข้อมูลจำลองสถานะระบบเพื่อส่งให้ AI วิเคราะห์ (ในระบบจริงควรดึงจาก Database)
-    const systemStats = `
-      System Status Report for Paddy Smart:
-      - Total Users: 2,543 (+12.5% increase)
-      - Online Devices: 1,890 (+8.2% stability)
-      - Today's Alerts: 15 (-2.1% decrease from avg)
-      - Data Usage: 45 GB (+5.4% load)
-      - System Health: All services operational.
-    `;
-    
-    const prompt = `
-      คุณคือ AI ผู้ช่วยอัจฉริยะสำหรับระบบ "Paddy Smart" (Platform บริหารจัดการนาข้าว IoT).
-      โปรดวิเคราะห์ข้อมูลสถานะระบบต่อไปนี้ และเขียน "รายงานสรุปสำหรับผู้บริหาร" (Executive Summary):
-      ${systemStats}
-
-      สิ่งที่ต้องการในคำตอบ:
-      1. สรุปภาพรวมสถานะระบบสั้นๆ
-      2. แนะนำ 3 สิ่งที่ Admin ควรตรวจสอบหรือทำต่อไป
-      3. ใช้น้ำเสียงเป็นทางการและใช้ภาษาไทย
-    `;
-
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-      });
-      if (!response.ok) throw new Error("API Request Failed");
-      const data = await response.json();
-      setAiContent(data.candidates?.[0]?.content?.parts?.[0]?.text || "ไม่ได้รับข้อมูลจาก AI");
-    } catch (error) {
-      setAiContent("เกิดข้อผิดพลาดในการเชื่อมต่อ AI กรุณาตรวจสอบ API Key หรือการเชื่อมต่ออินเทอร์เน็ต");
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
 
   return (
     <div className="flex h-screen bg-slate-100  text-slate-600">
@@ -418,7 +375,6 @@ export default function AdminDashboardPage() {
   
         <AdminHeader 
           setSidebarOpen={setSidebarOpen} 
-          onAiClick={generateGeminiInsight} 
         />
 
 
@@ -437,10 +393,7 @@ export default function AdminDashboardPage() {
 
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
-            {/* <AlertStatusChart />
-            <UserGrowthChart />
-            <DevicePerformanceChart />
-            <SystemUsageChart /> */}
+    
           </div>
 
         </main>

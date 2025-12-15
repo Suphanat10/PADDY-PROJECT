@@ -24,7 +24,7 @@ export function useSensorHistory(deviceId) {
         console.log("Raw API Response:", res);
 
         if (!res || !Array.isArray(res.data?.sensor_data)) {
-          console.error("❌ sensor_data missing or not array:", res);
+          console.error("sensor_data missing or not array:", res);
           setHistoricalData([]);
           return;
         }

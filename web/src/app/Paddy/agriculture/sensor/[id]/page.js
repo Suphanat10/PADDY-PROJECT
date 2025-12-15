@@ -45,11 +45,12 @@ import { useSensorWebSocket } from "@/lib/sensor/useSensorWebSocket";
 import { useSensorHistory } from "@/lib/sensor/useSensorHistory";
 
 
+
 export default function SensorDetailPage() {
 
 const { id } = useParams();
   const { historicalData, isLoading } = useSensorHistory(id);
-  const { currentData, isSocketConnected } = useSensorWebSocket(id);
+  const { currentData, isSocketConnected ,  } = useSensorWebSocket(id);
   const [sensorInfo, setSensorInfo] = useState(null);
 
   
@@ -76,7 +77,6 @@ const { id } = useParams();
     const maxLevel = 30;
     const waterHeight = Math.min((data.value / maxLevel) * 100, 100);
 
-   
 
     return (
       <div>
@@ -87,8 +87,6 @@ const { id } = useParams();
                 <div className="absolute top-0 w-full h-8 bg-gray-100 border-b border-gray-300"></div>
                 <div className="absolute top-8 w-full h-16 bg-gray-100 border-b border-gray-300"></div>
                 <div className="absolute top-24 w-full h-8 bg-gray-100"></div>
-
-                {/* Animated Water Level */}
                 <div
                   className="absolute bottom-0 w-full bg-gradient-to-t from-blue-400 to-blue-300 transition-all duration-700 ease-in-out"
                   style={{ height: `${waterHeight}%` }}

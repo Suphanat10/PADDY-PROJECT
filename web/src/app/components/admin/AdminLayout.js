@@ -15,7 +15,8 @@ import {
   Mail,
   Sprout,
   BarChart2,
-  Sparkles,
+  Send ,
+  Computer ,
   X
 } from 'lucide-react';
 import { SidebarItem } from './AdminUI';
@@ -72,7 +73,7 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
               
               {/* Farmers Menu with Submenu */}
               <SidebarItem 
-                icon={<Users size={20} />} text="จัดการอุปกรณ์ IoT"
+                icon={<Computer  size={20} />} text="จัดการอุปกรณ์ IoT"
                 active={activeMenu.startsWith('manageDevices')}
                 subItems={[
                   { 
@@ -82,19 +83,22 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
                     onClick: () => setActiveMenu('manageDevices-List')
                   },
                   { 
-                    text: 'ข้อมูลอุปกรณ์ IOT',
-                    href: '/Paddy/admin/manage-devices/new', 
-                    active: activeMenu === 'manageDevices-Add',
-                    onClick: () => setActiveMenu('manageDevices-Add')
+                    text: 'ข้อมูลการลงทะเบียนอุปกรณ์',
+                    href: '/Paddy/admin/registered-devices', 
+                    active: activeMenu === 'registered-devices',
+                    onClick: () => setActiveMenu('registered-devices')
                   },
-                  { 
-                    text: 'การส่งข้อมูลอุปกรณ์', 
-                    href: '/Paddy/admin/manage-devices/data', 
-                    active: activeMenu === 'manageDevices-Data',
-                    onClick: () => setActiveMenu('manageDevices-Data')
-                  }
                 ]}
               />
+              <SidebarItem 
+                icon={<Send  size={20} />} 
+                text="ภาพรวมการส่งข้อมูล"
+                href="/Paddy/admin/send-data"
+                active={activeMenu === 'SendData'} 
+                onClick={() => setActiveMenu('SendData')}
+              />
+
+
 
               <SidebarItem 
                 icon={<BarChart2 size={20} />} 

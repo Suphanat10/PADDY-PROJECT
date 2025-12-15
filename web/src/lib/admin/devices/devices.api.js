@@ -153,12 +153,12 @@ export async function updateDevice(device_id, device_code, setDevices) {
       title: "อัปเดตอุปกรณ์สำเร็จ",
       text: result.message || "ข้อมูลอุปกรณ์ถูกอัปเดตแล้ว",
       });
-      setDevices((prev) =>
-      prev.map((d) =>
-         d.device_ID === device_id
-         ? { ...d, device_code: device_code }
-         : d
-      )
+      setDevices((prev) => 
+         prev.map((device) =>
+            device.device_ID === device_id
+               ? { ...device, device_code: device_code }
+               : device
+         )
       );
    }
    catch (err) {
