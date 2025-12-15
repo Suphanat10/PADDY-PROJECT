@@ -26,7 +26,7 @@ import {
   ChevronRight,
   MoreHorizontal,
   FileText,
-  Activity
+   Loader2
 } from "lucide-react";
 import { AdminSidebar, AdminHeader } from '../../../components/admin/AdminLayout';
 import { apiFetch } from "@/lib/api";
@@ -96,43 +96,50 @@ export default function SystemLogsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [Loading , setLoading] = useState(false);
   const itemsPerPage = 6;
    const [Data_logs , setData_logs ] = useState([]);
 
   
       useEffect(() => {
+          setLoading(true);
 const fetchDataLogs = async () => {         
     const response = await apiFetch('/api/admin/log', { method: 'GET' });
             if(!response.ok) return;
             const data = response.data;
             console.log("Fetched Logs:", data);
             setData_logs (data);
+            setLoading(false);
          }
          fetchDataLogs();
       }, []);
 
 
-  const activityData = useMemo(() => {
-      const counts = {};
-      Data_logs.forEach(log => {
-         const date = new Date(log.created_at).toISOString().split('T')[0];
-         counts[date] = (counts[date] || 0) + 1;
-      });
+const activityData = useMemo(() => {
+  if (!Data_logs || Data_logs.length === 0) return [];
 
-      
+  const counts = new Map();
 
-    // แปลงเป็น Array และเรียงตามวันที่
-    return Object.keys(counts).sort().map(date => {
-        // จัดรูปแบบวันที่ให้สวยงาม (เช่น "14 Dec")
-        const dateObj = new Date(date);
-        const displayDate = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
-        return {
-            date: displayDate,
-            count: counts[date],
-            fullDate: date
-        };
-    });
-  }, []);
+  for (let i = 0; i < Data_logs.length; i++) {
+    const dateKey = Data_logs[i].created_at.slice(0, 10); // YYYY-MM-DD
+    counts.set(dateKey, (counts.get(dateKey) || 0) + 1);
+  }
+
+  const formatter = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+  });
+
+  return Array.from(counts.entries())
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([date, count]) => ({
+      date: formatter.format(new Date(date)),
+      count,
+      fullDate: date,
+    }));
+
+}, [Data_logs]);
+
 
   const filteredLogs = Data_logs.filter(log => {
     const searchLower = searchTerm.toLowerCase();
@@ -178,7 +185,14 @@ const fetchDataLogs = async () => {
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-7xl mx-auto space-y-6">
+
             
+        {Loading && (
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center">
+            <Loader2 className="animate-spin text-green-600" size={48} />
+          </div>
+        )}
+
             {/* Page Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
