@@ -111,7 +111,7 @@ const AlertModal = ({ isOpen, onClose, message }) => {
 };
 
 export default function UserFarmManagement() {
-  const [activeMenu, setActiveMenu] = useState("จัดการผู้ใช้งาน");
+  const [activeMenu, setActiveMenu] = useState("manageDevices-List");
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 

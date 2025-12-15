@@ -15,8 +15,10 @@ import {
   Mail,
   Sprout,
   BarChart2,
+  AlarmClock ,
   Send ,
   Computer ,
+  ClipboardClock ,
   X
 } from 'lucide-react';
 import { SidebarItem } from './AdminUI';
@@ -54,7 +56,7 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
         {/* Menu Items */}
         <div className="no-scrollbar flex-1 overflow-y-auto p-4 space-y-8">
           <div>
-            <h3 className="mb-4 ml-4 text-xs font-bold text-slate-400 uppercase tracking-wider">MENU</h3>
+            <h3 className="mb-4 ml-4 text-xs font-bold text-slate-400 uppercase tracking-wider">เมนู</h3>
             <nav className="space-y-1">
               <SidebarItem 
                 icon={<LayoutDashboard size={20} />} 
@@ -87,6 +89,7 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
                     href: '/Paddy/admin/registered-devices', 
                     active: activeMenu === 'registered-devices',
                     onClick: () => setActiveMenu('registered-devices')
+          
                   },
                 ]}
               />
@@ -102,7 +105,7 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
 
               <SidebarItem 
                 icon={<BarChart2 size={20} />} 
-                text="AI Analytics"
+                text="การวิเคราะห์ขการเจริญเติบโต"
                 href="/admin/analytics" 
                 active={activeMenu === 'Analytics'} 
                 onClick={() => setActiveMenu('Analytics')}
@@ -111,10 +114,10 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
           </div>
 
           <div>
-            <h3 className="mb-4 ml-4 text-xs font-bold text-slate-400 uppercase tracking-wider">SUPPORT</h3>
+            <h3 className="mb-4 ml-4 text-xs font-bold text-slate-400 uppercase tracking-wider">ประวัติ/การตั้งค่า</h3>
             <nav className="space-y-1">
-              <SidebarItem icon={<MessageSquare size={20} />} text="Chat" href="/admin/chat" />
-              <SidebarItem icon={<Mail size={20} />} text="Email" badge="2" href="/admin/email" />
+              <SidebarItem icon={<ClipboardClock  size={20} />} text="ประวัติการเข้าใช้งานระบบ" href ="/Paddy/admin/activity-log" />
+              <SidebarItem icon={<AlarmClock  size={20} />} text="ประวัติการส่งแจ้งเตือน" href="/admin/email" />
               <SidebarItem icon={<Settings size={20} />} text="Settings" href="/admin/settings" />
             </nav>
           </div>

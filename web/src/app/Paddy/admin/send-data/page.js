@@ -29,6 +29,7 @@ import { useMonitorWebSocket } from "@/lib/admin/send-data/useMonitorWebSocket";
 export default function SystemLogPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [activeMenu, setActiveMenu] = useState("sendData");
 
   const [devices, setDevices] = useState([]);
   const [logs, setLogs] = useState([]);
@@ -85,7 +86,7 @@ export default function SystemLogPage() {
       <AdminSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        activeMenu="monitor"
+        activeMenu={activeMenu}
       />
 
       <div className="flex flex-1 flex-col relative z-0">
