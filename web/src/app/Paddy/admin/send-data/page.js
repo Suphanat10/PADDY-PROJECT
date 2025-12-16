@@ -127,7 +127,7 @@ export default function SystemLogPage() {
                     กำลังส่งข้อมูล (Online)
                   </p>
                   <h3 className="text-2xl font-bold text-green-700">
-                    {onlineDevices}
+                    {totalDevices - offlineDevices}
                   </h3>
                 </div>
                 <div className="relative z-10 p-3 bg-green-100 rounded-lg text-green-600">

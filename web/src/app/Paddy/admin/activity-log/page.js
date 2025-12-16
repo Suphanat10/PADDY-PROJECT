@@ -178,21 +178,23 @@ const activityData = useMemo(() => {
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-600  overflow-hidden">
-      <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activeMenu="logs" />
+      <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activeMenu="ActivityLog" />
 
       <div className="flex flex-1 flex-col relative z-0">
         <AdminHeader setSidebarOpen={setSidebarOpen} />
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
-
-            
+               
         {Loading && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center">
             <Loader2 className="animate-spin text-green-600" size={48} />
           </div>
         )}
 
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="max-w-7xl mx-auto space-y-6">
+
+     
             {/* Page Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>

@@ -116,9 +116,32 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
           <div>
             <h3 className="mb-4 ml-4 text-xs font-bold text-slate-400 uppercase tracking-wider">ประวัติ/การตั้งค่า</h3>
             <nav className="space-y-1">
-              <SidebarItem icon={<ClipboardClock  size={20} />} text="ประวัติการเข้าใช้งานระบบ" href ="/Paddy/admin/activity-log" />
-              <SidebarItem icon={<AlarmClock  size={20} />} text="ประวัติการส่งแจ้งเตือน" href="/admin/email" />
-              <SidebarItem icon={<Settings size={20} />} text="Settings" href="/admin/settings" />
+              <SidebarItem icon={<ClipboardClock  size={20} />} text="ประวัติการเข้าใช้งานระบบ" href ="/Paddy/admin/activity-log"  
+              active={activeMenu === 'ActivityLog'} 
+              onClick={() => setActiveMenu('ActivityLog')}
+               />
+              <SidebarItem icon={<AlarmClock  size={20} />} text="ประวัติการส่งแจ้งเตือน" href="/Paddy/admin/notification/" 
+              active={activeMenu === 'notification'} 
+              onClick={() => setActiveMenu('notification')}
+              />
+              <SidebarItem icon={<Settings size={20} />} text="Settings"
+              setActiveMenu={() => setActiveMenu('Settings')}
+               subItems={[
+                  { 
+                    text: 'ตั้งค่าทั่วไป', 
+                    href: '/Paddy/admin/settings/general',
+                    active: activeMenu === 'Settings-General',
+                    onClick: () => setActiveMenu('Settings-General')
+                  },
+                  { 
+                    text: 'ตั้งค่าข้อความแจ้งเตือน', 
+                    href: '/Paddy/admin/settings/account',
+                    active: activeMenu === 'Settings-Account',
+                    onClick: () => setActiveMenu('Settings-Account')
+                  },
+                ]}
+              />
+                
             </nav>
           </div>
         </div>
