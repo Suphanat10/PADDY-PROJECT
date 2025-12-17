@@ -19,6 +19,7 @@ import {
   Send ,
   Computer ,
   ClipboardClock ,
+  Bot   ,
   X
 } from 'lucide-react';
 import { SidebarItem } from './AdminUI';
@@ -93,6 +94,10 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
                   },
                 ]}
               />
+
+             
+               
+
               <SidebarItem 
                 icon={<Send  size={20} />} 
                 text="ภาพรวมการส่งข้อมูล"
@@ -100,16 +105,18 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
                 active={activeMenu === 'SendData'} 
                 onClick={() => setActiveMenu('SendData')}
               />
-
-
-
               <SidebarItem 
-                icon={<BarChart2 size={20} />} 
+                icon={<Bot  size={20} />} 
                 text="การวิเคราะห์ขการเจริญเติบโต"
-                href="/admin/analytics" 
+                href="/Paddy/admin/analytics" 
                 active={activeMenu === 'Analytics'} 
                 onClick={() => setActiveMenu('Analytics')}
               />
+
+           
+
+
+               
             </nav>
           </div>
 
@@ -133,12 +140,7 @@ const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }
                     active: activeMenu === 'Settings-General',
                     onClick: () => setActiveMenu('Settings-General')
                   },
-                  { 
-                    text: 'ตั้งค่าข้อความแจ้งเตือน', 
-                    href: '/Paddy/admin/settings/account',
-                    active: activeMenu === 'Settings-Account',
-                    onClick: () => setActiveMenu('Settings-Account')
-                  },
+                 
                 ]}
               />
                 

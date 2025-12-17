@@ -17,32 +17,28 @@ import {
   Filter,
   Computer,
   Eye,
-  Loader2, 
+  Loader2,
   FileText,
-  Activity, 
+  Activity,
+  ArrowRightLeft,
 } from "lucide-react";
-
 
 import {
   AdminSidebar,
   AdminHeader,
 } from "../../../components/admin/AdminLayout";
 import { fetchDeviceRegistrations } from "@/lib/admin/deviceRegistrations/deviceRegistrations.api";
-import  Footer  from "@/app/components/Footer";
-
-
-
-
+import Footer from "@/app/components/Footer";
 
 export default function RegistrationListPage() {
   // State สำหรับจัดการ Sidebar และ Menu
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeMenu, setActiveMenu] = useState("registered-devices"); 
+  const [activeMenu, setActiveMenu] = useState("registered-devices");
 
   // State สำหรับข้อมูลและการค้นหา
   const [searchTerm, setSearchTerm] = useState("");
-  const [registrations, setRegistrations] = useState([]); 
-  const [loading, setLoading] = useState(true); 
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // คำนวณข้อมูลสรุป (Stats)
   const totalRegistrations = registrations.length;
@@ -51,32 +47,31 @@ export default function RegistrationListPage() {
   ).length;
   const inactiveRegistrations = totalRegistrations - activeRegistrations;
 
-useEffect(() => {
-  let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-  async function loadData() {
-    try {
-      setLoading(true);
-      const data = await fetchDeviceRegistrations();
-      if (isMounted) {
-        setRegistrations(data);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      if (isMounted) {
-        setLoading(false);
+    async function loadData() {
+      try {
+        setLoading(true);
+        const data = await fetchDeviceRegistrations();
+        if (isMounted) {
+          setRegistrations(data);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
-  }
 
-  loadData();
+    loadData();
 
-  return () => {
-    isMounted = false;
-  };
-}, []);
-
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("th-TH", {
@@ -88,7 +83,6 @@ useEffect(() => {
     });
   };
 
-
   const filteredRegistrations = registrations.filter(
     (reg) =>
       reg.Device.device_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -97,10 +91,7 @@ useEffect(() => {
       reg.Area.Farm.farm_name.includes(searchTerm)
   );
 
-  
-  const handleViewDetails = (id, deviceCode) => {
-     
-  };
+  const handleViewDetails = (id, deviceCode) => {};
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-600">
@@ -323,30 +314,34 @@ useEffect(() => {
                           {/* Action Column (เพิ่มปุ่มดูข้อมูล) */}
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex items-center justify-end gap-2">
-                              <Link href={`/Paddy/admin/sensor/${item.Device.device_code}`}>
-  <button
-    type="button"
-    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 shadow-sm"
-  >
-    <Eye size={16} />
-    <span>ดูข้อมูล</span>
-  </button>
-</Link>
-                              {/* <button
-                                onClick={() =>
-                                  handleViewDetails(
-                                    item.device_registrations_ID,
-                                    item.Device.device_code
-                                  )
-                                }
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 shadow-sm"
+                              <Link
+                                href={`/Paddy/admin/sensor/${item.Device.device_code}`}
                               >
-                                <Eye size={16} />
-                                <span>ดูข้อมูล</span>
-                              </button> */}
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100 shadow-sm"
+                                >
+                                  <Eye size={16} />
+                                  <span>ดูข้อมูล</span>
+                                </button>
+                              </Link>
+
+                              <Link
+                                href={`/Paddy/admin/Move-device-registration/${item.Account.user_ID}/${item.device_registrations_ID}`}
+                              >
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 shadow-sm"
+                                >
+                                  <ArrowRightLeft size={16} />
+                                  <span>ย้ายพื้นที่</span>
+                                </button>
+                              </Link>
+
+                              {/* 
                               <button className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-lg">
                                 <MoreVertical size={18} />
-                              </button>
+                              </button> */}
                             </div>
                           </td>
                         </tr>
@@ -387,7 +382,7 @@ useEffect(() => {
             </div>
           </div>
         </main>
-      <Footer />
+        <Footer />
       </div>
     </div>
   );

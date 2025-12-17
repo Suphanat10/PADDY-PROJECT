@@ -9,7 +9,7 @@ const kanit = Kanit({
 })
 
 export const metadata = {
-  title: 'My App',
+  title: 'PaddySmart',
   description: 'This is a login app',
 }
 

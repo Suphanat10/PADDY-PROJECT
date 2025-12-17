@@ -86,7 +86,7 @@ export default function SystemSettingsPage() {
       <AdminSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        activeMenu="settings"
+        activeMenu="Settings-General"
       />
 
       <div className="flex flex-1 flex-col relative z-0">
@@ -235,12 +235,15 @@ export default function SystemSettingsPage() {
                         }
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700  font-medium"
                         >
-                           <option value={0.5}>ส่งข้อมูลทุก 30 นาที</option>
-                         <option value={1}>ส่งข้อมูลทุก 1 วัน</option>
-                         <option value={3}>ส่งข้อมูลทุก 3 วัน</option>
-                         <option value={7}>ส่งข้อมูลทุก 7 วัน</option>
-                         <option value={15}>ส่งข้อมูลทุก 15 วัน</option>
-                         <option value={30}>ส่งข้อมูลทุก 30 วัน</option>
+                           <option value="0.0208">ทุกๆ 30 นาที</option>
+                      <option value="0.0417">ทุกๆ 1 ชั่วโมง</option>
+                      <option value="0.1667">ทุกๆ 4 ชั่วโมง</option>
+                      <option value="0.25">ทุกๆ 6 ชั่วโมง</option>
+                      <option value="0.5">ทุกๆ 12 ชั่วโมง</option>
+                      <option value="1">ทุกๆ 1 วัน</option>
+                      <option value="3">ทุกๆ 3 วัน</option>
+                       <option value="7">ทุกๆ 7 วัน</option>
+                       <option value="15">ทุกๆ 15 วัน</option>
                       </select>
                   
                         <span className="text-sm font-medium text-slate-500 whitespace-nowrap">
@@ -281,10 +284,12 @@ export default function SystemSettingsPage() {
                         }
                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-slate-700  font-medium"
                       >
-                           <option value={3}>3 วัน</option>
-                           <option value={7}>7 วัน</option>
-                           <option value={15}>15 วัน</option>
-                           <option value={30}>30 วัน</option>
+                                           <option value="3">ทุกๆ 3 วัน</option>
+                      <option value="7">ทุกๆ 7 วัน</option>
+                      <option value="10">ทุกๆ 10 วัน</option>
+                      <option value="15">ทุกๆ 15 วัน</option>
+                      <option value="20">ทุกๆ 20 วัน</option>
+                      <option value="25">ทุกๆ 25 วัน</option>
 
                         </select>
                  
@@ -311,23 +316,11 @@ export default function SystemSettingsPage() {
 
               <button
                 onClick={handleSave}
-                disabled={isSaving}
-                className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium px-5 py-3 rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />{" "}
-                    กำลังบันทึก...
-                  </>
-                ) : saveStatus === "success" ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" /> บันทึกเรียบร้อย
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" /> บันทึกการเปลี่ยนแปลง
-                  </>
-                )}
+            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-3 rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            
+               >
+                
+               บันทึกข้อมูล
               </button>
             </div>
           </div>

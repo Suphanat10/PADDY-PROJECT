@@ -23,6 +23,7 @@ import {
   AdminHeader,
 } from "../../../components/admin/AdminLayout";
 import {fetchDevices} from "@/lib/admin/send-data/device";
+import Footer from "@/app/components/Footer";
 import { useMonitorWebSocket } from "@/lib/admin/send-data/useMonitorWebSocket";
 
 
@@ -171,22 +172,7 @@ export default function SystemLogPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsPaused(!isPaused)}
-                  className="p-1.5 hover:bg-slate-200 rounded text-slate-500"
-                >
-                  {isPaused ? (
-                    <PlayCircle className="w-4 h-4" />
-                  ) : (
-                    <PauseCircle className="w-4 h-4" />
-                  )}
-                </button>
-                <button
-                  onClick={() => setLogs([])}
-                  className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded text-slate-500"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {/*  */}
               </div>
             </div>
 
@@ -210,6 +196,7 @@ export default function SystemLogPage() {
             </div>
           </div>
         </main>
+        <Footer />
       </div>
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
