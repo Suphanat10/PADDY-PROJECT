@@ -35,9 +35,6 @@ export default async function handleSubmit(
     }
 
     const payload = result.data;
-
-    localStorage.setItem("token", payload.user.Token);
-
     Swal.fire({
       icon: "success",
       title: payload.message || "เข้าสู่ระบบสำเร็จ",

@@ -6,13 +6,12 @@ export async function apiFetch(path, options = {}) {
   const method = (options.method || "GET").toUpperCase();
 
   let body = options.body;
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const headers = {
     ...(options.headers || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
+  // ถ้าไม่ใช่ FormData → แปลงเป็น JSON
   if (body !== undefined && !(body instanceof FormData)) {
     body = JSON.stringify(body);
     headers["Content-Type"] = "application/json";
@@ -23,6 +22,9 @@ export async function apiFetch(path, options = {}) {
       method,
       headers,
       body: method === "GET" ? undefined : body,
+
+      // ⭐⭐⭐ สำคัญที่สุด
+      credentials: "include",
     });
 
     const text = await res.text();
@@ -43,13 +45,17 @@ export async function apiFetch(path, options = {}) {
       };
     }
 
-    return { ok: true, status: res.status, data };
+    return {
+      ok: true,
+      status: res.status,
+      data,
+    };
+
   } catch (err) {
     return {
       ok: false,
       status: 500,
       message: err.message || "Network error",
     };
-
   }
 }

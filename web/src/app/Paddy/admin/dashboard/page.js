@@ -1,402 +1,294 @@
-// "use client";
-
-// import React, { useState } from 'react';
-// import {
-//   LayoutDashboard,
-//   Users,
-//   Cpu,
-//   Settings,
-//   Bell,
-//   Search,
-//   LogOut,
-//   Menu,
-//   ChevronDown,
-//   ArrowUp,
-//   ArrowDown,
-//   MoreVertical,
-//   FileText,
-//   MessageSquare,
-//   Mail,
-//   Sprout,
-//   BarChart2,
-//   ShoppingCart,
-//   Layers,
-//   PieChart,
-//   Sparkles,
-//   Loader2,
-//   X,
-//   AlertTriangle,
-//   List,
-//   UserPlus,
-//   UserCheck
-// } from 'lucide-react';
-
-// // ==============================
-// // 1. UI ATOM COMPONENTS
-// // ==============================
-
-// // 1.1 Sidebar Item
-//    export function SidebarItem({ icon, text, active = false, badge, onClick, subItems }) {
-//   const [isExpanded, setIsExpanded] = useState(false);
-
-//   const handleClick = () => {
-//     if (subItems) {
-//       setIsExpanded(!isExpanded);
-//     } else {
-//       onClick && onClick();
-//     }
-//   };
-
-//   const isParentActive = active || (subItems && isExpanded);
-
-//   return (
-//     <div className="mb-1">
-//       <button
-//         onClick={handleClick}
-//         className={`group flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-//           active && !subItems
-//             ? 'bg-emerald-600 text-white'
-//             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-//         } ${isParentActive && subItems ? 'bg-slate-50 text-emerald-700' : ''}`}
-//       >
-//         <div className="flex items-center gap-3">
-//           <span className={active && !subItems ? 'text-white' : (isParentActive && subItems ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600')}>
-//             {icon}
-//           </span>
-//           <span>{text}</span>
-//         </div>
-//         {subItems ? (
-//           <ChevronDown 
-//             size={16} 
-//             className={`text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-emerald-600' : ''}`} 
-//           />
-//         ) : badge && (
-//           <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${active ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-600'}`}>
-//             {badge}
-//           </span>
-//         )}
-//       </button>
-
-//       {/* Submenu Items */}
-//       <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-//         {subItems && subItems.map((item, index) => (
-//           <button
-//             key={index}
-//             onClick={item.onClick}
-//             className={`w-full flex items-center pl-12 pr-4 py-2 text-xs font-medium rounded-lg transition-colors mb-0.5 ${
-//               item.active 
-//                 ? 'text-emerald-600 bg-emerald-50' 
-//                 : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-//             }`}
-//           >
-//             <span className={`w-1.5 h-1.5 rounded-full mr-2 ${item.active ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-//             {item.text}
-//           </button>
-//         ))}
-//       </div>
-//     </div>
-//   );
-// }
-
-// const AdminSidebar = ({ sidebarOpen, setSidebarOpen, activeMenu, setActiveMenu }) => {
-//   return (
-//     <>
-//       {/* Mobile Overlay */}
-//       {sidebarOpen && (
-//         <div 
-//           className="fixed inset-0 z-20 bg-black/50 lg:hidden"
-//           onClick={() => setSidebarOpen(false)}
-//         ></div>
-//       )}
-
-//       <aside 
-//         className={`fixed inset-y-0 left-0 z-30 w-72 transform bg-white transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
-//           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-//         } border-r border-slate-200 flex flex-col`}
-//       >
-//         {/* Logo Section */}
-//         <div className="flex h-20 items-center justify-between px-6 border-b border-slate-100 lg:border-none">
-//           <div className="flex items-center gap-3">
-//             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold shadow-emerald-200 shadow-lg">
-//               <Sprout size={24} />
-//             </div>
-//             <span className="text-xl font-bold text-slate-800 tracking-tight">PaddySmart</span>
-//           </div>
-//           <button className="lg:hidden text-slate-500" onClick={() => setSidebarOpen(false)}>
-//             <X size={24} />
-//           </button>
-//         </div>
-
-//         {/* Menu Items */}
-//         <div className="no-scrollbar flex-1 overflow-y-auto p-4 space-y-8">
-//           <div>
-//             <h3 className="mb-4 ml-4 text-xs font-bold text-slate-400 uppercase tracking-wider">MENU</h3>
-//             <nav className="space-y-1">
-//               <SidebarItem 
-//                 icon={<LayoutDashboard size={20} />} text="Dashboard" 
-//                 active={activeMenu === 'Dashboard'} onClick={() => setActiveMenu('Dashboard')}
-//               />
-//               <SidebarItem 
-//                 icon={<Cpu size={20} />} text="IoT Devices" 
-//                 active={activeMenu === 'IoT Devices'} onClick={() => setActiveMenu('IoT Devices')}
-//               />
-              
-//               {/* Farmers Menu with Submenu */}
-//               <SidebarItem 
-//                 icon={<Users size={20} />} text="Farmers" 
-//                 active={activeMenu.startsWith('Farmers')}
-//                 subItems={[
-//                   { 
-//                     text: 'รายชื่อเกษตรกร', 
-//                     active: activeMenu === 'Farmers-List',
-//                     onClick: () => setActiveMenu('Farmers-List')
-//                   },
-//                   { 
-//                     text: 'ลงทะเบียนใหม่', 
-//                     active: activeMenu === 'Farmers-Add',
-//                     onClick: () => setActiveMenu('Farmers-Add')
-//                   },
-//                   { 
-//                     text: 'กลุ่มเกษตรกร', 
-//                     active: activeMenu === 'Farmers-Groups',
-//                     onClick: () => setActiveMenu('Farmers-Groups')
-//                   }
-//                 ]}
-//               />
-
-//               <SidebarItem 
-//                 icon={<BarChart2 size={20} />} text="Analytics" 
-//                 active={activeMenu === 'Analytics'} onClick={() => setActiveMenu('Analytics')}
-//               />
-//             </nav>
-//           </div>
-
-//           <div>
-//             <h3 className="mb-4 ml-4 text-xs font-bold text-slate-400 uppercase tracking-wider">SUPPORT</h3>
-//             <nav className="space-y-1">
-//               <SidebarItem icon={<MessageSquare size={20} />} text="Chat" />
-//               <SidebarItem icon={<Mail size={20} />} text="Email" badge="2" />
-//               <SidebarItem icon={<Settings size={20} />} text="Settings" />
-//             </nav>
-//           </div>
-//         </div>
-        
-//         {/* User Mini Profile & Logout */}
-//         <div className="p-4 border-t border-slate-100">
-//             <button 
-//                 className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors mb-3"
-//                 onClick={() => alert("ออกจากระบบเรียบร้อยแล้ว")}
-//             >
-//                 <LogOut size={20} />
-//                 <span>ออกจากระบบ</span>
-//             </button>
-
-//             <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border border-slate-100">
-//                 <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
-//                     A
-//                 </div>
-//                 <div className="flex-1 min-w-0">
-//                     <p className="text-sm font-semibold text-slate-800 truncate">Admin User</p>
-//                     <p className="text-xs text-slate-500 truncate">admin@paddysmart.com</p>
-//                 </div>
-//             </div>
-//         </div>
-//       </aside>
-//     </>
-//   );
-// };
-
-
-// const AdminHeader = ({ setSidebarOpen, onAiClick }) => {
-//   return (
-//     <header className="flex h-20 items-center justify-between bg-white px-6 shadow-sm z-10 sticky top-0">
-//       <div className="flex items-center gap-4">
-//         <button 
-//           className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
-//           onClick={() => setSidebarOpen(true)}
-//         >
-//           <Menu size={24} />
-//         </button>
-        
-//         <div className="hidden md:flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 w-80 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
-//           <Search size={18} className="text-slate-400" />
-//           <input 
-//             type="text" placeholder="ค้นหา..." 
-//             className="bg-transparent text-sm outline-none placeholder:text-slate-400 w-full"
-//           />
-//           <span className="text-xs text-slate-400 font-medium border border-slate-300 rounded px-1.5 py-0.5">⌘K</span>
-//         </div>
-//       </div>
-
-//       <div className="flex items-center gap-4">
-       
-
-        
-        
-//         <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-slate-200">
-//           <div className="text-right">
-//             <p className="text-sm font-medium text-slate-700">Admin User</p>
-//             <p className="text-xs text-slate-500">Super Admin</p>
-//           </div>
-//           <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-sm bg-slate-200">
-//              <div className="w-full h-full bg-emerald-500 flex items-center justify-center text-white font-bold">A</div>
-//           </div>
-//           <ChevronDown size={16} className="text-slate-400 cursor-pointer" />
-//         </div>
-//       </div>
-//     </header>
-//   );
-// };
-
-// // ==============================
-// // 4. PAGE SECTIONS
-// // ==============================
-
-// // ==============================
-// // 5. MAIN PAGE COMPONENT
-// // ==============================
-// export default function AdminDashboardPage() {
-//   const [sidebarOpen, setSidebarOpen] = useState(false);
-//   const [activeMenu, setActiveMenu] = useState('Dashboard');
-
-//   // AI State
-//   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-//   const [aiContent, setAiContent] = useState('');
-//   const [isAiLoading, setIsAiLoading] = useState(false);
-
-//   // Gemini API Function
-//   const generateGeminiInsight = async () => {
-//     setIsAiModalOpen(true);
-//     setIsAiLoading(true);
-//     setAiContent('');
-
-//     const apiKey = ""; // System injected
-//     const systemStats = `
-//       System Status: Total Users: 2,543 (+12.5%), Online Devices: 1,890 (+8.2%), Today's Alerts: 15 (-2.1%), Data Usage: 45 GB (+5.4%).
-//     `;
-//     const prompt = `วิเคราะห์สถานะระบบ Paddy Smart จากข้อมูล: ${systemStats} สรุปสั้นๆ และแนะนำ Admin 3 ข้อ`;
-
-//     try {
-//       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-//       });
-//       if (!response.ok) throw new Error("API Request Failed");
-//       const data = await response.json();
-//       setAiContent(data.candidates?.[0]?.content?.parts?.[0]?.text || "No data");
-//     } catch (error) {
-//       setAiContent("เกิดข้อผิดพลาดในการเชื่อมต่อ AI");
-//     } finally {
-//       setIsAiLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="flex h-screen bg-slate-100  text-slate-600">
-      
-   
-
-//       <AdminSidebar 
-//         sidebarOpen={sidebarOpen} 
-//         setSidebarOpen={setSidebarOpen} 
-//         activeMenu={activeMenu} 
-//         setActiveMenu={setActiveMenu} 
-//       />
-
-//       <div className="flex flex-1 flex-col overflow-hidden">
-//         <AdminHeader 
-//           setSidebarOpen={setSidebarOpen} 
-//           onAiClick={generateGeminiInsight} 
-//         />
-
-//         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-slate-50/50">
-          
-//           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-//             <div>
-//                 <h2 className="text-2xl font-bold text-slate-800">ภาพรวมระบบ (Overview)</h2>
-//                 <p className="text-slate-500 text-sm mt-1">ยินดีต้อนรับกลับมา, นี่คือสถานะล่าสุดของ Paddy Smart</p>
-//             </div>
-            
-
-//           </div>
-
-//           {/* <StatsSection />
-//           <ChartsSection /> */}
-
-//         </main>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from "react";
 import {
+  Smartphone,
   Users,
-  Cpu,
-  Layers,
-  AlertTriangle
-} from 'lucide-react';
+  Tractor,
+  Map as MapIcon,
+  Sprout,
+  Wifi,
+  WifiOff,
+  Search,
+  Activity,
+  Battery,
+  BatteryCharging,
+  Signal,
+  MoreVertical,
+} from "lucide-react";
 
-// นำเข้า Component ที่แยกไฟล์แล้วจากโฟลเดอร์ components/admin
-import { StatCard, AIInsightModal } from '../../../components/admin/AdminUI';
-import { AdminSidebar, AdminHeader } from '../../../components/admin/AdminLayout';
-// import { AlertStatusChart, UserGrowthChart, DevicePerformanceChart, SystemUsageChart } from '../../components/admin/AdminCharts';
+import {
+  AdminSidebar,
+  AdminHeader,
+} from "../../../components/admin/AdminLayout";
+import { apiFetch } from "@/lib/api";
+import Footer from "@/app/components/Footer";
 
-export default function AdminDashboardPage() {
-  // State สำหรับจัดการ Sidebar และ Menu
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeMenu, setActiveMenu] = useState('Dashboard');
+import { useDeviceWebSocket } from "@/lib/dashboard/useDeviceWebSocket";
 
-  // AI State สำหรับ Modal และข้อมูล
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [aiContent, setAiContent] = useState('');
-  const [isAiLoading, setIsAiLoading] = useState(false);
+const StatCard = ({ title, value, unit, icon: Icon, theme = "blue" }) => {
+  const themes = {
+    blue: "bg-blue-50 text-blue-600 border-blue-100",
+    green: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    orange: "bg-orange-50 text-orange-600 border-orange-100",
+    indigo: "bg-indigo-50 text-indigo-600 border-indigo-100",
+  };
 
-
+  const activeTheme = themes[theme] || themes.blue;
 
   return (
-    <div className="flex h-screen bg-slate-100  text-slate-600">
-   
-      <AdminSidebar 
-        sidebarOpen={sidebarOpen} 
-        setSidebarOpen={setSidebarOpen} 
-        activeMenu={activeMenu} 
-        setActiveMenu={setActiveMenu} 
+    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
+          <h3 className="text-3xl font-bold text-slate-800">
+            {value}{" "}
+            <span className="text-sm font-normal text-slate-400">{unit}</span>
+          </h3>
+        </div>
+        <div className={`p-3 rounded-xl ${activeTheme}`}>
+          <Icon size={24} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DeviceStatusCard = ({ device }) => {
+  const isOnline = device.status === "online";
+
+  return (
+    <div
+      className={`group relative rounded-2xl border p-5 transition-all duration-300 ${
+        isOnline
+          ? "bg-white border-emerald-200 shadow-lg shadow-emerald-100/50"
+          : "bg-slate-50 border-slate-200 hover:shadow-sm"
+      }`}
+    >
+      {/* Header Card */}
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center gap-3">
+          <div
+            className={`p-2.5 rounded-lg ${
+              isOnline
+                ? "bg-emerald-100 text-emerald-600"
+                : "bg-slate-200 text-slate-500"
+            }`}
+          >
+            <Wifi size={20} />
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-800 text-lg">
+              {device.device_code}
+            </h4>
+            {/* <span className="text-xs text-slate-500">ID: {device.device_ID}</span> */}
+          </div>
+        </div>
+
+        {/* Status Indicator */}
+        <div className="flex items-center gap-2">
+          {isOnline ? (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              ออนไลน์
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded-full bg-slate-200 text-slate-500 text-xs font-semibold">
+              ออฟไลน์
+            </span>
+          )}
+        </div>
+      </div>
+
+      <hr className="border-slate-100 my-3" />
+
+      {/* Footer Info */}
+      <div className="flex justify-between items-center text-sm">
+        <div className="flex items-center gap-2 text-slate-500">
+          {isOnline ? (
+            <>
+              <Activity size={16} className="text-emerald-500 animate-pulse" />
+              <span>ออนไลน์</span>
+            </>
+          ) : (
+            <>
+              <WifiOff size={16} className="text-slate-400" />
+              <span>ออฟไลน์</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function DashboardPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const [devices, setDevices] = useState([]);
+  const [summary, setSummary] = useState([]);
+
+  useEffect(() => {
+    const getData = async () => {
+      const res = await apiFetch("/api/admin/get_dashboard_overview", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) {
+        console.error("Dashboard API error:", res);
+        return;
+      }
+      setDevices(res.data.devices);
+      setSummary(res.data.summary);
+    };
+
+    getData();
+  }, []);
+
+  const deviceCodes = useMemo(
+    () => devices.map((d) => d.device_code),
+    [devices]
+  );
+
+  useDeviceWebSocket({
+    deviceIds: deviceCodes,
+    onStatus: (deviceCode, status) => {
+      setDevices((prev) =>
+        prev.map((d) => (d.device_code === deviceCode ? { ...d, status } : d))
+      );
+    },
+  });
+
+  const filteredDevices = useMemo(() => {
+    return devices.filter((d) =>
+      d.device_code.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [devices, searchTerm]);
+
+  return (
+    <div className="flex h-screen bg-slate-50/50 overflow-hidden">
+      <AdminSidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        activeMenu="dashboard"
       />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        
-  
-        <AdminHeader 
-          setSidebarOpen={setSidebarOpen} 
-        />
+      <div className="flex flex-1 flex-col relative">
+        <AdminHeader setSidebarOpen={setSidebarOpen} />
 
-
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-slate-50/50">
-          
-   
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="max-w-7xl mx-auto space-y-8">
+            {/* 1. Header Section */}
             <div>
-                <h2 className="text-2xl font-bold text-slate-800">ภาพรวมระบบ (Overview)</h2>
-                <p className="text-slate-500 text-sm mt-1">ยินดีต้อนรับกลับมา, นี่คือสถานะล่าสุดของ Paddy Smart</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
+                ภาพรวมระบบ
+              </h1>
+              <p className="text-slate-500 mt-1">
+                ติดตามสถานะอุปกรณ์และข้อมูลฟาร์มแบบเรียลไทม์
+              </p>
             </div>
-           
+
+            {/* 2. STATS GRID */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <StatCard
+                title="อุปกรณ์ทั้งหมด"
+                value={summary.total_devices}
+                icon={Smartphone}
+                theme="blue"
+              />
+              <StatCard
+                title="ลงทะเบียนแล้ว"
+                value={summary.registered_devices}
+                icon={Signal}
+                theme="indigo"
+              />
+              <StatCard
+                title="ผู้ใช้งาน"
+                value={summary.agriculture_users}
+                icon={Users}
+                theme="orange"
+              />
+              <StatCard
+                title="จำนวนฟาร์ม"
+                value={summary.total_farms}
+                icon={Tractor}
+                theme="green"
+              />
+              <StatCard
+                title="พื้นที่ย่อย"
+                value={summary.total_areas}
+                icon={MapIcon}
+                theme="green"
+              />
+              <StatCard
+                title="อุปกรณ์ออนไลน์"
+                value={devices.filter((d) => d.status === "online").length}
+                icon={Wifi}
+                theme="blue"
+              />
+              <StatCard
+                title="อุปกรณ์ออฟไลน์"
+                value={devices.filter((d) => d.status !== "online").length}
+                icon={WifiOff}
+                theme="blue"
+              />
+            </div>
+
+            {/* 3. DEVICE MONITOR SECTION */}
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <Activity className="text-emerald-500" />
+                  สถานะอุปกรณ์
+                  <span className="text-sm font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                    {filteredDevices.length} เครื่อง
+                  </span>
+                </h2>
+
+                {/* Search Bar Styled */}
+                <div className="relative w-full md:w-80">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm transition-all shadow-sm"
+                    placeholder="ค้นหารหัสอุปกรณ์ (Device Code)..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Device Grid */}
+              {filteredDevices.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredDevices.map((device) => (
+                    <DeviceStatusCard key={device.device_ID} device={device} />
+                  ))}
+                </div>
+              ) : (
+                // Empty State
+                <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
+                  <Search className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+                  <h3 className="text-lg font-medium text-slate-900">
+                    ไม่พบอุปกรณ์
+                  </h3>
+                  <p className="text-slate-500">
+                    ลองตรวจสอบรหัสอุปกรณ์อีกครั้ง
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-
-          
-
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
-    
-          </div>
-
         </main>
+        <Footer />
       </div>
     </div>
   );

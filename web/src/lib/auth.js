@@ -33,7 +33,6 @@ export async function getMeServer() {
   }
 }
 
-// ใช้ใน Server Component/Layout
 export async function requireAuth(nextPath = '/') {
   const user = await getMeServer();
   if (!user) {
