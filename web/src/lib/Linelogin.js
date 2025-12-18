@@ -1,28 +1,58 @@
 import liff from "@line/liff";
 import { apiFetch } from "@/lib/api";
+import Swal from "sweetalert2";
 
 export async function ensureLiffLogin() {
-  await liff.init({
-    liffId: process.env.NEXT_PUBLIC_LIFF_ID,
-    withLoginOnExternalBrowser: true,
-  });
+  try {
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (!liffId) {
+      throw new Error("LIFF ID is missing in environment variables");
+    }
 
-  if (!liff.isLoggedIn()) {
-    liff.login();
-    return;
+    await liff.init({
+      liffId: liffId,
+      withLoginOnExternalBrowser: true, 
+    });
+
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return null; 
+    }
+
+    const accessToken = liff.getAccessToken();
+    const profile = await liff.getProfile();
+
+    if (!accessToken) {
+      throw new Error("Failed to get access token");
+    }
+
+
+    const res = await apiFetch("/api/auth/line-login", {
+      method: "POST",
+      body: {  
+        userId: profile.userId,
+        accessToken: accessToken,  
+      },
+    });
+
+    if(!res.ok){
+     Swal.fire({
+        icon: "error",
+        title: "เข้าสู่ระบบไม่สำเร็จ",
+        text: res.message || "กรุณาลองใหม่อีกครั้งภายหลัง",
+        confirmButtonText: "ตกลง"
+      });
+      
+    }
+
+    return {
+      lineToken: accessToken, 
+      user: res.user,         
+      profile: profile,       
+    };
+
+  } catch (error) {
+    console.error("LIFF Login Error:", error);
+    throw error;
   }
-
-  const profile = await liff.getProfile();
-  const token = liff.getAccessToken();
-
-  const res = await apiFetch("/api/auth/login-line", {
-    method: "POST",
-    body: { userId: profile.userId },
-  });
-
-  return {
-    token,
-    user: res.user,
-    profile,
-  };
 }

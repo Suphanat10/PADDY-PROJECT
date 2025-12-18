@@ -1,5 +1,5 @@
-version: "2"
-authtoken: 34uliho26SGGWcS62Ug2K6mg2B0_3ToywvKr1bXL8jwRdM7Mg
+version: "3"
+authtoken: 371gSKkrp7Q4HigESOjF84pwebU_2erfPXJceHQsGBRNAzzTB
 
 tunnels:
   frontend:
