@@ -34,8 +34,7 @@ export function useSensorHistory(deviceId) {
         const grouped = sensorData.reduce((acc, item) => {
           if (!item.measured_at) return acc;
 
-          const dateKey = item.measured_at.split("T")[0];
-
+const dateKey = item.measured_at.substring(0, 16).replace("T", " ");
           if (!acc[dateKey]) {
             acc[dateKey] = {
               time: dateKey,
@@ -74,9 +73,12 @@ export function useSensorHistory(deviceId) {
           return acc;
         }, {});
 
-        const history = Object.values(grouped).sort(
-          (a, b) => new Date(a.time) - new Date(b.time)
+
+
+        const history = Object.values(grouped).sort((a, b) =>
+          new Date(a.time) - new Date(b.time)
         );
+
 
         console.log("History for chart:", history);
         setHistoricalData(history);
