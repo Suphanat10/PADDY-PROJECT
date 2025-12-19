@@ -1,38 +1,31 @@
-name: Deploy Self-Hosted
-
-on:
-  push:
-    branches: [ "main" ]
-
-jobs:
-  deploy:
-    runs-on: self-hosted  # 👈 จุดสำคัญ: บอกให้มาทำงานที่เครื่องเราเอง
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy with Docker
+- name: Deploy with Docker
         run: |
-          echo "NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}" >> .env
-          echo "NEXT_PUBLIC_LIFF_ID=${{ secrets.NEXT_PUBLIC_LIFF_ID }}" >> .env
-          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" >> .env
           TARGET_DIR="/var/www/html/smart-paddy"
-          
           echo "🚀 Copying files to $TARGET_DIR..."
           mkdir -p $TARGET_DIR
-          # ใช้ rsync ส่งไฟล์จากจุดที่ Runner อยู่ ไปที่โฟลเดอร์ปลายทาง
+          
+          # 1. ส่งไฟล์จาก Runner ไปที่โฟลเดอร์ปลายทาง
           rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.next' ./ $TARGET_DIR
 
-          # เข้าไปสั่ง Docker
-          echo "🐳 Building Docker..."
+          # 2. เข้าไปที่โฟลเดอร์ web (จุดที่มี docker-compose.yml และ Dockerfile)
           cd $TARGET_DIR/web
-          
-          # ถ้ามีไฟล์ .env ต้องสร้างตรงนี้ (หรือสร้างทิ้งไว้ในเครื่องแล้วก็ได้)
-          # echo "DATABASE_URL=..." > .env 
 
-          docker compose down
-          docker compose up -d --build
-          docker image prune -f
+          # 3. 🔥 สร้างไฟล์ .env ไว้ในโฟลเดอร์ web นี้เลย เพื่อให้ Docker Compose มองเห็น
+          echo "NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}" > .env
+          echo "NEXT_PUBLIC_LIFF_ID=${{ secrets.NEXT_PUBLIC_LIFF_ID }}" >> .env
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" >> .env
           
+          # เพิ่ม DATABASE_URL (ถ้าใช้ในหน้าเว็บหรือ API ในโฟลเดอร์นี้)
+          # echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+
+          # 4. 🐳 สั่ง Docker ทำงาน
+          echo "🐳 Building Docker..."
+          docker compose down
+          # ส่งค่า Secrets เข้าไปเป็น Build Args เพื่อให้ Next.js ฝังค่าตอน Build
+          NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }} \
+          NEXT_PUBLIC_LIFF_ID=${{ secrets.NEXT_PUBLIC_LIFF_ID }} \
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }} \
+          docker compose up -d --build
+          
+          docker image prune -f
           echo "✅ Deployment Successful!"
