@@ -57,7 +57,9 @@ export default async function handleSubmit(
 
     const response = await apiFetch("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: {
+        ...payload
+      },
     });
 
     if (response.success) {
