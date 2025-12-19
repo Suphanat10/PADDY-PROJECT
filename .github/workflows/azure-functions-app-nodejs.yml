@@ -14,8 +14,9 @@ jobs:
 
       - name: Deploy with Docker
         run: |
-          # ตอนนี้เราอยู่ที่เครื่อง Server แล้ว ไม่ต้อง SSH
-          # ย้ายไฟล์จาก Runner ไปที่โฟลเดอร์งานจริง
+          echo "NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}" >> .env
+          echo "NEXT_PUBLIC_LIFF_ID=${{ secrets.NEXT_PUBLIC_LIFF_ID }}" >> .env
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" >> .env
           TARGET_DIR="/var/www/html/smart-paddy"
           
           echo "🚀 Copying files to $TARGET_DIR..."
