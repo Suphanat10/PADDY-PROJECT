@@ -20,8 +20,6 @@ export async function apiFetch(path, options = {}) {
       method,
       headers,
       body: method === "GET" ? undefined : body,
-
-      // ⭐⭐⭐ สำคัญที่สุด
       credentials: "include",
     });
 

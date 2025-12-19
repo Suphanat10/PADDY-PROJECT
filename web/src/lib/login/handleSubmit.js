@@ -24,7 +24,6 @@ export default async function handleSubmit(
       body: { email, password }
     });
 
-
     if (!result.ok) {
       Swal.fire({
         icon: "error",
@@ -33,7 +32,6 @@ export default async function handleSubmit(
       });
       return;
     }
-
     const payload = result.data;
     Swal.fire({
       icon: "success",
@@ -44,7 +42,6 @@ export default async function handleSubmit(
         "/Paddy/agriculture/dashboard";
       window.location.replace(next);
     });
-
   } catch (err) {
     Swal.fire({
       icon: "error",
