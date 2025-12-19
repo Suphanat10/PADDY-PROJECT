@@ -3,44 +3,39 @@ pipeline {
 
     environment {
         SERVER_IP = '4.217.199.31'
-        SERVER_USER = 'Suphanat' 
+        SERVER_USER = 'Suphanat'
         PROJECT_PATH = '/var/www/html/smart-paddy'
         CREDENTIAL_ID = 'vps-ssh-key' 
-        GIT_URL = 'https://github.com/Suphanat10/PADDY-PROJECT' 
-        BRANCH_NAME = 'main'
+        // ไม่ต้องใส่ GIT_URL เพราะ Jenkins รู้จักจากตอนตั้งค่า Job แล้ว
     }
 
     stages {
-        stage('Checkout Code') {
-            steps {
-                git branch: "${BRANCH_NAME}", url: "${GIT_URL}"
-            }
-        }
-
         stage('Deploy to Server') {
             steps {
                 sshagent([CREDENTIAL_ID]) {
                     // 1. สร้างโฟลเดอร์ (ถ้ายังไม่มี)
                     sh "ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} 'mkdir -p ${PROJECT_PATH}'"
                     
-                    // 2. ส่งไฟล์ Dockerfile และ docker-compose ไป
-                    // เราไม่ส่ง node_modules หรือ .next ไป เพราะเราจะ Build ใหม่ใน Docker
+                    // 2. ส่งไฟล์โค้ดไป (ส่งเฉพาะที่จำเป็นสำหรับ Docker Build)
+                    // เราไม่ส่ง node_modules เพราะเดี๋ยวไป install ใน Docker เอา
                     sh "rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.next' ./ ${SERVER_USER}@${SERVER_IP}:${PROJECT_PATH}"
                 }
             }
         }
 
-        stage('Build & Run Docker') {
+        stage('Docker Build & Run') {
             steps {
                 sshagent([CREDENTIAL_ID]) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} '
                             cd ${PROJECT_PATH}
                             
-                            echo " Building new image..."
+                            echo "🐳 Building new image..."
+                            # สั่ง Docker Compose ให้ทำงาน (-d คือรันเบื้องหลัง, --build คือบังคับสร้างใหม่)
                             docker compose up -d --build
                             
-                            echo "Cleaning old images..."
+                            echo "🧹 Cleaning old images..."
+                            # ลบ Image เก่าที่ไม่ได้ใช้ เพื่อประหยัดพื้นที่
                             docker image prune -f
                         '
                     """
