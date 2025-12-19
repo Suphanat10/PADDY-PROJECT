@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState ,  useEffect   } from "react";
 import Link from "next/link";
 import {  Eye, EyeOff, Sprout } from "lucide-react";
 import Login from "@/lib/login/handleSubmit";
@@ -10,6 +10,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // --- จุดสำคัญ: ตรวจสอบ Callback อัตโนมัติ ---
+  useEffect(() => {
+    // ตรวจสอบว่า URL ปัจจุบันมีพารามิเตอร์ 'code' หรือไม่
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("code")) {
+      console.log("Detecting LINE callback, processing login...");
+      LineLogin(setIsLoading);
+    }
+  }, []);
  
    const handleLogin = (e) =>
     LineLogin(setIsLoading);

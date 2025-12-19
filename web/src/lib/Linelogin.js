@@ -2,20 +2,28 @@ import liff from "@line/liff";
 import { apiFetch } from "@/lib/api";
 import Swal from "sweetalert2";
 
+let isLiffInitialized = false;
+
 export async function ensureLiffLogin() {
   try {
     const liffId = "2007854586-9ogoEj2j";
-    if (!liffId) {
-      throw new Error("LIFF ID is missing in environment variables");
+    
+    if (typeof window === 'undefined') return null;
+
+    // 2. Initialize LIFF (ทำเพียงครั้งเดียวต่อการโหลดหน้า)
+    if (!isLiffInitialized) {
+      await liff.init({
+        liffId: liffId,
+        withLoginOnExternalBrowser: true, 
+      });
+      isLiffInitialized = true;
     }
 
-    await liff.init({
-      liffId: liffId,
-      withLoginOnExternalBrowser: true, 
-    });
-
     if (!liff.isLoggedIn()) {
-      liff.login();
+      console.log("Redirecting to LINE Login...");
+      liff.login({ 
+        redirectUri: window.location.href 
+      });
       return null; 
     }
 
@@ -23,10 +31,10 @@ export async function ensureLiffLogin() {
     const profile = await liff.getProfile();
 
     if (!accessToken) {
-      throw new Error("Failed to get access token");
+      throw new Error("ไม่สามารถดึง Access Token จาก LINE ได้");
     }
 
-
+    // 5. ส่งข้อมูลไปยัง Backend ของเราเพื่อสร้าง Session/Token ระบบ
     const res = await apiFetch("/api/auth/line-login", {
       method: "POST",
       body: {  
@@ -34,25 +42,39 @@ export async function ensureLiffLogin() {
         accessToken: accessToken,  
       },
     });
-
-    if(!res.ok){
-     Swal.fire({
+    if (!res.ok) {
+      Swal.fire({
         icon: "error",
-        title: "เข้าสู่ระบบไม่สำเร็จ",
-        text: res.message || "กรุณาลองใหม่อีกครั้งภายหลัง",
-        confirmButtonText: "ตกลง"
+        title: "เชื่อมต่อระบบล้มเหลว",
+        text: res.message || "บัญชี LINE นี้อาจยังไม่ได้ผูกกับระบบ",
+        confirmButtonText: "ตกลง",
+        confirmButtonColor: "#10b981"
       });
-      
+      return null;
     }
 
     return {
-      lineToken: accessToken, 
-      user: res.user,         
-      profile: profile,       
+      systemUser: res.data.user,
     };
 
   } catch (error) {
-    console.error("LIFF Login Error:", error);
-    throw error;
+    console.error("❌ LIFF Login Error:", error);
+
+    if (error.message?.includes('code_verifier')) {
+      sessionStorage.clear();
+      localStorage.clear();
+      window.location.reload();
+      return null;
+    }
+
+    // แจ้งเตือนข้อผิดพลาดอื่นๆ
+    Swal.fire({
+      icon: "error",
+      title: "เกิดข้อผิดพลาด",
+      text: "ไม่สามารถเริ่มต้นการเข้าสู่ระบบผ่าน LINE ได้",
+      confirmButtonText: "รับทราบ"
+    });
+    
+    return null;
   }
 }
