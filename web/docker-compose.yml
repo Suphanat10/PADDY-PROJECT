@@ -3,9 +3,16 @@ version: '3.8'
 services:
   smart-paddy:
     container_name: smart-paddy-app
-    build: .
-    restart: always  # ถ้าระบบล่ม ให้ลุกขึ้นมาเองอัตโนมัติ
+    build: 
+      context: .
+      # ถ้าต้องใช้ env ตั้งแต่ตอน Build (เช่น NEXT_PUBLIC_...)
+      args:
+        - NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}
+    restart: always
     ports:
-      - "3000:3000" # แมพ Port 3000 เครื่องจริง เข้า 3000 ใน Container
+      - "3000:3000"
+    # 🔥 เพิ่มบรรทัดนี้เพื่อให้ Container ดึงค่าจากไฟล์ .env มาใช้ตอน Runtime
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
