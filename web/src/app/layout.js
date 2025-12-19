@@ -10,7 +10,7 @@ const kanit = Kanit({
 
 export const metadata = {
   title: 'PaddySmart',
-  description: 'This is a login app',
+  description: 'ระบบจัดการข้อมูลเพื่อการเกษตรอัจฉริยะ',
 }
 
 export default function RootLayout({ children }) {

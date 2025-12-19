@@ -39,6 +39,12 @@ useEffect(() => {
       const { devicesList, historyList } =
         await loadGrowthAnalysis(fetchGrowthAnalysisApi);
 
+        if(!devicesList || !historyList){
+          setDevicesList([]);
+          setProcessedHistory([]);
+          return;
+        }
+
       setDevicesList(devicesList);
       setProcessedHistory(historyList);
 

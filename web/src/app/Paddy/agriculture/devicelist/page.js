@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo  } from "react";
-import { router } from "next/navigation";
+import { useEffect, useState, useRef, useMemo } from "react";
 import {
   Thermometer,
   Droplets,
@@ -19,10 +18,10 @@ import {
   Trash2,
   Calendar,
   ScanQrCode,
-  ArrowLeftRight ,
+  ArrowLeftRight,
   MapPin,
   Clock,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import Header from "../components/Header";
@@ -31,7 +30,7 @@ import { closeSensorWebSocket } from "@/lib/devices/sensorWebSocket";
 import { loadDevicesService } from "@/lib/devices/loadDevices";
 import { deleteDeviceByCode } from "@/lib/devices/deleteDevice";
 import { createSensorWebSocket } from "@/lib/devices/sensorWebSocket";
-
+import { useRouter } from 'next/navigation';
 
 const getStatusBadge = (status) => {
   const map = {
@@ -56,7 +55,9 @@ const getStatusBadge = (status) => {
   const Icon = item.icon;
 
   return (
-    <div className={`px-3 py-1 rounded-full inline-flex items-center ${item.color}`}>
+    <div
+      className={`px-3 py-1 rounded-full inline-flex items-center ${item.color}`}
+    >
       <Icon className="w-3 h-3 mr-1.5" />
       <span className="text-xs font-medium">{item.text}</span>
     </div>
@@ -66,11 +67,16 @@ const getStatusBadge = (status) => {
 const getSensorIcon = (type = "") => {
   const t = type.toLowerCase();
 
-  if (t.includes("water") || t.includes("humid")) return { icon: Droplets, color: "text-blue-500", bg: "bg-blue-50" };
-  if (t.includes("moisture")) return { icon: Activity, color: "text-blue-600", bg: "bg-blue-50" };
-  if (t.includes("npk") || t.includes("soil")) return { icon: Sprout, color: "text-emerald-600", bg: "bg-emerald-50" };
-  if (t.includes("temp")) return { icon: Thermometer, color: "text-red-500", bg: "bg-red-50" };
-  if (t.includes("battery")) return { icon: Zap, color: "text-amber-500", bg: "bg-amber-50" };
+  if (t.includes("water") || t.includes("humid"))
+    return { icon: Droplets, color: "text-blue-500", bg: "bg-blue-50" };
+  if (t.includes("moisture"))
+    return { icon: Activity, color: "text-blue-600", bg: "bg-blue-50" };
+  if (t.includes("npk") || t.includes("soil"))
+    return { icon: Sprout, color: "text-emerald-600", bg: "bg-emerald-50" };
+  if (t.includes("temp"))
+    return { icon: Thermometer, color: "text-red-500", bg: "bg-red-50" };
+  if (t.includes("battery"))
+    return { icon: Zap, color: "text-amber-500", bg: "bg-amber-50" };
 
   return { icon: Thermometer, color: "text-gray-600", bg: "bg-gray-50" };
 };
@@ -102,13 +108,8 @@ function combineNPK(sensor) {
       current: val(sensor?.soil_moisture),
       unit: "%",
     },
-
   ];
 }
-
-
-
-
 
 export default function DeviceListPage() {
   const [sensorDevices, setSensorDevices] = useState([]);
@@ -124,93 +125,90 @@ export default function DeviceListPage() {
   const wsRef = useRef(null);
   const latestSensorData = useRef({});
 
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        setLoading(true);
+
+        const mapped = await loadDevicesService();
+        if(mapped.length === 0){
+          setSelectedDevice(null);
+          return;
+        }
+        setSensorDevices(mapped);
+
+        if (mapped.length > 0) {
+          setSelectedDevice(mapped[0].device_code);
+        }
+      } catch (err) {
+        console.error("Load devices error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDevices();
+  }, []);
+
+  const handleDelete = async (deviceCode) => {
+    // เรียกใช้ฟังก์ชันลบอุปกรณ์
+    await deleteDeviceByCode({
+      deviceCode,
+      onSuccess: () => {
+        // รีเฟรชรายการอุปกรณ์หลังจากลบสำเร็จ
+        setSensorDevices((prev) =>
+          prev.filter((d) => d.device_code !== deviceCode)
+        );
+        setSelectedDevice(null);
+      },
+      onError: (err) => {
+        console.error("Delete device failed:", err);
+      },
+    });
+  };
 
 
   useEffect(() => {
-  const fetchDevices = async () => {
-    try {
-      setLoading(true);
+    if (sensorDevices.length === 0) return;
 
-      const mapped = await loadDevicesService();
+    const deviceIds = sensorDevices.map((d) => d.device_code);
 
-      setSensorDevices(mapped);
+    createSensorWebSocket({
+      url: "ws://localhost:8000/",
+      deviceIds,
+      onConnected: () => setIsWsConnected(true),
+      onDisconnected: () => setIsWsConnected(false),
 
-      if (mapped.length > 0) {
-        setSelectedDevice(mapped[0].device_code);
-      }
+      onSensorUpdate: (deviceId, data, timestamp) => {
 
-    } catch (err) {
-      console.error("Load devices error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        setSensorDevices((prev) =>
+          prev.map((dev) =>
+            dev.device_code === deviceId
+              ? {
+                  ...dev,
+                  sensor: data,
+                  lastUpdate: timestamp,
+                  status: "connected",
+                }
+              : dev
+          )
+        );
+       
+      },
 
-  fetchDevices();
-}, []);
+      onError: () => setIsWsConnected(false),
+    });
 
-
-const handleDelete = async (deviceCode) => {
-  // เรียกใช้ฟังก์ชันลบอุปกรณ์
-  await deleteDeviceByCode({
-    deviceCode,
-    onSuccess: () => {
-      // รีเฟรชรายการอุปกรณ์หลังจากลบสำเร็จ
-      setSensorDevices((prev) => prev.filter((d) => d.device_code !== deviceCode));
-      setSelectedDevice(null);
-    },
-    onError: (err) => {
-      console.error("Delete device failed:", err);
-    },
-  });
-};
-
-
-  
-
-
-  const [hasFirstData, setHasFirstData] = useState(false);
-
-
-useEffect(() => {
-  if (sensorDevices.length === 0) return;
-
-  const deviceIds = sensorDevices.map(d => d.device_code);
-
-  createSensorWebSocket({
-    url: "ws://localhost:8000/",
-    deviceIds,
-    onConnected: () => setIsWsConnected(true),
-    onDisconnected: () => setIsWsConnected(false),
-
-    onSensorUpdate: (deviceId, data, timestamp) => {
-      setHasFirstData(true);
-
-      setSensorDevices(prev =>
-        prev.map(dev =>
-          dev.device_code === deviceId
-            ? { ...dev, sensor: data, lastUpdate: timestamp, status: "connected" }
-            : dev
-        )
-      );
-    },
-
-    onError: () => setIsWsConnected(false),
-  });
-
-  return () => {
-    closeSensorWebSocket();
-  };
-}, [sensorDevices.length]);
-
-
+    return () => {
+      closeSensorWebSocket();
+    };
+  }, [sensorDevices.length]);
 
   // =====================================================
   const filteredDevices = useMemo(() => {
     return sensorDevices.filter((device) => {
       const term = searchTerm.toLowerCase();
 
-  
       const matchesSearch =
         (device.device_code || "").toLowerCase().includes(term) ||
         (device.farm || "").toLowerCase().includes(term) ||
@@ -218,8 +216,10 @@ useEffect(() => {
         (device.description || "").toLowerCase().includes(term);
 
       let matchesStatus = true;
-      if (filterStatus === "เชื่อมต่อแล้ว") matchesStatus = device.status === "connected";
-      else if (filterStatus === "ขาดการเชื่อมต่อ") matchesStatus = device.status === "disconnected";
+      if (filterStatus === "เชื่อมต่อแล้ว")
+        matchesStatus = device.status === "connected";
+      else if (filterStatus === "ขาดการเชื่อมต่อ")
+        matchesStatus = device.status === "disconnected";
 
       let matchesArea = true;
       if (filterArea !== "พื้นที่ทั้งหมด") {
@@ -238,7 +238,9 @@ useEffect(() => {
   // เลือกอุปกรณ์ตัวแรกอัตโนมัติเมื่อ Filter เปลี่ยน
   useEffect(() => {
     if (filteredDevices.length > 0) {
-      const currentExists = filteredDevices.find((d) => d.device_code === selectedDevice);
+      const currentExists = filteredDevices.find(
+        (d) => d.device_code === selectedDevice
+      );
       if (!currentExists) {
         setSelectedDevice(filteredDevices[0].device_code);
       }
@@ -247,7 +249,6 @@ useEffect(() => {
     }
   }, [filteredDevices, selectedDevice]);
 
-  
   const selected = sensorDevices.find((d) => d.device_code === selectedDevice);
 
   return (
@@ -259,18 +260,25 @@ useEffect(() => {
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">ข้อมูลอุปกรณ์</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                ข้อมูลอุปกรณ์
+              </h1>
               <p className="text-gray-500 text-sm mt-1">
-                จัดการและตรวจสอบสถานะเซ็นเซอร์ทั้งหมด ({sensorDevices.length} อุปกรณ์)
+                จัดการและตรวจสอบสถานะเซ็นเซอร์ทั้งหมด ({sensorDevices.length}{" "}
+                อุปกรณ์)
               </p>
             </div>
             <div className="flex gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+              {/* <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
                 <Download size={16} /> ส่งออกข้อมูล
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-emerald-600 rounded-lg text-sm font-medium text-white hover:bg-emerald-700 transition-colors shadow-sm">
-                <Plus size={16} /> เพิ่มอุปกรณ์
-              </button>
+              </button> */}
+              <Link 
+  href="/Paddy/agriculture/registerdevice" 
+  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 rounded-lg text-sm font-medium text-white hover:bg-emerald-700 transition-colors shadow-sm inline-flex"
+>
+  <Plus size={16} />
+  เพิ่มอุปกรณ์
+</Link>
             </div>
           </div>
 
@@ -308,9 +316,7 @@ useEffect(() => {
               ))}
             </select>
           </div>
-        </div>  
-
-       
+        </div>
 
         {/* DEVICE LIST (TABS - FILTERED) */}
         <div className="mb-6 bg-white p-2 rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
@@ -342,18 +348,18 @@ useEffect(() => {
           </div>
         </div>
 
-   
-
         {/* SELECTED DEVICE CONTENT */}
-        {!hasFirstData ? (
-           <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
-             <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-2" />
-             <p className="text-gray-400">กำลังเชื่อมต่อระบบ Real-time...</p>
-           </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
+            <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-2" />
+            <p className="text-gray-400">กำลังเชื่อมต่อระบบ Real-time...</p>
+          </div>
         ) : !selected ? (
           sensorDevices.length > 0 && (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
-              <p className="text-gray-400">กรุณาเลือกอุปกรณ์ หรือ เปลี่ยนเงื่อนไขการค้นหา</p>
+              <p className="text-gray-400">
+                กรุณาเลือกอุปกรณ์ หรือ เปลี่ยนเงื่อนไขการค้นหา
+              </p>
             </div>
           )
         ) : (
@@ -376,7 +382,9 @@ useEffect(() => {
 
                 {/* Right: Details */}
                 <div className="lg:w-2/3">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">รายละเอียดอุปกรณ์</h3>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">
+                    รายละเอียดอุปกรณ์
+                  </h3>
                   <p className="text-gray-600 text-sm leading-relaxed mb-6">
                     {selected.description}
                   </p>
@@ -393,7 +401,6 @@ useEffect(() => {
                         </p>
                       </div>
                     </div>
-            
                   </div>
                   <div className="mt-4 flex gap-4 text-sm text-gray-500">
                     <div className="flex items-center gap-1">
@@ -408,22 +415,23 @@ useEffect(() => {
 
               {/* Actions Footer */}
               <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
-             <Link
-  href={`/Paddy/agriculture/sensor/${selected.device_code}`}
-  className="flex-1 bg-emerald-500 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-200 text-center block"
->
-  ดูข้อมูลเซ็นเซอร์
-</Link>
-               
-<Link
-  href={`/Paddy/agriculture/DeviceTransfer`}
-  className="flex items-center justify-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
->
-  <ArrowLeftRight  className="w-4 h-4" />
-  ย้ายตำแหน่งอุปกรณ์
-</Link>
-                <button className="flex items-center justify-center gap-2 px-6 py-2.5 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors"
-                 onClick={() => handleDelete(selected.device_code)}
+                <Link
+                  href={`/Paddy/agriculture/sensor/${selected.device_code}`}
+                  className="flex-1 bg-emerald-500 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-emerald-600 transition-colors shadow-sm shadow-emerald-200 text-center block"
+                >
+                  ดูข้อมูลเซ็นเซอร์
+                </Link>
+
+                <Link
+                  href={`/Paddy/agriculture/DeviceTransfer`}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                >
+                  <ArrowLeftRight className="w-4 h-4" />
+                  ย้ายตำแหน่งอุปกรณ์
+                </Link>
+                <button
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors"
+                  onClick={() => handleDelete(selected.device_code)}
                 >
                   <Trash2 className="w-4 h-4" /> ยกเลิกการลงทะเบียน
                 </button>
@@ -431,7 +439,9 @@ useEffect(() => {
             </div>
 
             {/* SENSORS SECTION HEADER */}
-            <h3 className="text-lg font-bold text-gray-800 mb-4">เซ็นเซอร์ทั้งหมด</h3>
+            <h3 className="text-lg font-bold text-gray-800 mb-4">
+              เซ็นเซอร์ทั้งหมด
+            </h3>
 
             {/* SENSORS GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -451,7 +461,9 @@ useEffect(() => {
                             <Icon className={`w-6 h-6 ${style.color}`} />
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-800">{s.label}</h4>
+                            <h4 className="font-bold text-gray-800">
+                              {s.label}
+                            </h4>
                             <div className="flex items-center gap-2 mt-1">
                               {getStatusBadge(selected.status)}
                             </div>
@@ -467,8 +479,12 @@ useEffect(() => {
                             key={k}
                             className="text-center p-3 bg-gray-50 rounded-lg border border-gray-100"
                           >
-                            <p className="text-xs text-gray-500 font-bold mb-1">{k}</p>
-                            <p className={`text-xl font-bold ${style.color}`}>{v}</p>
+                            <p className="text-xs text-gray-500 font-bold mb-1">
+                              {k}
+                            </p>
+                            <p className={`text-xl font-bold ${style.color}`}>
+                              {v}
+                            </p>
                             <p className="text-xs text-gray-400">mg/kg</p>
                           </div>
                         ))}
@@ -489,12 +505,16 @@ useEffect(() => {
                       {getStatusBadge(selected.status)}
                     </div>
 
-                    <h4 className="font-semibold text-gray-700 mb-1">{s.label}</h4>
+                    <h4 className="font-semibold text-gray-700 mb-1">
+                      {s.label}
+                    </h4>
                     <div className="flex items-baseline gap-1 mb-4">
                       <span className={`text-3xl font-bold ${style.color}`}>
                         {s.current}
                       </span>
-                      <span className="text-sm text-gray-500 font-medium">{s.unit}</span>
+                      <span className="text-sm text-gray-500 font-medium">
+                        {s.unit}
+                      </span>
                     </div>
 
                     <div className="pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
@@ -510,7 +530,6 @@ useEffect(() => {
             </div>
           </>
         )}
-   
       </main>
       <Footer />
     </div>

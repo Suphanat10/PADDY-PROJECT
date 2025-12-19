@@ -1,6 +1,13 @@
 export async function loadGrowthAnalysis(fetcher) {
   const data = await fetcher();
 
+  if(data === undefined || !Array.isArray(data)){
+    return {
+      devicesList: [],
+      historyList: []
+    };
+  }
+
   const devicesList = [];
   const historyList = [];
 

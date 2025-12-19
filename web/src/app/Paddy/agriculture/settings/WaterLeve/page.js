@@ -41,18 +41,13 @@ export default function WaterLevelSettings() {
     notifyApp: true,
   });
 
-  // Load Data
-  useEffect(() => {
-    async function fetchData() {
-      // Simulate API Call
-      // setLoading(true);
-      waterPlots(setDevices, setSettings, setSelectedDeviceId);
-      setLoading(false);
-    }
 
+ useEffect(() => {
+    async function fetchData() {
+      await waterPlots(setDevices, setSettings, setSelectedDeviceId, setLoading);
+    }
     fetchData();
   }, []);
-
   useEffect(() => {
     if (!selectedDeviceId) return;
     if (!Array.isArray(devices)) return;
@@ -69,7 +64,11 @@ export default function WaterLevelSettings() {
       setSettings((prev) => ({
         ...prev,
         minLevel: currentDevice.setting.Water_level_min ?? 0,
-        maxLevel: currentDevice.setting.Water_level_mxm ?? 0, // ← แก้ชื่อถูกต้อง
+        maxLevel: currentDevice.setting.Water_level_mxm ?? 0,
+        growth_analysis_period :
+          parseInt(currentDevice.setting.growth_analysis_period) ,
+        data_send_interval_days :
+          parseInt(currentDevice.setting.data_send_interval_days),
         dataSendInterval:
           parseInt(currentDevice.setting.data_send_interval_days) || 1,
         currentWaterLevel: safeWaterValue,
@@ -93,7 +92,7 @@ export default function WaterLevelSettings() {
 
   const handleSave = () => {
     setLoading(true);
-    waterSettings( settings.minLevel, settings.maxLevel, selectedDeviceId, setLoading, setSaveStatus , setSettings );
+    waterSettings( settings.minLevel, settings.maxLevel,  settings.data_send_interval_days, settings.growth_analysis_period  , selectedDeviceId, setLoading, setSaveStatus , setSettings  );
 
   };
 
@@ -124,7 +123,7 @@ export default function WaterLevelSettings() {
 
 
 
-  if (!currentDevice)
+  if (loading && devices.length === 0)
     return (
       <>
              <Header />
@@ -137,6 +136,25 @@ export default function WaterLevelSettings() {
              <Footer />
            </>
     );
+
+
+
+    if(devices.length === 0){
+      return (
+        <>
+            <Header />
+            <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center px-4">
+                <div className="max-w-md text-center"></div>
+                    <Database size={48} className="text-gray-300 mx-auto mb-4"/>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">ไม่พบการลงทะเบียนอุปกรณ์</h2>
+                    <p className="text-gray-500 mb-6">คุณยังไม่มีอุปกรณ์ที่ลงทะเบียนในระบบ กรุณาเพิ่มอุปกรณ์ก่อนทำการตั้งค่าระดับน้ำ</p>
+                  
+                </div>
+            <Footer />
+          </> 
+      );
+    }
+    
 
   return (
     <div

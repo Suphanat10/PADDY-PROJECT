@@ -50,7 +50,7 @@ export default function SmartFarmDashboard() {
     setLastUpdate(new Date());
   }, []);
 
-  // --- WebSocket Integration ---
+
   useDeviceWebSocket({
     deviceIds, 
     onSensor: (deviceId, sensorData) => {
@@ -103,8 +103,6 @@ export default function SmartFarmDashboard() {
 
     setDevices(formattedData);
   }
-
-  // --- Computed Data ---
   const systemSummary = {
     total: devices.length,
     online: devices.filter(d => d.status === 'online').length,
@@ -117,7 +115,6 @@ export default function SmartFarmDashboard() {
     device.farm_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // จัดกลุ่มข้อมูลตามฟาร์ม
   const groupedDevices = useMemo(() => {
     return filteredDevices.reduce((groups, device) => {
       const farm = device.farm_name;

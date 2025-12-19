@@ -192,6 +192,27 @@ export default function GrowthAnalysisSettings() {
     );
   }
 
+
+  if(devices.length === 0){
+    return (  
+      <>
+        <Header />
+        <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center px-4">
+          <div className="max-w-md text-center">
+            <PlayCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              ไม่พบอุปกรณ์ในระบบ
+            </h2>
+            <p className="text-gray-600 mb-4">
+              กรุณาทำการลงทะเบียนอุปกรณ์ก่อนตั้งค่าการวิเคราะห์การเจริญเติบโต
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+  
+
   return (
     <>
       <Header />

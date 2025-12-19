@@ -1,7 +1,8 @@
 import { apiFetch } from "@/lib/api";
 import Swal from "sweetalert2";
 
-export async function waterSettings( minLevel, maxLevel, selectedDeviceId, setLoading, setSaveStatus  , setSettings ) {
+export async function waterSettings( minLevel, maxLevel, data_send_interval_days, growth_analysis_period ,  selectedDeviceId, setLoading, setSaveStatus , setSettings  ) {
+
   try {
 
 
@@ -34,6 +35,8 @@ export async function waterSettings( minLevel, maxLevel, selectedDeviceId, setLo
       device_registrations_id: selectedDeviceId,
       Water_level_min: minLevel,
       Water_level_max: maxLevel,
+      data_send_interval_days: parseInt(data_send_interval_days),
+      growth_analysis_period: parseInt(growth_analysis_period),
     };
 
 

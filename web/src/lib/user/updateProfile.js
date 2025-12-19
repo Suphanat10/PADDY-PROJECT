@@ -25,7 +25,6 @@ export async function updateProfile(e, formData, setIsSaving, setIsEditing) {
             phone_number: formData.phone_number,
             address: formData.address,
             email: formData.email,
-            gender : formData.gender,
 
         }
       });

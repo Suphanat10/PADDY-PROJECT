@@ -32,7 +32,6 @@ export default async function handleLineRegister(setIsLoading) {
       first_name: profile.displayName,
       last_name: "", // ให้ user กรอกเพิ่มทีหลัง
       email: email, 
-      // ส่งค่าว่างไปก่อน เพราะดึงจาก LINE ไม่ได้ในบัญชีทั่วไป
       birthdate: "", 
       gender: "",
       phone_number: "", 

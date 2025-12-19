@@ -50,7 +50,6 @@ export default async function handleSubmit(
       last_name: formData.last_name || "",
       phone_number: formData.phone_number,
       email: formData.email,
-      username: formData.username,
       password: formData.password,
       user_id_line: formData.user_id_line || null,
     };
@@ -62,12 +61,25 @@ export default async function handleSubmit(
       },
     });
 
-    if (response.success) {
-      Swal.fire({
-        icon: "success",
-        title: "ลงทะเบียนสำเร็จ",
-      }).then(() => window.location.replace("/"));
+    if (!response.ok) {
+      return setAlert({
+        title: "ลงทะเบียนไม่สำเร็จ",
+        message: response.message || "กรุณาลองใหม่อีกครั้งภายหลัง",
+        type: "error",
+      });
     }
+
+    Swal.fire({
+      icon: "success",
+      title: "ลงทะเบียนสำเร็จ",
+      timer: 1500,
+      showConfirmButton: false,
+    }).then(() => {
+      window.location.replace("/");
+    });
+
+
+    
   } catch (err) {
     Swal.fire({ icon: "error", title: "เกิดข้อผิดพลาด", text: err.message });
   } finally {
