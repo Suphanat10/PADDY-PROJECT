@@ -1,0 +1,44 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH & Deploy
+        env:
+          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.HOST }}
+          USER: ${{ secrets.USERNAME }}
+        run: |
+          # 1. ตั้งค่า SSH Key ชั่วคราวใน GitHub Runner
+          mkdir -p ~/.ssh/
+          echo "$PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+
+          # ตั้งตัวแปร Server
+          SERVER="$USER@$HOST"
+          DEST_PATH="/var/www/html/smart-paddy"
+
+          echo "Starting Deployment to $HOST..."
+
+          # 2. สร้างโฟลเดอร์ปลายทาง (เผื่อยังไม่มี)
+          ssh $SERVER "mkdir -p $DEST_PATH"
+
+          # 3. ส่งไฟล์โค้ดทั้งหมดไป Server (ไม่เอา folder ขยะ)
+          # มันจะส่ง folder 'web' ไปด้วยอัตโนมัติ เพราะเราอยู่ที่ root
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.next' ./ $SERVER:$DEST_PATH
+
+          # 4. สั่ง Docker Compose (ต้องเข้าไปใน folder web ก่อน)
+          echo "Rebuilding Docker Containers..."
+          ssh $SERVER "cd $DEST_PATH/web && docker compose down && docker compose up -d --build && docker image prune -f"
+          
+          echo "Deployment Successful!"
