@@ -3,17 +3,9 @@ version: '3.8'
 services:
   smart-paddy:
     container_name: smart-paddy-app
-    build: 
-      context: .
-      args:
-        # ส่งผ่านค่าจากเครื่อง (หรือ GitHub) เข้าไปใน Dockerfile
-        - NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}
-        - NEXT_PUBLIC_LIFF_ID=${NEXT_PUBLIC_LIFF_ID}
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-    restart: always
+    build: .
+    restart: always  # ถ้าระบบล่ม ให้ลุกขึ้นมาเองอัตโนมัติ
     ports:
-      - "3000:3000"
-    env_file:
-      - .env
+      - "3000:3000" # แมพ Port 3000 เครื่องจริง เข้า 3000 ใน Container
     environment:
       - NODE_ENV=production

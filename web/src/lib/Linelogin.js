@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 
 export async function ensureLiffLogin() {
   try {
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    const liffId = "2007854586-9ogoEj2j";
     if (!liffId) {
       throw new Error("LIFF ID is missing in environment variables");
     }

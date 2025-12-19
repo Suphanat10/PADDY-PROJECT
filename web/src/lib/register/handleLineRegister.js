@@ -8,13 +8,11 @@ export default async function handleLineRegister(setIsLoading) {
 
     // 1. Init LIFF
     await liff.init({ 
-      liffId: process.env.NEXT_PUBLIC_LIFF_ID,
+      liffId: "2007854586-9ogoEj2j",
       withLoginOnExternalBrowser: true
     });
 
-    // 2. Login Check
     if (!liff.isLoggedIn()) {
-      // scope: profile openid email เป็นมาตรฐานที่ขได้ทั่วไป
       liff.login({ scope: 'profile openid email' }); 
       return;
     }
@@ -62,7 +60,7 @@ export default async function handleLineRegister(setIsLoading) {
       });
       return;
     }
-    
+
     
     if (result) {
       Swal.fire({
