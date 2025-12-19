@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+
+    environment {
+        SERVER_IP = '4.217.199.31'
+        SERVER_USER = 'Suphanat' 
+        PROJECT_PATH = '/var/www/html/smart-paddy'
+        CREDENTIAL_ID = 'vps-ssh-key' 
+        GIT_URL = 'https://github.com/Suphanat10/PADDY-PROJECT' 
+        BRANCH_NAME = 'main'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: "${BRANCH_NAME}", url: "${GIT_URL}"
+            }
+        }
+
+        stage('Deploy to Server') {
+            steps {
+                sshagent([CREDENTIAL_ID]) {
+                    // 1. สร้างโฟลเดอร์ (ถ้ายังไม่มี)
+                    sh "ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} 'mkdir -p ${PROJECT_PATH}'"
+                    
+                    // 2. ส่งไฟล์ Dockerfile และ docker-compose ไป
+                    // เราไม่ส่ง node_modules หรือ .next ไป เพราะเราจะ Build ใหม่ใน Docker
+                    sh "rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.next' ./ ${SERVER_USER}@${SERVER_IP}:${PROJECT_PATH}"
+                }
+            }
+        }
+
+        stage('Build & Run Docker') {
+            steps {
+                sshagent([CREDENTIAL_ID]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_IP} '
+                            cd ${PROJECT_PATH}
+                            
+                            echo " Building new image..."
+                            docker compose up -d --build
+                            
+                            echo "Cleaning old images..."
+                            docker image prune -f
+                        '
+                    """
+                }
+            }
+        }
+    }
+}
