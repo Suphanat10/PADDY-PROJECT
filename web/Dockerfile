@@ -4,14 +4,17 @@ WORKDIR /usr/src/app
 
 # รับค่าจาก Build Argument
 ARG NEXT_PUBLIC_API_BASE
-# ตั้งค่าเป็น Environment Variable ภายในเครื่องตอน Build
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
+
+# ปิด ESLint ตอน build (สำคัญมาก)
+ENV NEXT_DISABLE_ESLINT=true
 
 COPY package*.json ./
 RUN npm install
+
 COPY . .
 
-# ตอนรันคำสั่งนี้ Next.js จะดึงค่าจาก ENV ด้านบนไปฝังในไฟล์ JS
+# Build Next.js
 RUN npm run build
 
 EXPOSE 3000
