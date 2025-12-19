@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted  # 👈 จุดสำคัญ: บอกให้มาทำงานที่เครื่องเราเอง
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -14,24 +14,33 @@ jobs:
 
       - name: Deploy with Docker
         run: |
-          # ตอนนี้เราอยู่ที่เครื่อง Server แล้ว ไม่ต้อง SSH
-          # ย้ายไฟล์จาก Runner ไปที่โฟลเดอร์งานจริง
           TARGET_DIR="/var/www/html/smart-paddy"
           
-          echo "🚀 Copying files to $TARGET_DIR..."
-          mkdir -p $TARGET_DIR
-          # ใช้ rsync ส่งไฟล์จากจุดที่ Runner อยู่ ไปที่โฟลเดอร์ปลายทาง
+          echo "🚀 Creating directory and copying files..."
+          sudo mkdir -p $TARGET_DIR
+          # แก้ไข Permission เพื่อให้ Runner เขียนไฟล์ได้
+          sudo chown -R $USER:$USER $TARGET_DIR
+          
+          # ใช้ rsync ส่งไฟล์ไปที่ปลายทาง
           rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.next' ./ $TARGET_DIR
 
-          # เข้าไปสั่ง Docker
+          echo "📝 Creating .env file for Frontend..."
+          # สร้างไฟล์ .env ไว้ในโฟลเดอร์ web ให้ตรงกับที่ Docker Compose เรียกใช้
+          cat <<EOF > $TARGET_DIR/web/.env
+          NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}
+          NEXT_PUBLIC_LIFF_ID=${{ secrets.NEXT_PUBLIC_LIFF_ID }}
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          NODE_ENV=production
+          EOF
+
           echo "🐳 Building Docker..."
           cd $TARGET_DIR/web
           
-          # ถ้ามีไฟล์ .env ต้องสร้างตรงนี้ (หรือสร้างทิ้งไว้ในเครื่องแล้วก็ได้)
-          # echo "DATABASE_URL=..." > .env 
-
+          # สั่งรัน Docker Compose
           docker compose down
           docker compose up -d --build
+          
+          # ล้าง Image เก่าๆ ที่ไม่ได้ใช้เพื่อประหยัดพื้นที่ server
           docker image prune -f
           
           echo "✅ Deployment Successful!"
