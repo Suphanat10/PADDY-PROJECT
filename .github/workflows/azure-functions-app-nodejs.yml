@@ -1,4 +1,4 @@
-name: Deploy to VPS
+name: Deploy Self-Hosted
 
 on:
   push:
@@ -6,39 +6,32 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # 👈 จุดสำคัญ: บอกให้มาทำงานที่เครื่องเราเอง
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH & Deploy
-        env:
-          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          HOST: ${{ secrets.HOST }}
-          USER: ${{ secrets.USERNAME }}
+      - name: Deploy with Docker
         run: |
-          # 1. ตั้งค่า SSH Key ชั่วคราวใน GitHub Runner
-          mkdir -p ~/.ssh/
-          echo "$PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
-
-          # ตั้งตัวแปร Server
-          SERVER="$USER@$HOST"
-          DEST_PATH="/var/www/html/smart-paddy"
-
-          echo "Starting Deployment to $HOST..."
-
-          # 2. สร้างโฟลเดอร์ปลายทาง (เผื่อยังไม่มี)
-          ssh $SERVER "mkdir -p $DEST_PATH"
-
-          # 3. ส่งไฟล์โค้ดทั้งหมดไป Server (ไม่เอา folder ขยะ)
-          # มันจะส่ง folder 'web' ไปด้วยอัตโนมัติ เพราะเราอยู่ที่ root
-          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.next' ./ $SERVER:$DEST_PATH
-
-          # 4. สั่ง Docker Compose (ต้องเข้าไปใน folder web ก่อน)
-          echo "Rebuilding Docker Containers..."
-          ssh $SERVER "cd $DEST_PATH/web && docker compose down && docker compose up -d --build && docker image prune -f"
+          # ตอนนี้เราอยู่ที่เครื่อง Server แล้ว ไม่ต้อง SSH
+          # ย้ายไฟล์จาก Runner ไปที่โฟลเดอร์งานจริง
+          TARGET_DIR="/var/www/html/smart-paddy"
           
-          echo "Deployment Successful!"
+          echo "🚀 Copying files to $TARGET_DIR..."
+          mkdir -p $TARGET_DIR
+          # ใช้ rsync ส่งไฟล์จากจุดที่ Runner อยู่ ไปที่โฟลเดอร์ปลายทาง
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.next' ./ $TARGET_DIR
+
+          # เข้าไปสั่ง Docker
+          echo "🐳 Building Docker..."
+          cd $TARGET_DIR/web
+          
+          # ถ้ามีไฟล์ .env ต้องสร้างตรงนี้ (หรือสร้างทิ้งไว้ในเครื่องแล้วก็ได้)
+          # echo "DATABASE_URL=..." > .env 
+
+          docker compose down
+          docker compose up -d --build
+          docker image prune -f
+          
+          echo "✅ Deployment Successful!"
