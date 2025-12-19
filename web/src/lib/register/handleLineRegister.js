@@ -48,7 +48,9 @@ export default async function handleLineRegister(setIsLoading) {
       headers: {
         "Content-Type": "application/json"
       },
-      body: payload,
+      body: {
+        ...payload
+      }
     });
     
      if(!result.ok){
