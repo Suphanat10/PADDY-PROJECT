@@ -1,23 +1,23 @@
-# ใช้ Node.js Base Image (Alpine เพื่อความเบา)
-FROM node:20-alpine
+FROM node:22
 
-# ตั้ง Working Directory
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Copy ไฟล์ Package มาลงก่อน (เพื่อให้ Docker Cache layer นี้ไว้)
+# 1. ประกาศรับ Argument จาก docker-compose
+ARG NEXT_PUBLIC_API_BASE
+ARG NEXT_PUBLIC_LIFF_ID
+ARG NEXT_PUBLIC_API_URL
+
+# 2. ตั้งค่าเป็น ENV เพื่อให้ Next.js ดึงไปใช้ตอน Build โค้ด
+ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
+ENV NEXT_PUBLIC_LIFF_ID=$NEXT_PUBLIC_LIFF_ID
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 COPY package*.json ./
-
-# ติดตั้ง Dependencies
-RUN npm install --legacy-peer-deps
-
-# Copy โค้ดทั้งหมด
+RUN npm install
 COPY . .
 
-# สร้าง Build สำหรับ Production
+# 3. ขั้นตอนนี้ Next.js จะนำค่า ENV ด้านบนไปใส่ในไฟล์ JavaScript
 RUN npm run build
 
-# เปิด Port 3000
 EXPOSE 3000
-
-# คำสั่งรันเมื่อ Container เริ่มทำงาน
 CMD ["npm", "start"]

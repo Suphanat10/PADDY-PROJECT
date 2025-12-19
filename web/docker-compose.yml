@@ -5,13 +5,14 @@ services:
     container_name: smart-paddy-app
     build: 
       context: .
-      # ถ้าต้องใช้ env ตั้งแต่ตอน Build (เช่น NEXT_PUBLIC_...)
       args:
+        # ส่งผ่านค่าจากเครื่อง (หรือ GitHub) เข้าไปใน Dockerfile
         - NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}
+        - NEXT_PUBLIC_LIFF_ID=${NEXT_PUBLIC_LIFF_ID}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     restart: always
     ports:
       - "3000:3000"
-    # 🔥 เพิ่มบรรทัดนี้เพื่อให้ Container ดึงค่าจากไฟล์ .env มาใช้ตอน Runtime
     env_file:
       - .env
     environment:

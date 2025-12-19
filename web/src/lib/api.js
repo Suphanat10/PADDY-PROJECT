@@ -1,4 +1,4 @@
-export const API_BASE = "https://smart-paddy.space/api";
+export const API_BASE = "https://smart-paddy.space";
 export async function apiFetch(path, options = {}) {
   const url = `${API_BASE}${path}`;
   const method = (options.method || "GET").toUpperCase();
