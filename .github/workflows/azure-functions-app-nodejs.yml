@@ -1,35 +1,40 @@
 name: Deploy Self-Hosted
 
 on:
-  push:
-    branches: [ "main" ]
+  push:
+    branches:
+      - main
 
 jobs:
-  deploy:
-    runs-on: self-hosted  # 👈 จุดสำคัญ: บอกให้มาทำงานที่เครื่องเราเอง
+  deploy:
+    runs-on: self-hosted
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Deploy with Docker
-        run: |
-          TARGET_DIR="/var/www/html/smart-paddy"
-          
-          echo "🚀 Copying files to $TARGET_DIR..."
-          mkdir -p $TARGET_DIR
-          # ใช้ rsync ส่งไฟล์จากจุดที่ Runner อยู่ ไปที่โฟลเดอร์ปลายทาง
-          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '.next' ./ $TARGET_DIR
+      - name: Deploy with Docker
+        shell: bash
+        run: |
+          set -e
 
-          # เข้าไปสั่ง Docker
-          echo "🐳 Building Docker..."
-          cd $TARGET_DIR/web
-          
-          # ถ้ามีไฟล์ .env ต้องสร้างตรงนี้ (หรือสร้างทิ้งไว้ในเครื่องแล้วก็ได้)
-          # echo "DATABASE_URL=..." > .env 
+          TARGET_DIR="/var/www/html/smart-paddy"
 
-          docker compose down
-          docker compose up -d --build
-          docker image prune -f
-          
-          echo "✅ Deployment Successful!"  เเก้ไข
+          echo "🚀 Copying files to $TARGET_DIR..."
+          mkdir -p "$TARGET_DIR"
+
+          rsync -avz \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude '.next' \
+            ./ "$TARGET_DIR"
+
+          echo "🐳 Building Docker..."
+          cd "$TARGET_DIR/web"
+
+          docker compose down
+          docker compose up -d --build
+          docker image prune -f
+
+          echo "✅ Deployment Successful!"
+
