@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState , useEffect } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, Sprout, FileText } from "lucide-react";
 import Swal from "sweetalert2";
@@ -30,6 +30,16 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState(null);
+
+  useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has("code")) {
+    handleLineRegister(setIsLoading);
+  }
+}, []);
+
+
+
 
   const handleInputChange = (e) => handleInputChangeFn(e, setFormData);
 
