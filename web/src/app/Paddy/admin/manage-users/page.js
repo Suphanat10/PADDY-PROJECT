@@ -536,6 +536,9 @@ const deleteSubArea = (areaId) => {
 };
 
 
+
+
+
   const generateGeminiInsight = async () => {
     setIsAiModalOpen(true);
     setIsAiLoading(true);
@@ -555,6 +558,21 @@ const deleteSubArea = (areaId) => {
           setSidebarOpen={setSidebarOpen}
           onAiClick={generateGeminiInsight}
         />
+
+
+        {/* {users.length === 0 && !isLoading && (
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center">
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-800 mb-2">  
+                ไม่พบข้อมูลผู้ใช้งาน
+              </h3>
+              <p className="text-slate-500 mb-4">
+                กรุณาเพิ่มผู้ใช้งานใหม่เพื่อเริ่มต้นการจัดการ
+              </p>
+
+            </div>
+          </div>
+        )} */}
 
         {isLoading && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -619,10 +637,14 @@ const deleteSubArea = (areaId) => {
               {/* Farm key */}
               <div>
                 <div className="text-2xl font-bold text-slate-800">
-                  {users.reduce(
-                    (acc, u) => acc + (u.Farm ? u.Farm.length : 0),
-                    0
-                  )}
+                  {(Array.isArray(users)
+  ? users.reduce(
+      (acc, u) =>
+        acc + (Array.isArray(u?.Farm) ? u.Farm.length : 0),
+      0
+    )
+  : 0)}
+
                 </div>
                 <div className="text-xs text-slate-500 font-bold uppercase">
                   ฟาร์ม (แห่ง)
@@ -636,16 +658,18 @@ const deleteSubArea = (areaId) => {
               {/* Farm key + area key */}
               <div>
                 <div className="text-2xl font-bold text-slate-800">
-                  {users
-                    .reduce(
-                      (acc, u) =>
-                        acc +
-                        (u.Farm
-                          ? u.Farm.reduce((a, f) => a + Number(f.area || 0), 0)
-                          : 0),
-                      0
-                    )
-                    .toFixed(1)}
+                 {(
+  (Array.isArray(users) ? users : []).reduce((acc, u) => {
+    const farms = Array.isArray(u?.Farm) ? u.Farm : [];
+
+    const farmArea = farms.reduce(
+      (a, f) => a + Number(f?.area || 0),
+      0
+    );
+
+    return acc + farmArea;
+  }, 0)
+).toFixed(1)}
                 </div>
                 <div className="text-xs text-slate-500 font-bold uppercase">
                   พื้นที่ (ไร่)

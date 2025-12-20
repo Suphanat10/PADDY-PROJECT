@@ -105,7 +105,10 @@ export default function SystemLogsPage() {
           setLoading(true);
 const fetchDataLogs = async () => {         
     const response = await apiFetch('/api/admin/log', { method: 'GET' });
-            if(!response.ok) return;
+            if(!response.ok) {
+              setLoading(false);
+              return;
+            }
             const data = response.data;
             console.log("Fetched Logs:", data);
             setData_logs (data);
@@ -237,7 +240,8 @@ const activityData = useMemo(() => {
                         </h3>
                     </div>
                     <div className="h-[180px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                        {activityData.length > 0 ? (
+                           <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={activityData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
@@ -262,6 +266,11 @@ const activityData = useMemo(() => {
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-full">
+                                <p className="text-sm text-slate-400">ไม่มีข้อมูลกิจกรรม</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

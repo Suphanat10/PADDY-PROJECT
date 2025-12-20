@@ -48,7 +48,10 @@ export default function NotificationHistoryPage() {
     const fetchdta = async () => {
       setLoading(true);
       const res = await apiFetch("/api/admin/log_alert", { method: "GET" });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setLoading(false);
+        return;
+      }
 
       const prepared = res.data.map((alert) => {
         const created = new Date(alert.created_at);

@@ -256,7 +256,6 @@ const useUserProfile = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-
         const response = await apiFetch("/api/auth/me", {
           method: "GET",
           headers: {
@@ -303,7 +302,7 @@ const logout = async () => {
     }).then(() => {
       window.location.replace("/Paddy/admin/login");
     });
-    
+
   } catch (error) {
     Swal.fire({
       icon: "error",
