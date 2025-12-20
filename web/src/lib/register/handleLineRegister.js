@@ -50,19 +50,15 @@ export default async function handleLineRegister(setIsLoading) {
     if (!result.ok) {
       throw new Error(result.message || "ลงทะเบียนไม่สำเร็จ กรุณาตรวจสอบข้อมูล");
     }
-
-    // 6. แจ้งเตือนสำเร็จและดีดไปหน้า Dashboard
-    // แนะนำให้ใช้ Swal แบบมีปุ่ม 'ตกลง' เพื่อให้ Browser มีเวลาจัดการ Cookie ให้เสร็จ
     Swal.fire({
       icon: "success",
       title: "ลงทะเบียนสำเร็จ",
-      text: "ยินดีต้อนรับเข้าสู่ระบบ Smart Paddy",
+      text: "คุณสามารถเข้าสู่ระบบได้แล้ว",
       confirmButtonText: "ตกลง",
       confirmButtonColor: "#10b981", 
     }).then((res) => {
       if (res.isConfirmed || res.isDismissed) {
-        // ✅ ใช้ window.location.replace เพื่อล้างค่า ?code=... ออกจาก URL
-        window.location.replace("/Paddy/agriculture/dashboard");
+        window.location.replace("/");
       }
     });
 

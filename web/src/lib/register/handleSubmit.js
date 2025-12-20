@@ -78,8 +78,6 @@ export default async function handleSubmit(
       window.location.replace("/");
     });
 
-
-    
   } catch (err) {
     Swal.fire({ icon: "error", title: "เกิดข้อผิดพลาด", text: err.message });
   } finally {
