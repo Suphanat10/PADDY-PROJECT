@@ -50,7 +50,6 @@ export default function NotificationHistoryPage() {
       const res = await apiFetch("/api/admin/log_alert", { method: "GET" });
       if (!res.ok) {
         setLoading(false);
-        return;
       }
 
       const prepared = res.data.map((alert) => {
@@ -106,22 +105,26 @@ export default function NotificationHistoryPage() {
   }, [RAW_ALERTS, searchTerm, selectedDevice]);
 
   const frequencyData = useMemo(() => {
-    const map = new Map();
+  const map = new Map();
 
-    for (const a of filteredAlerts) {
-      map.set(a._dateKey, (map.get(a._dateKey) || 0) + 1);
-    }
-
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, count]) => {
-        const sample = filteredAlerts.find((a) => a._dateKey === key);
-        return {
-          date: sample?._dateTH || key,
-          count,
-        };
+  for (const a of filteredAlerts) {
+    if (!map.has(a._dateKey)) {
+      map.set(a._dateKey, {
+        count: 1,
+        dateTH: a._dateTH,
       });
-  }, [filteredAlerts]);
+    } else {
+      map.get(a._dateKey).count++;
+    }
+  }
+
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b)) // O(n log n)
+    .map(([_, value]) => ({
+      date: value.dateTH,
+      count: value.count,
+    }));
+}, [filteredAlerts]);
 
   useEffect(() => {
     setCurrentPage(1);
