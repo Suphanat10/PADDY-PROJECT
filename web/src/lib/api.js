@@ -1,4 +1,4 @@
-export const API_BASE = "http://localhost:8000";
+export const API_BASE = "https://smart-paddy.space";
 
 export async function apiFetch(path, options = {}) {
   const url = `${API_BASE}${path}`;
