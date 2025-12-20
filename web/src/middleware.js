@@ -4,10 +4,18 @@ export function middleware(request) {
   const token = request.cookies.get("accessToken")?.value;
   const { pathname } = request.nextUrl;
 
+  const publicPaths = [
+    "/",
+    "/register",
+    "/Paddy/admin/login",
+  ];
+
+  // อนุญาต static / api
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
-    pathname === "/"  || pathname === "/register" ) {
+    publicPaths.includes(pathname)
+  ) {
     return NextResponse.next();
   }
 
@@ -19,3 +27,5 @@ export function middleware(request) {
 
   return NextResponse.next();
 }
+
+

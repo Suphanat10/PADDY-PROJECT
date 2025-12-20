@@ -284,7 +284,36 @@ const useUserProfile = () => {
   return { userProfile, loading };
 };
 
-// --- 2. Helper Function สำหรับหาตัวอักษรแรกของชื่อ ---
+
+const logout = async () => {
+  try {
+    const response = await apiFetch("/api/auth/logout", {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw new Error(response.message || "ไม่สามารถออกจากระบบได้");
+    }
+
+    Swal.fire({
+      icon: "success",
+      title: "ออกจากระบบสำเร็จ",
+      timer: 1500,
+      showConfirmButton: false,
+    }).then(() => {
+      window.location.replace("/Paddy/admin/login");
+    });
+    
+  } catch (error) {
+    Swal.fire({
+      icon: "error",
+      title: "ข้อผิดพลาด",
+      text: error.message || "ไม่สามารถออกจากระบบได้",
+    });
+  }
+};
+
+
 const getInitial = (name) => {
   return name ? name.charAt(0).toUpperCase() : "U";
 };
@@ -429,13 +458,14 @@ const AdminSidebar = ({
 
         {/* User Mini Profile & Logout (Updated Dynamic Data) */}
         <div className="p-4 border-t border-slate-100">
-          <a
-            href="/auth/login"
-            className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors mb-3"
+          <button 
+            onClick={logout}
+
+             className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors mb-3"
           >
             <LogOut size={20} />
             <span>ออกจากระบบ</span>
-          </a>
+          </button>
 
           <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border border-slate-100">
             <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold shrink-0">
