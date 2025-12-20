@@ -22,6 +22,7 @@ export async  function getdataDevices(setIsLoading, setDevices) {
          title: "ข้อผิดพลาด",
          text: res.message || "Fetch failed",
       });
+       setIsLoading(false);
       return;
       }
       setDevices(res.data);

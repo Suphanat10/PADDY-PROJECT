@@ -41,7 +41,7 @@ export function useMonitorWebSocket(deviceCodes = [], onMessage) {
     const connect = () => {
       if (!isMountedRef.current) return;
 
-      const ws = new WebSocket("ws://localhost:8000");
+const ws = new WebSocket("wss://smart-paddy.space");
       socketRef.current = ws;
 
       ws.onopen = () => {

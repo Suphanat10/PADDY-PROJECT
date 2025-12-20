@@ -174,7 +174,7 @@ export default function DeviceListPage() {
     const deviceIds = sensorDevices.map((d) => d.device_code);
 
     createSensorWebSocket({
-      url: "ws://localhost:8000/",
+      url: "wss://smart-paddy.space",
       deviceIds,
       onConnected: () => setIsWsConnected(true),
       onDisconnected: () => setIsWsConnected(false),

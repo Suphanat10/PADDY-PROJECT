@@ -67,8 +67,8 @@ export default function AdminDashboardPage() {
   });
 
   useEffect(() => {
-    function fetchDevices() {
-      getdataDevices(setLoading, setDevices);
+    async function fetchDevices () {
+       const res = await getdataDevices(setLoading, setDevices);
     }
     fetchDevices();
   }, []);

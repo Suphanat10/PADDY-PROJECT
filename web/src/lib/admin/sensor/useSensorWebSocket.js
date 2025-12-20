@@ -49,7 +49,7 @@ export function useSensorWebSocket(deviceId  ) {
     const connectSocket = () => {
       if (!isPageActiveRef.current) return;
 
-      socketRef.current = new WebSocket("ws://localhost:8000");
+      socketRef.current = new WebSocket("wss://smart-paddy.space");
 
       socketRef.current.onopen = () => {
         console.log("🟢 WS Connected");
