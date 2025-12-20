@@ -13,7 +13,7 @@ export function useDeviceWebSocket({ deviceIds, onStatus }) {
     const connect = () => {
       if (!isPageActive.current) return; // ถ้าหน้าถูกปิด → ไม่ต้องเชื่อมต่อใหม่
 
-     const ws = new WebSocket("wss://smart-paddy.space");
+     const ws = new WebSocket("wss://smart-paddy.space/ws");
       wsRef.current = ws;
 
       ws.onopen = () => {
