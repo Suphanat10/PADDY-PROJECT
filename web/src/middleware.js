@@ -8,6 +8,7 @@ export function middleware(request) {
     "/",
     "/register",
     "/Paddy/admin/login",
+    "/ForgotPassword"
   ];
 
   // อนุญาต static / api
