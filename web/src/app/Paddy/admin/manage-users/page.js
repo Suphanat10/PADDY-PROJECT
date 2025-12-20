@@ -637,13 +637,12 @@ const deleteSubArea = (areaId) => {
               {/* Farm key */}
               <div>
                 <div className="text-2xl font-bold text-slate-800">
-                  {(Array.isArray(users)
-  ? users.reduce(
-      (acc, u) =>
-        acc + (Array.isArray(u?.Farm) ? u.Farm.length : 0),
-      0
-    )
-  : 0)}
+        {Array.isArray(users)
+  ? users
+      .map(u => (Array.isArray(u?.Farm) ? u.Farm.length : 0))
+      .flat()
+      .reduce((a, b) => a + b, 0)
+  : 0}
 
                 </div>
                 <div className="text-xs text-slate-500 font-bold uppercase">
@@ -658,18 +657,18 @@ const deleteSubArea = (areaId) => {
               {/* Farm key + area key */}
               <div>
                 <div className="text-2xl font-bold text-slate-800">
-                 {(
-  (Array.isArray(users) ? users : []).reduce((acc, u) => {
-    const farms = Array.isArray(u?.Farm) ? u.Farm : [];
-
-    const farmArea = farms.reduce(
-      (a, f) => a + Number(f?.area || 0),
-      0
-    );
-
-    return acc + farmArea;
-  }, 0)
-).toFixed(1)}
+        {Array.isArray(users)
+  ? users
+      .map(u => 
+        (Array.isArray(u?.Farm) 
+          ? u.Farm.map(f => (Array.isArray(f?.areas) ? f.areas.length : 0)).reduce((a, b) => a + b, 0)
+          : 0
+        )
+      )
+      .flat()
+      .reduce((a, b) => a + b, 0)
+  : 0}
+                 
                 </div>
                 <div className="text-xs text-slate-500 font-bold uppercase">
                   พื้นที่ (ไร่)
