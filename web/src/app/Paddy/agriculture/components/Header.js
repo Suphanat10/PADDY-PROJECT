@@ -7,7 +7,7 @@ import {
   Bell, Settings, User, ChevronDown, Menu, X, Sprout, 
   LogOut, Shield, Activity, FileText, LayoutDashboard, 
   PlusCircle, Database, BarChart3, Map, ChevronRight,
-  CheckCircle, Clock
+  CheckCircle, Clock ,Droplets
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import Swal from "sweetalert2";
@@ -35,7 +35,8 @@ export default function Header() {
     { name: "ลงทะเบียนอุปกรณ์", href: "/Paddy/agriculture/registerdevice", icon: PlusCircle },
     { name: "จัดการพื้นที่", href: "/Paddy/agriculture/FarmManagement", icon: Map },
     { name: "ข้อมูลอุปกรณ์", href: "/Paddy/agriculture/devicelist", icon: Database },
-    { name: "การวิเคราะห์การเจริญเติบโต", href: "/Paddy/agriculture/growthAnalysis", icon: BarChart3 },
+    { name: "AI วิเคราะห์ข้าว", href: "/Paddy/agriculture/growthAnalysis", icon: BarChart3 },
+    { name: "จัดการปั๊มน้ำ", href: "/Paddy/agriculture/PumpManagement", icon: Droplets }
   ];
 
   const handleMarkAsRead = (id) => {
