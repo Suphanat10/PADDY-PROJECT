@@ -37,11 +37,7 @@ const App = () => {
          if (response.ok) {
              setFarmAreas(response.data);
          } else {
-             Swal.fire({
-               icon: "error",
-               title: "ข้อผิดพลาด",
-               text: response.message || "ไม่สามารถดึงข้อมูลพื้นที่ได้",
-             });
+               setFarmAreas([]);
          }
       }
 
@@ -169,7 +165,6 @@ const App = () => {
 
       setIsModalOpen(false);
     } catch (error) {
-      console.error("REGISTER PUMP FAILED:", error);
       Swal.fire({
         icon: "error",
         title: "ลงทะเบียนไม่สำเร็จ",
