@@ -1,4 +1,4 @@
-name: Deploy Self-Hosted
+name: Deploy Frontend (Self-Hosted)
 
 on:
   push:
@@ -13,28 +13,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy with Docker
+      - name: Deploy Frontend with Docker
         shell: bash
         run: |
           set -e
 
           TARGET_DIR="/var/www/html/smart-paddy"
 
-          echo "🚀 Copying files to $TARGET_DIR..."
+          echo "🚀 Syncing files..."
           mkdir -p "$TARGET_DIR"
 
           rsync -avz \
+            --delete \
             --exclude '.git' \
             --exclude 'node_modules' \
             --exclude '.next' \
             ./ "$TARGET_DIR"
 
-          echo "🐳 Building Docker..."
           cd "$TARGET_DIR/web"
 
-          docker compose down
+          echo "🐳 Docker Compose Up..."
+          docker compose pull || true
           docker compose up -d --build
+
+          echo "🧹 Cleanup unused images..."
           docker image prune -f
 
-          echo "✅ Deployment Successful!"
-
+          echo "✅ Frontend Deployment Successful!"
