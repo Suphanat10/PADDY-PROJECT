@@ -1,21 +1,36 @@
-- name: Deploy with Docker
-  shell: bash
-  run: |
-    set -e
-    TARGET_DIR="/var/www/html/smart-paddy"
-    echo "🚀 Copying files to $TARGET_DIR..."
+name: Deploy Self-Hosted
 
-    sudo mkdir -p "$TARGET_DIR"
-    sudo rsync -avz \
-      --exclude '.git' \
-      --exclude 'node_modules' \
-      --exclude '.next' \
-      ./ "$TARGET_DIR"
+on:
+  push:
+    branches:
+      - main
 
-    echo "🐳 Building Docker..."
-    cd "$TARGET_DIR/web"
-    sudo docker compose down
-    sudo docker compose up -d --build
-    sudo docker image prune -f
+jobs:
+  deploy:
+    runs-on: self-hosted
 
-    echo "✅ Deployment Successful!"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy with Docker
+        shell: bash
+        run: |
+          set -e
+          TARGET_DIR="/var/www/html/smart-paddy"
+          echo "🚀 Copying files to $TARGET_DIR..."
+
+          sudo mkdir -p "$TARGET_DIR"
+          sudo rsync -avz \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude '.next' \
+            ./ "$TARGET_DIR"
+
+          echo "🐳 Building Docker..."
+          cd "$TARGET_DIR/web"
+          sudo docker compose down
+          sudo docker compose up -d --build
+          sudo docker image prune -f
+
+          echo "✅ Deployment Successful!"
