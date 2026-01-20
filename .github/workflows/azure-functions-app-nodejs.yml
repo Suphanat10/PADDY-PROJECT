@@ -19,4 +19,3 @@
     sudo docker image prune -f
 
     echo "✅ Deployment Successful!"
-"
