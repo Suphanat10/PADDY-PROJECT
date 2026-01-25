@@ -17,7 +17,7 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  // ✅ อนุญาต static / api
+
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -26,7 +26,6 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  // ❌ ไม่มี token → redirect
   if (!token) {
     const loginUrl = new URL("/", request.url);
     loginUrl.searchParams.set("next", pathname);
@@ -36,7 +35,7 @@ export function middleware(request) {
   return NextResponse.next();
 }
 
-// ⭐ สำคัญมาก
+
 export const config = {
   matcher: [
     "/((?!login/line|api|_next/static|_next/image|favicon.ico).*)",
