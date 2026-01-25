@@ -4,31 +4,29 @@ export function middleware(request) {
   const token = request.cookies.get("accessToken")?.value;
   const { pathname } = request.nextUrl;
 
-  // 🔓 public routes
   const publicPaths = [
     "/",
+    "/login/line",
     "/register",
+    "/Paddy/admin/login",
     "/ForgotPassword",
-    "/login/line",       // LIFF
-    "/Paddy/admin/login"
   ];
 
-  // ⛔ allow static / api / assets
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.startsWith("/api") ||
-    pathname.startsWith("/public")
-  ) {
-    return NextResponse.next();
-  }
-
-  // 🔓 public path
+  // ✅ อนุญาต public path
   if (publicPaths.includes(pathname)) {
     return NextResponse.next();
   }
 
-  // 🔐 protected
+  // ✅ อนุญาต static / api
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/static")
+  ) {
+    return NextResponse.next();
+  }
+
+  // ❌ ไม่มี token → redirect
   if (!token) {
     const loginUrl = new URL("/", request.url);
     loginUrl.searchParams.set("next", pathname);
@@ -38,3 +36,9 @@ export function middleware(request) {
   return NextResponse.next();
 }
 
+// ⭐ สำคัญมาก
+export const config = {
+  matcher: [
+    "/((?!login/line|api|_next/static|_next/image|favicon.ico).*)",
+  ],
+};
