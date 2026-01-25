@@ -1,85 +1,116 @@
-let wsInstance = null; // ⭐ ป้องกัน WebSocket ถูกสร้างซ้ำ
+import { io } from "socket.io-client";
 import Swal from "sweetalert2";
+
+let socketInstance = null;
+let lastDataTimers = {}; // ⭐ timer ต่อ device
+
+const DATA_TIMEOUT = 15000; // 15 วินาที
+
 export function createSensorWebSocket({
   url,
   deviceIds,
   onConnected,
   onDisconnected,
   onSensorUpdate,
+  onStatusUpdate,
   onError,
 }) {
-  
-  if (wsInstance && wsInstance.readyState === WebSocket.OPEN) {
-    console.log("WS already connected. Reuse instance.");
-    return wsInstance;
+  if (socketInstance && socketInstance.connected) {
+    console.log("Socket.IO already connected.");
+    return socketInstance;
   }
 
-  console.log("Connecting WebSocket →", url);
+  const socket = io(url, {
+    transports: ["websocket"],
+    withCredentials: true,
+  });
 
-  const ws = new WebSocket(url);
-  wsInstance = ws;
+  socketInstance = socket;
 
-  ws.onopen = () => {
-    console.log("WebSocket Connected");
-
+  socket.on("connect", () => {
+    console.log("Socket.IO Connected:", socket.id);
     onConnected?.();
 
-    ws.send(
-      JSON.stringify({
-        action: "SUBSCRIBE",
-        device_ids: deviceIds,
-      })
-    );
-  };
+    const ids = Array.isArray(deviceIds) ? deviceIds : [deviceIds];
+    ids.forEach((id) => {
+      socket.emit("join-device", id);
 
-  ws.onmessage = (event) => {
+      // ⭐ ตั้ง timeout รอข้อมูล
+      resetDeviceTimer(id, onStatusUpdate);
+    });
+  });
+
+  socket.on("sensorData", (payload) => {
     try {
-      const msg = JSON.parse(event.data);
-      const deviceId = msg.deviceId || msg.device_id;
+      const deviceId = payload.device_code;
+      const rawData = payload.data;
 
-      if (msg.type !== "SENSOR_UPDATE" || !deviceId) return;
+      if (!deviceId || !rawData) return;
+
+      // ⭐ reset timer เมื่อมีข้อมูล
+      resetDeviceTimer(deviceId, onStatusUpdate);
 
       const data = {
-        N: msg.npk?.N ?? msg.data?.N,
-        P: msg.npk?.P ?? msg.data?.P,
-        K: msg.npk?.K ?? msg.data?.K,
-        water_level: msg.water_level ?? msg.data?.water_level,
-        soil_moisture: msg.soil_moisture ?? msg.data?.soil_moisture,
+        N: rawData.N,
+        P: rawData.P,
+        K: rawData.K,
+        water_level: rawData.water_level,
+        soil_moisture: rawData.soil_moisture,
       };
 
-      const timestamp = new Date().toLocaleString("th-TH", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
+      const rawDate = payload.measured_at || new Date().toISOString();
+      const timestamp = rawDate.substring(0, 19).replace("T", " ");
 
       onSensorUpdate?.(deviceId, data, timestamp);
+      onStatusUpdate?.(deviceId, "online");
+
     } catch (err) {
-      console.error("WS Parse Error:", err);
+      console.error("Sensor parse error:", err);
       onError?.(err);
     }
-  };
+  });
 
-  ws.onclose = () => {
-    console.log("WebSocket Closed");
+  socket.on("disconnect", (reason) => {
+    console.log("Socket.IO Disconnected:", reason);
     onDisconnected?.();
-    wsInstance = null;       
-  };
 
-  ws.onerror = (err) => {
-    console.error("WebSocket Error:", err);
+    Object.keys(lastDataTimers).forEach((id) => {
+      onStatusUpdate?.(id, "offline");
+    });
+
+    if (reason === "io server disconnect") {
+      socket.connect();
+    }
+  });
+
+  socket.on("connect_error", (err) => {
+    console.error("Socket.IO Error:", err);
     onError?.(err);
-  };
+  });
 
-  return ws;
+  return socket;
 }
 
-/**
- * ปิด WebSocket (เมื่อออกจากหน้า)
- */
-export function closeSensorWebSocket() {
-  if (wsInstance) {
-    console.log("Closing WebSocket...");
-    wsInstance.close();
-    wsInstance = null;
+/* =========================
+   ⏱️ TIMER HANDLER
+========================= */
+function resetDeviceTimer(deviceId, onStatusUpdate) {
+  if (lastDataTimers[deviceId]) {
+    clearTimeout(lastDataTimers[deviceId]);
   }
+
+  lastDataTimers[deviceId] = setTimeout(() => {
+    console.warn(`No data from ${deviceId} → OFFLINE`);
+    onStatusUpdate?.(deviceId, "offline");
+  }, DATA_TIMEOUT);
+}
+
+export function closeSensorWebSocket() {
+  if (socketInstance) {
+    socketInstance.disconnect();
+    socketInstance = null;
+  }
+
+  Object.values(lastDataTimers).forEach(clearTimeout);
+  lastDataTimers = {};
 }

@@ -1,17 +1,18 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { io } from "socket.io-client";
 
-export function useSensorWebSocket(deviceId  ) {
+// URL ของ Backend
+const SOCKET_URL = "http://localhost:8000"; 
+
+export function useSensorWebSocket(deviceId) {
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [currentData, setCurrentData] = useState(null);
 
   const socketRef = useRef(null);
-  const reconnectTimerRef = useRef(null);
-  const isPageActiveRef = useRef(true);
-
   const lastValueRef = useRef({});
 
-
+  // ฟังก์ชันคำนวณแนวโน้ม (เหมือนเดิม)
   const calcTrend = (prev, next) => {
     if (prev === undefined || prev === null) return "stable";
     if (next > prev) return "up";
@@ -19,131 +20,92 @@ export function useSensorWebSocket(deviceId  ) {
     return "stable";
   };
 
-
-  const safeSend = (msg) => {
-    const socket = socketRef.current;
-    if (!socket) return;
-
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(msg);
-      return;
-    }
-
-    if (socket.readyState === WebSocket.CONNECTING) {
-      const interval = setInterval(() => {
-        if (socket.readyState === WebSocket.OPEN) {
-          clearInterval(interval);
-          socket.send(msg);
-        }
-      }, 50);
-    }
-  };
-
-
   useEffect(() => {
     if (!deviceId) return;
 
+    // 1. สร้างการเชื่อมต่อ Socket.IO
+    socketRef.current = io(SOCKET_URL, {
+      transports: ["websocket"],
+      withCredentials: true,
+    });
 
-    isPageActiveRef.current = true;
+    const socket = socketRef.current;
 
-    const connectSocket = () => {
-      if (!isPageActiveRef.current) return;
+    socket.on("connect", () => {
+      console.log("🟢 Socket.IO Connected");
+      setIsSocketConnected(true);
+      
+      // 2. Join Room แทนการส่ง SUBSCRIBE JSON
+      socket.emit("join-device", deviceId);
+    });
 
-      socketRef.current = new WebSocket("wss://smart-paddy.space/ws");
+    // 3. รอรับข้อมูลเซนเซอร์ (Event: sensorData)
+    socket.on("sensorData", (payload) => {
+      // payload โครงสร้าง: { device_code, data: { N, P, K, water_level, soil_moisture } }
+      if (!payload || payload.device_code !== deviceId) return;
 
-      socketRef.current.onopen = () => {
-        console.log("🟢 WS Connected");
-        setIsSocketConnected(true);
+      const msgData = payload.data;
 
-        safeSend(
-          JSON.stringify({
-            action: "SUBSCRIBE",
-            deviceIds: [deviceId],
-          })
-        );
-      };
+      setCurrentData((prev) => {
+        const next = {
+          nitrogen: {
+            value: msgData.N ?? prev?.nitrogen?.value ?? "-",
+            unit: "mg/kg",
+            trend: calcTrend(lastValueRef.current.N, msgData.N),
+          },
+          phosphorus: {
+            value: msgData.P ?? prev?.phosphorus?.value ?? "-",
+            unit: "mg/kg",
+            trend: calcTrend(lastValueRef.current.P, msgData.P),
+          },
+          potassium: {
+            value: msgData.K ?? prev?.potassium?.value ?? "-",
+            unit: "mg/kg",
+            trend: calcTrend(lastValueRef.current.K, msgData.K),
+          },
+          humidity: {
+            value: msgData.soil_moisture ?? prev?.humidity?.value ?? "-",
+            unit: "%",
+            trend: calcTrend(lastValueRef.current.humidity, msgData.soil_moisture),
+          },
+          waterLevel: {
+            value: msgData.water_level ?? prev?.waterLevel?.value ?? "-",
+            unit: "cm",
+            trend: calcTrend(lastValueRef.current.waterLevel, msgData.water_level),
+          },
+          timestamp: payload.measured_at // เวลาที่ Backend ส่งมา
+        };
 
-      socketRef.current.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type !== "SENSOR_UPDATE") return;
+        // เก็บค่าล่าสุดไว้ใช้คำนวณ Trend ในรอบถัดไป
+        lastValueRef.current = {
+          N: msgData.N,
+          P: msgData.P,
+          K: msgData.K,
+          humidity: msgData.soil_moisture,
+          waterLevel: msgData.water_level,
+        };
 
-          setCurrentData((prev) => {
-            const next = {
-              nitrogen: {
-                value: msg.npk?.N ?? prev?.nitrogen?.value ?? "-",
-                unit: "mg/kg",
-                trend: calcTrend(lastValueRef.current.N, msg.npk?.N),
-              },
-              phosphorus: {
-                value: msg.npk?.P ?? prev?.phosphorus?.value ?? "-",
-                unit: "mg/kg",
-                trend: calcTrend(lastValueRef.current.P, msg.npk?.P),
-              },
-              potassium: {
-                value: msg.npk?.K ?? prev?.potassium?.value ?? "-",
-                unit: "mg/kg",
-                trend: calcTrend(lastValueRef.current.K, msg.npk?.K),
-              },
-              humidity: {
-                value: msg.soil_moisture ?? prev?.humidity?.value ?? "-",
-                unit: "%",
-                trend: calcTrend(
-                  lastValueRef.current.humidity,
-                  msg.soil_moisture
-                ),
-              },
-              waterLevel: {
-                value: msg.water_level ?? prev?.waterLevel?.value ?? "-",
-                unit: "cm",
-                trend: calcTrend(
-                  lastValueRef.current.waterLevel,
-                  msg.water_level
-                ),
-              },
-             
-            };
+        return next;
+      });
+    });
 
-            lastValueRef.current = {
-              N: msg.npk?.N,
-              P: msg.npk?.P,
-              K: msg.npk?.K,
-              humidity: msg.soil_moisture,
-              waterLevel: msg.water_level,
-              temperature: msg.temperature,
-            };
-             
+    socket.on("disconnect", () => {
+      console.warn("🔴 Socket.IO Disconnected");
+      setIsSocketConnected(false);
+    });
 
-            return next;
-          });
-        } catch (err) {
-          console.error("WS parse error:", err);
-        }
-      };
+    socket.on("connect_error", (err) => {
+      console.error("❌ Socket Error:", err.message);
+      setIsSocketConnected(false);
+    });
 
-      socketRef.current.onclose = () => {
-        console.warn("WS Disconnected");
-        setIsSocketConnected(false);
-
-        if (!isPageActiveRef.current) return;
-
-        reconnectTimerRef.current = setTimeout(connectSocket, 2000);
-      };
-
-      socketRef.current.onerror = () => {
-        socketRef.current.close();
-      };
-    };
-
-    connectSocket();
-
+    // 4. Cleanup เมื่อ Component Unmount
     return () => {
-      console.log("Page unmount → close WebSocket");
-
-      isPageActiveRef.current = false;
-
-      socketRef.current?.close();
-      clearTimeout(reconnectTimerRef.current);
+      console.log("Cleanup Socket.IO");
+      socket.off("connect");
+      socket.off("sensorData");
+      socket.off("disconnect");
+      socket.disconnect();
     };
   }, [deviceId]);
 

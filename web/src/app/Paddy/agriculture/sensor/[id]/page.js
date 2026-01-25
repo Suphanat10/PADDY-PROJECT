@@ -444,7 +444,7 @@ const { id } = useParams();
                       <Legend />
                       <Line
                         type="monotone"
-                        dataKey="humidity"
+                         dataKey= "humidity"
                         stroke="#0ea5e9"
                         strokeWidth={2}
                         name="ความชื้น (%)"

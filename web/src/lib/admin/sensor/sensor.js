@@ -2,20 +2,18 @@ import { apiFetch } from "@/lib/api";
 import Swal from "sweetalert2";
 import { useState, useEffect } from "react";
 
-
 export async function fetchSensorDetail(deviceCode) {
-   const response = await apiFetch(`/api/admin/devicebyID`, {
+  const response = await apiFetch(`/api/admin/devicebyID`, {
     method: "POST",
     body: { device_code: deviceCode },
   });
 
-
-  if(response.status === 404) {
-     return [];
+  if (response.status === 404) {
+    return [];
   }
 
   if (!response.ok) {
-     Swal.fire({
+    Swal.fire({
       icon: "error",
       title: "ข้อผิดพลาด",
       text: response.message || "Fetch failed",
@@ -25,7 +23,6 @@ export async function fetchSensorDetail(deviceCode) {
 
   return response.data;
 }
-
 
 export default function useSensorDetail(deviceCode) {
   const [currentData, setCurrentData] = useState(null);
@@ -51,8 +48,8 @@ export default function useSensorDetail(deviceCode) {
             setError("ไม่พบอุปกรณ์ที่ระบุ");
             setIsLoading(false);
           }
-            return;
-         }
+          return;
+        }
 
         if (!isMounted) return;
 
@@ -66,15 +63,22 @@ export default function useSensorDetail(deviceCode) {
           },
         });
 
-      
+        // --- 1. จัดการข้อมูลปัจจุบัน (Latest Data) ---
         const latestByType = {};
+        let latestTime = "-";
+
         for (const row of res.sensor_data) {
           if (!latestByType[row.sensor_type]) {
             latestByType[row.sensor_type] = row;
+            // เก็บเวลาจากข้อมูลตัวที่ใหม่ที่สุดที่เจอ (ตัวแรกใน Array มักจะใหม่สุด)
+            if (latestTime === "-") {
+                latestTime = row.measured_at.substring(0, 16).replace("T", " ");
+            }
           }
         }
 
         setCurrentData({
+          timestamp: latestTime, // ✅ เพิ่มเวลาล่าสุด
           nitrogen: {
             value: latestByType["Nitrogen (N)"]?.value ?? "-",
             unit: "mg/kg",
@@ -102,40 +106,49 @@ export default function useSensorDetail(deviceCode) {
           },
         });
 
-      
+        // --- 2. จัดการข้อมูลประวัติ (Historical Data) ตามวันเวลา ---
         const grouped = {};
 
         res.sensor_data.forEach((row) => {
-          const time = new Date(row.measured_at).toLocaleDateString("th-TH", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          });
+          // ✅ จัดรูปแบบเวลาเป็น YYYY-MM-DD HH:mm
+          const timeKey = row.measured_at.substring(0, 16).replace("T", " ");
 
-          if (!grouped[time]) grouped[time] = { time };
+          if (!grouped[timeKey]) {
+              grouped[timeKey] = { time: timeKey };
+          }
 
+          // ตรวจสอบ sensor_type ให้ตรงกับที่ DB ส่งมา (N, P, K หรือชื่อเต็ม)
           switch (row.sensor_type) {
             case "Nitrogen (N)":
-              grouped[time].nitrogen = row.value;
+            case "N":
+              grouped[timeKey].nitrogen = row.value;
               break;
             case "Phosphorus (P)":
-              grouped[time].phosphorus = row.value;
+            case "P":
+              grouped[timeKey].phosphorus = row.value;
               break;
             case "Potassium (K)":
-              grouped[time].potassium = row.value;
+            case "K":
+              grouped[timeKey].potassium = row.value;
               break;
             case "Soil Moisture":
-              grouped[time].humidity = row.value;
+            case "soil_moisture":
+              grouped[timeKey].humidity = row.value;
               break;
             case "Water Level":
-              grouped[time].waterLevel = row.value;
+            case "water_level":
+              grouped[timeKey].waterLevel = row.value;
               break;
           }
         });
 
-        setHistoricalData(
-          Object.values(grouped).slice(-24) 
+        // แปลง Object เป็น Array และเรียงลำดับเวลา (ใหม่ไปเก่า)
+        const sortedHistory = Object.values(grouped).sort((a, b) => 
+            new Date(b.time) - new Date(a.time)
         );
+
+        setHistoricalData(sortedHistory);
+
       } catch (err) {
         console.error(err);
         setError("ไม่สามารถโหลดข้อมูลอุปกรณ์ได้");
@@ -160,6 +173,5 @@ export default function useSensorDetail(deviceCode) {
     isSocketConnected: false, 
   };
 }
-
 
 

@@ -1,68 +1,55 @@
 "use client";
+
 import { useEffect, useRef } from "react";
+import { io } from "socket.io-client";
 
 export function useDeviceWebSocket({ deviceIds, onStatus }) {
-  const wsRef = useRef(null);
-  const isPageActive = useRef(false); // เช็คว่าหน้านี้ยังเปิดอยู่ไหม
+  const socketRef = useRef(null);
 
   useEffect(() => {
+    // 1. ตรวจสอบว่ามี ID อุปกรณ์ส่งมาหรือไม่
     if (!deviceIds || deviceIds.length === 0) return;
 
-    isPageActive.current = true;
 
-    const connect = () => {
-      if (!isPageActive.current) return; // ถ้าหน้าถูกปิด → ไม่ต้องเชื่อมต่อใหม่
+    const socket = io("http://localhost:8000", {
+      transports: ["websocket"],
+      withCredentials: true,
+      reconnectionAttempts: 5, // พยายามต่อใหม่ 5 ครั้งถ้าหลุด
+    });
 
-     const ws = new WebSocket("wss://smart-paddy.space/ws");
-      wsRef.current = ws;
+    socketRef.current = socket;
 
-      ws.onopen = () => {
-        console.log("WS Connected → SUBSCRIBE ONLY STATUS");
+    socket.on("connect", () => {
+      console.log("Socket.IO Connected → Join Status Rooms");
 
-        ws.send(
-          JSON.stringify({
-            action: "SUBSCRIBE_STATUS", 
-            deviceIds: deviceIds,
-          })
-        );
-      };
+      deviceIds.forEach((id) => {
+        socket.emit("join-device", id);
+      });
+    });
 
-      ws.onmessage = (event) => {
-        if (!isPageActive.current) return;
+    socket.on("deviceStatus", (msg) => {
+      if (msg && msg.device_code) {
+        onStatus?.(msg.device_code, msg.status);
+      }
+    });
 
-        try {
-          const msg = JSON.parse(event.data);
+    socket.on("connect_error", (err) => {
+      console.error("Socket.IO Connection Error:", err);
+    });
 
-          if (msg.type === "DEVICE_STATUS") {
-            onStatus?.(msg.deviceId, msg.status); 
-          }
-        } catch (err) {
-          console.error("WS Parse Error:", err);
-        }
-      };
-
-      ws.onerror = () => console.log("WS Error");
-
-      ws.onclose = () => {
-        console.log("WS Closed");
-
-        if (!isPageActive.current) return;
-
-        // Reconnect หลัง 1.2 วินาที
-        setTimeout(() => connect(), 1200);
-      };
-    };
-
-    connect();
+    socket.on("disconnect", (reason) => {
+      console.log("Socket.IO Disconnected:", reason);
+    });
 
     return () => {
-      console.log("Page closed → stop WebSocket");
-
-      isPageActive.current = false;
-
-      if (wsRef.current) {
-        wsRef.current.close();
+      console.log("Cleaning up Socket.IO Connection...");
+      if (socket) {
+        socket.off("connect");
+        socket.off("deviceStatus");
+        socket.off("disconnect");
+        socket.off("connect_error");
+        socket.disconnect();
       }
     };
-  }, [deviceIds]);
+  }, [deviceIds]); 
 }

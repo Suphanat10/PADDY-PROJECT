@@ -34,7 +34,7 @@ export function useSensorHistory(deviceId) {
         const grouped = sensorData.reduce((acc, item) => {
           if (!item.measured_at) return acc;
 
-const dateKey = item.measured_at.substring(0, 16).replace("T", " ");
+          const dateKey = item.measured_at.substring(0, 16).replace("T", " ");
           if (!acc[dateKey]) {
             acc[dateKey] = {
               time: dateKey,
@@ -43,28 +43,24 @@ const dateKey = item.measured_at.substring(0, 16).replace("T", " ");
               potassium: null,
               humidity: null,
               waterLevel: null,
-              temperature: null,
             };
           }
 
           switch (item.sensor_type) {
-            case "Nitrogen (N)":
+            case "N":
               acc[dateKey].nitrogen = item.value;
               break;
-            case "Phosphorus (P)":
+            case "P":
               acc[dateKey].phosphorus = item.value;
               break;
-            case "Potassium (K)":
+            case "K":
               acc[dateKey].potassium = item.value;
               break;
-            case "Soil Moisture":
+            case "soil_moisture":
               acc[dateKey].humidity = item.value;
               break;
-            case "Water Level":
+            case "water_level":
               acc[dateKey].waterLevel = item.value;
-              break;
-            case "Temperature":
-              acc[dateKey].temperature = item.value;
               break;
             default:
               break;

@@ -1,104 +1,78 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { io } from "socket.io-client";
+
+const SOCKET_URL = "http://localhost:8000"; 
 
 export function useMonitorWebSocket(deviceCodes = [], onMessage) {
   const [isSocketConnected, setIsSocketConnected] = useState(false);
-
   const socketRef = useRef(null);
-  const reconnectTimerRef = useRef(null);
-  const isMountedRef = useRef(false);
 
-  // ---------- safe send ----------
-  const safeSend = (payload) => {
-    const socket = socketRef.current;
-    if (!socket) return;
-
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(payload);
-      return;
-    }
-
-    if (socket.readyState === WebSocket.CONNECTING) {
-      const interval = setInterval(() => {
-        if (!socketRef.current) {
-          clearInterval(interval);
-          return;
-        }
-
-        if (socketRef.current.readyState === WebSocket.OPEN) {
-          clearInterval(interval);
-          socketRef.current.send(payload);
-        }
-      }, 50);
-    }
-  };
+  // แปลง Array เป็น String เพื่อใช้ใน Dependency Array ของ useEffect (ป้องกัน Loop)
+  const devicesKey = JSON.stringify([...deviceCodes].sort());
 
   useEffect(() => {
     if (!Array.isArray(deviceCodes) || deviceCodes.length === 0) return;
 
-    isMountedRef.current = true;
 
-    const connect = () => {
-      if (!isMountedRef.current) return;
+    socketRef.current = io(SOCKET_URL, {
+      transports: ["websocket"],
+      withCredentials: true,
+      reconnectionAttempts: 5,
+    });
 
-    const ws = new WebSocket("wss://smart-paddy.space/ws");
-      socketRef.current = ws;
+    const socket = socketRef.current;
 
-      ws.onopen = () => {
-        if (!isMountedRef.current) return;
+    socket.on("connect", () => {
+      console.log("🟢 Monitor Socket Connected:", socket.id);
+      setIsSocketConnected(true);
 
-        setIsSocketConnected(true);
+      // 2. Join Room สำหรับทุกอุปกรณ์ที่ส่งมาใน Array
+      deviceCodes.forEach((code) => {
+        socket.emit("join-device", code);
+      });
+    });
 
-        safeSend(
-          JSON.stringify({
-            action: "SUBSCRIBE",
-            deviceIds: deviceCodes,
-          })
-        );
-      };
+    socket.on("sensorData", (payload) => {
+      onMessage?.({
+        type: "SENSOR_UPDATE",
+        deviceId: payload.device_code,
+        data: payload.data,
+        measured_at: payload.measured_at
+      });
+    });
 
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
 
-          // 🔥 ส่ง message เต็ม ๆ ให้คนเรียกใช้
-          onMessage?.(msg);
-        } catch (err) {
-          console.error("WS parse error:", err);
-        }
-      };
+    socket.on("deviceStatus", (payload) => {
+      onMessage?.({
+        type: "DEVICE_STATUS",
+        deviceId: payload.device_code,
+        status: payload.status
+      });
+    });
 
-      ws.onclose = () => {
-        setIsSocketConnected(false);
+    socket.on("disconnect", (reason) => {
+      console.warn("🔴 Monitor Socket Disconnected:", reason);
+      setIsSocketConnected(false);
+    });
 
-        if (isMountedRef.current) {
-          reconnectTimerRef.current = setTimeout(connect, 2000);
-        }
-      };
+    socket.on("connect_error", (err) => {
+      console.error("❌ Monitor Socket Error:", err.message);
+      setIsSocketConnected(false);
+    });
 
-      ws.onerror = () => {
-        ws.close();
-      };
-    };
-
-    connect();
-
-    // ---------- CLEANUP (สำคัญมาก) ----------
+    // ---------- CLEANUP ----------
     return () => {
-      isMountedRef.current = false;
-
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-      }
-
-      if (socketRef.current) {
-        socketRef.current.onclose = null;
-        socketRef.current.onerror = null;
-        socketRef.current.close();
-        socketRef.current = null;
+      console.log("Cleanup Monitor Socket");
+      if (socket) {
+        socket.off("connect");
+        socket.off("sensorData");
+        socket.off("deviceStatus");
+        socket.off("disconnect");
+        socket.off("connect_error");
+        socket.disconnect();
       }
     };
-  }, [JSON.stringify([...deviceCodes].sort())]); // กัน rerender แปลก ๆ
-
+  }, [devicesKey]); 
   return { isSocketConnected };
 }

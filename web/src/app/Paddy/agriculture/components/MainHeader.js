@@ -23,6 +23,8 @@ import {
   Edit2,
   Save,
   XCircle,
+  Waves,
+  DropletOff ,
   Zap,
   Sprout
 } from "lucide-react";
@@ -32,15 +34,14 @@ import { useDeviceWebSocket } from "@/lib/dashboard/useDeviceWebSocket";
 import Footer from "@/app/components/Footer";
 
 export default function SmartFarmDashboard() {
-  // --- State for Weather & Location ---
   const [weather, setWeather] = useState(null);
   const [loadingWeather, setLoadingWeather] = useState(true);
   const [locationName, setLocationName] = useState("ระบุพิกัด...");
   const [lastUpdate, setLastUpdate] = useState(null);
   const [deviceIds, setDeviceIds] = useState([]);  
 
-  // --- State for Table Management ---
   const [devices, setDevices] = useState([]);
+  const [pumpDevices, setPumpDevices] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
@@ -51,34 +52,43 @@ export default function SmartFarmDashboard() {
   }, []);
 
 
-  useDeviceWebSocket({
-    deviceIds, 
-    onSensor: (deviceId, sensorData) => {
-      setDevices(prev =>
-        prev.map(d =>
-          d.device_code === deviceId 
-            ? { 
-                ...d, 
-                status: "online",
-                sensor: sensorData,
-                battery: sensorData.battery || d.battery,
-                signal: sensorData.signal || d.signal,
-                lastSeen: new Date().toLocaleString("th-TH") 
-              }
-            : d
-        )
-      );
-    },
-    onStatus: (deviceId, status) => {
-      setDevices(prev =>
-        prev.map(d =>
-          d.device_code === deviceId 
-            ? { ...d, status } 
-            : d
-        )
-      );
-    }
-  });
+useDeviceWebSocket({
+  deviceIds: devices.map(d => d.device_code),
+  
+  // เมื่อได้รับข้อมูลเซนเซอร์
+  onSensor: (deviceId, sensorData) => {
+    setDevices(prev =>
+      prev.map(d =>
+        d.device_code === deviceId 
+          ? { 
+              ...d, 
+              status: "online", // ได้รับข้อมูลแสดงว่ายังออนไลน์
+              sensor: sensorData,
+              // อัปเดตค่าแบตเตอรี่และสัญญาณ (ถ้ามีส่งมาใน JSON)
+              battery: sensorData.battery || d.battery,
+              signal: sensorData.signal || d.signal,
+              lastSeen: new Date().toLocaleString("th-TH") 
+            }
+          : d
+      )
+    );
+  },
+
+  // เมื่อได้รับสถานะ Online/Offline จาก MQTT Status Topic
+  onStatus: (deviceId, status) => {
+    setDevices(prev =>
+      prev.map(d =>
+        d.device_code === deviceId 
+          ? { 
+              ...d, 
+              status: status,
+              lastSeen: new Date().toLocaleString("th-TH")
+            } 
+          : d
+      )
+    );
+  }
+});
 
   async function loadDashboard() {
     const apiData = await getDashboardData();
@@ -96,17 +106,49 @@ export default function SmartFarmDashboard() {
       farm_name: item.farm_name || "ฟาร์มทั่วไป",
       type: "Sensor Node",
       status: "offline",
-      battery: 0,
-      signal: 0,
       sensor: null
     }));
+      setDevices(formattedData);
 
-    setDevices(formattedData);
+
+//       [
+//     {
+//         "device_id": 1,
+//         "device_code": "G9H-001",
+//         "registered_at": "2025-12-21T09:19:50.000Z",
+//         "area_id": 10,
+//         "area_name": "พื้นที่ A",
+//         "farm_id": 6,
+//         "farm_name": "เเปลงทดสอบ",
+//         "owner_id": 19,
+//         "owner_name": "ศุภณัฏฐ์ บำรุงนา",
+//         "pump_id": 1,
+//         "pump_name": "ปั๊มน้ำ ใกล้สระ",
+//         "status": "OFF"
+//     }
+// ]
+    const formattedPumpDevices = apiData.filter(item => 
+      item.pump_id !== null
+    ).map(item => ({
+      id: item.pump_id,
+      type: "Water Pump",
+      status: item.status || "OFF",
+      sensor: null
+      
+    }));
+
+    setPumpDevices(formattedPumpDevices);
   }
   const systemSummary = {
     total: devices.length,
     online: devices.filter(d => d.status === 'online').length,
     offline: devices.filter(d => d.status === 'offline').length,
+  };
+
+  const pump_summary = {
+    total: pumpDevices.length,
+    online: pumpDevices.filter(d => d.status === 'ON').length,
+    offline: pumpDevices.filter(d => d.status === 'OFF').length,
   };
 
   // กรองข้อมูล
@@ -267,6 +309,25 @@ export default function SmartFarmDashboard() {
               <p className="text-sm font-medium text-rose-500 mb-1 flex items-center gap-2"><WifiOff className="w-4 h-4" /> ขาดการเชื่อมต่อ</p>
               <h3 className="text-4xl font-bold text-rose-600">{systemSummary.offline}</h3>
            </div>
+
+           <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+              <p className="text-sm font-medium text-yellow-500 mb-1 flex items-center gap-2"><Waves  className="w-4 h-4" />จำนวนปั๊มน้ำ</p>
+             <p className="text-4xl font-bold text-yellow-800">{pump_summary.total}</p>
+           </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+              <p className="text-sm font-medium text-green-500 mb-1 flex items-center gap-2"><Droplets className="w-4 h-4" /> ปั๊มน้ำที่ทำงานอยู่</p>
+             <p className="text-4xl font-bold text-green-800">{pump_summary.online}</p>
+           </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+              <p className="text-sm font-medium text-rose-500 mb-1 flex items-center gap-2"><DropletOff  className="w-4 h-4" /> ปั๊มน้ำที่ออฟไลน์</p>
+             <p className="text-4xl font-bold text-rose-800">{pump_summary.offline}</p>
+            </div>
+          
+                 
+
+
         </div>
 
         {/* 3. Devices Table */}

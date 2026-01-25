@@ -28,56 +28,80 @@ import { useMonitorWebSocket } from "@/lib/admin/send-data/useMonitorWebSocket";
 
 
 export default function SystemLogPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [activeMenu, setActiveMenu] = useState("sendData");
 
   const [devices, setDevices] = useState([]);
   const [logs, setLogs] = useState([]);
+  
+  // 🔹 เพิ่ม State สำหรับเก็บสถานะล่าสุดของแต่ละเครื่อง
+  const [deviceStatusMap, setDeviceStatusMap] = useState({});
 
   const logsEndRef = useRef(null);
 
   // 🔹 โหลดอุปกรณ์จาก API
   useEffect(() => {
     fetchDevices()
-      .then(setDevices)
+      .then((data) => {
+        setDevices(data);
+        // ตั้งค่าเริ่มต้นให้ทุกเครื่องเป็น offline ก่อนจนกว่าจะมีสัญญาณมา
+        const initialStatus = {};
+        data.forEach(d => initialStatus[d.device_code] = "offline");
+        setDeviceStatusMap(initialStatus);
+      })
       .catch(console.error);
   }, []);
 
+  const onlineDeviceCodes = devices.map((d) => d.device_code);
 
-  const onlineDeviceCodes = devices
-    .map((d) => d.device_code);
-
-  // 🔹 Summary
+  // 🔹 Summary (คำนวณจาก deviceStatusMap)
   const totalDevices = devices.length;
-  const onlineDevices = logs.filter((log) => log.text.includes("STATUS") && log.text.includes("online")).length;
-  const offlineDevices = logs.filter((log) => log.text.includes("STATUS") && log.text.includes("offline")).length;
+const onlineDevices = Object.values(deviceStatusMap).filter(s => s === "online").length;
 
-    useMonitorWebSocket(onlineDeviceCodes, (msg) => {
-  if (isPaused) return;
+// 3. จำนวนเครื่องที่ "กำลังส่งข้อมูล" (Active) 
+// เราจะดูจากเครื่องที่สถานะเป็น online และมีข้อมูล sensor อยู่ใน logs ล่าสุด
+const activeSending = Object.keys(deviceStatusMap).filter(deviceId => {
+    // เช็คว่าเครื่องนี้มีสถานะเป็น online หรือไม่
+    return deviceStatusMap[deviceId] === "online";
+}).length;
 
-  if (msg.type === "SENSOR_UPDATE") {
-    const logLine = `RECV (${msg.deviceId}) -> ${JSON.stringify({
-      N: msg.npk?.N,
-      P: msg.npk?.P,
-      K: msg.npk?.K,
-      water: msg.water_level,
-      moisture: msg.soil_moisture,
-      battery: msg.battery,
-    })}`;
+  useMonitorWebSocket(onlineDeviceCodes, (msg) => {
+    if (isPaused) return;
 
-    setLogs((prev) =>
-      [...prev, { id: Date.now(), text: logLine }].slice(-1000)
-    );
-  }
+    // 1. จัดการข้อมูลเซนเซอร์
+    if (msg.type === "SENSOR_UPDATE") {
+      const { deviceId, data, measured_at } = msg;
 
-  if (msg.type === "DEVICE_STATUS") {
-    const logLine = `STATUS (${msg.deviceId}) -> ${msg.status}`;
-    setLogs((prev) =>
-      [...prev, { id: Date.now(), text: logLine }].slice(-1000)
-    );
-  }
-});
+      // อัปเดตสถานะเป็น online ทันทีที่มีข้อมูลส่งมา
+      setDeviceStatusMap(prev => ({ ...prev, [deviceId]: "online" }));
+
+      const logLine = `[${measured_at || ''}] RECV (${deviceId}) -> ${JSON.stringify({
+        N: data?.N ?? "-",
+        P: data?.P ?? "-",
+        K: data?.K ?? "-",
+        water: data?.water_level ?? "-",
+        moisture: data?.soil_moisture ?? "-",
+      })}`;
+
+      setLogs((prev) => [...prev, { id: Date.now(), text: logLine }].slice(-1000));
+    }
+
+    // 2. จัดการข้อมูลสถานะ (จาก MQTT Status Topic)
+    if (msg.type === "DEVICE_STATUS") {
+  const { deviceId, status } = msg;
+
+  setDeviceStatusMap(prev => ({
+    ...prev,
+    [deviceId]: status.toLowerCase(), // online / offline
+  }));
+
+  const logLine = `STATUS (${deviceId}) -> ${status.toUpperCase()}`;
+  setLogs(prev =>
+    [...prev, { id: Date.now(), text: logLine }].slice(-1000)
+  );
+}
+  });
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -128,7 +152,7 @@ export default function SystemLogPage() {
                     กำลังส่งข้อมูล (Online)
                   </p>
                   <h3 className="text-2xl font-bold text-green-700">
-                    {totalDevices - offlineDevices}
+                      {activeSending}
                   </h3>
                 </div>
                 <div className="relative z-10 p-3 bg-green-100 rounded-lg text-green-600">
@@ -147,7 +171,7 @@ export default function SystemLogPage() {
                     ไม่ส่งข้อมูล (Offline)
                   </p>
                   <h3 className="text-2xl font-bold text-red-600">
-                    {offlineDevices}
+                    {totalDevices-onlineDevices}
                   </h3>
                 </div>
                 <div className="p-3 bg-red-50 rounded-lg text-red-500">

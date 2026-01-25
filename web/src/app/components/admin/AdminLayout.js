@@ -237,6 +237,7 @@ import {
   Menu,
   ChevronDown,
   Sprout,
+  Waves,
   AlarmClock,
   Send,
   Computer,
@@ -402,6 +403,16 @@ const AdminSidebar = ({
                   },
                 ]}
               />
+
+
+              <SidebarItem
+                icon={<Waves size={20} />}
+                text="การจัดการปั๊มน้ำ"
+                href="/Paddy/admin/PumpManagement"
+                active={activeMenu === "PumpManagement"}
+                onClick={() => setActiveMenu("PumpManagement")}
+              />
+
               <SidebarItem
                 icon={<Send size={20} />}
                 text="ภาพรวมการส่งข้อมูล"
@@ -416,6 +427,8 @@ const AdminSidebar = ({
                 active={activeMenu === "Analytics"}
                 onClick={() => setActiveMenu("Analytics")}
               />
+
+               
             </nav>
           </div>
 
