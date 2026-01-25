@@ -31,21 +31,21 @@ export default function LineLoginPage() {
         const accessToken = liff.getAccessToken();
         if (!accessToken) throw new Error("No LINE access token");
 
-        // const res = await fetch(
-        //   "https://smart-paddy.space/api/auth/line-oa-login",
-        //   {
-        //     method: "POST",
-        //     credentials: "include",
-        //     headers: { "Content-Type": "application/json" },
-        //     body: JSON.stringify({
-        //       accessToken,
-        //     }),
-        //   }
-        // );
+        const res = await fetch(
+          "https://smart-paddy.space/api/auth/line-oa-login",
+          {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              accessToken,
+            }),
+          }
+        );
 
-        const res = ok ;
 
-        if (res) {
+
+        if (!res.ok) {
           throw new Error("Backend login failed");
         }
 

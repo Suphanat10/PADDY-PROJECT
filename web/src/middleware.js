@@ -26,6 +26,10 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/login/line")) {
+  return NextResponse.next();
+}
+
   if (!token) {
     const loginUrl = new URL("/", request.url);
     loginUrl.searchParams.set("next", pathname);
