@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import liff from "@line/liff";
+import Swal from "sweetalert2";
 
 const LIFF_ID = "2007854586-9ogoEj2j";
 
@@ -40,25 +41,24 @@ export default function LineLoginPage() {
             body: JSON.stringify({
               accessToken,
             }),
-          }
+          },
         );
 
-
-
         if (!res.ok) {
-          throw new Error("Backend login failed");
+          Swal.fire({
+            icon: "error",
+            title: "เกิดข้อผิดพลาด",
+            text: "ไม่สามารถเข้าสู่ระบบด้วย LINE ได้ กรุณาลองใหม่อีกครั้ง",
+          });
+          return;
+
+          
         }
 
-        console.log("✅ LINE OA Login success");
-
+        liff.closeWindow();
         if (liff.isInClient()) {
           liff.closeWindow();
-        } 
-        // ✅ ถ้าเป็นเว็บ → redirect
-        else {
-          window.location.href = "/";
         }
-
       } catch (err) {
         console.error("❌ LIFF error:", err);
 
@@ -74,12 +74,8 @@ export default function LineLoginPage() {
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-4">
       <div className="animate-spin rounded-full h-10 w-10 border-4 border-green-500 border-t-transparent" />
-      <p className="text-gray-600 text-lg">
-        กำลังเข้าสู่ระบบด้วย LINE...
-      </p>
-      <p className="text-sm text-gray-400">
-        หน้านี้จะปิดอัตโนมัติ
-      </p>
+      <p className="text-gray-600 text-lg">กำลังเข้าสู่ระบบด้วย LINE...</p>
+      <p className="text-sm text-gray-400">หน้านี้จะปิดอัตโนมัติ</p>
     </div>
   );
 }

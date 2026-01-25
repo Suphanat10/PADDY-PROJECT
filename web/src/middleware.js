@@ -1,3 +1,4 @@
+// src/middleware.js
 import { NextResponse } from "next/server";
 
 export function middleware(request) {
@@ -8,16 +9,16 @@ export function middleware(request) {
     "/",
     "/login/line",
     "/register",
-    "/Paddy/admin/login",
     "/ForgotPassword",
+    "/Paddy/admin/login",
   ];
 
-  // ✅ อนุญาต public path
-  if (publicPaths.includes(pathname)) {
+  // ✅ public routes
+  if (publicPaths.some(p => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-
+  // ✅ static / api
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -26,22 +27,16 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/login/line")) {
-  return NextResponse.next();
-}
-
+  // ❌ no token
   if (!token) {
-    const loginUrl = new URL("/", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
 }
 
-
 export const config = {
   matcher: [
-    "/((?!login/line|api|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api|_next|favicon.ico|login/line).*)",
   ],
 };
