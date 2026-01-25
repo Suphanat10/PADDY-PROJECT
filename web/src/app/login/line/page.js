@@ -84,7 +84,6 @@ export default function LineLoginPage() {
       try {
         await liff.init({ liffId: LIFF_ID });
 
-        // ❗ ถ้าไม่อยู่ใน LINE → พาไป LINE Login
         if (!liff.isInClient()) {
           window.location.href =
             "https://access.line.me/oauth2/v2.1/authorize" +
