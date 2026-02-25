@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
 // URL ของ Backend
-const SOCKET_URL = "http://localhost:8000"; 
+const SOCKET_URL = "https://smart-paddy.space"; 
 
 export function useSensorWebSocket(deviceId) {
   const [isSocketConnected, setIsSocketConnected] = useState(false);

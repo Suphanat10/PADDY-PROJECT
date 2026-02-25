@@ -55,14 +55,11 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const onlineDeviceCodes = devices.map((d) => d.device_code);
 
-  // 🔹 Summary (คำนวณจาก deviceStatusMap)
   const totalDevices = devices.length;
 const onlineDevices = Object.values(deviceStatusMap).filter(s => s === "online").length;
 
-// 3. จำนวนเครื่องที่ "กำลังส่งข้อมูล" (Active) 
-// เราจะดูจากเครื่องที่สถานะเป็น online และมีข้อมูล sensor อยู่ใน logs ล่าสุด
+
 const activeSending = Object.keys(deviceStatusMap).filter(deviceId => {
-    // เช็คว่าเครื่องนี้มีสถานะเป็น online หรือไม่
     return deviceStatusMap[deviceId] === "online";
 }).length;
 

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "http://localhost:8000"; 
+const SOCKET_URL = "https://smart-paddy.space"; 
 
 export function useMonitorWebSocket(deviceCodes = [], onMessage) {
   const [isSocketConnected, setIsSocketConnected] = useState(false);

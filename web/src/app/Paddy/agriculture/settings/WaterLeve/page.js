@@ -34,8 +34,8 @@ export default function WaterLevelSettings() {
 
   // Settings State
   const [settings, setSettings] = useState({
-    minLevel: 0,
-    maxLevel: 0,
+    minLevel: 5,
+    maxLevel: 15,
     dataSendInterval: 1,
     notifyLine: true,
     notifyApp: true,
@@ -63,8 +63,8 @@ export default function WaterLevelSettings() {
     if (currentDevice.setting) {
       setSettings((prev) => ({
         ...prev,
-        minLevel: currentDevice.setting.Water_level_min ?? 0,
-        maxLevel: currentDevice.setting.Water_level_mxm ?? 0,
+        minLevel: currentDevice.setting.Water_level_min ?? 5,
+        maxLevel: currentDevice.setting.Water_level_mxm ?? 15,
         growth_analysis_period :
           parseInt(currentDevice.setting.growth_analysis_period) ,
         data_send_interval_days :
@@ -366,7 +366,7 @@ export default function WaterLevelSettings() {
                   className="absolute bottom-0 w-full bg-blue-400/80 transition-all duration-1000 ease-in-out z-10 flex items-center justify-center"
                   style={{
                     height: `${
-                      ((currentDevice?.latest_water_level?.value ?? 0) / 30) *
+                      ((currentDevice?.latest_water_level?.value ?? 10) / 30) *
                       100
                     }%`,
                   }}

@@ -468,7 +468,7 @@ export default function ForgotPasswordPage() {
           {step !== 4 && (
             <div className="mt-8 text-center">
               <a
-                href="/auth/login"
+                href="/"
                 className="text-gray-500 hover:text-emerald-600 text-sm font-medium flex items-center justify-center gap-2 transition-colors group"
               >
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />{" "}

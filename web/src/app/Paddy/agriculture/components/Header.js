@@ -134,7 +134,7 @@ export default function Header() {
           timer: 1500,
           showConfirmButton: false,
         }).then(() => {
-          router.replace("/Paddy/agriculture/login");
+          router.replace("/");
         });
       } else {
         Swal.fire({

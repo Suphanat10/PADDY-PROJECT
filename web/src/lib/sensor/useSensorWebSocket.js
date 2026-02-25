@@ -114,23 +114,19 @@
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
-// URL ของ Backend (ควรดึงจาก .env หรือ Config)
-  const  SOCKET_URL =  "http://localhost:8000"
-// ถ้าขึ้น Server จริงใช้ "https://smart-paddy.space"
-// const SOCKET_URL = "https://smart-paddy.space"; 
+  const  SOCKET_URL =  "https://smart-paddy.space"
+
 
 export function useSensorWebSocket(deviceId) {
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [currentData, setCurrentData] = useState(null);
   
-  // ใช้ useRef เก็บ Socket instance เพื่อป้องกันการสร้างซ้ำ
   const socketRef = useRef(null);
 
   useEffect(() => {
     if (!deviceId) return;
 
-    // 1. สร้าง Connection
-    // Socket.IO จะจัดการ Reconnect ให้เองอัตโนมัติ ไม่ต้องเขียน Loop
+
     socketRef.current = io(SOCKET_URL, {
       transports: ["websocket"], // บังคับใช้ WebSocket เพื่อ performance ที่ดี
       withCredentials: true,     // จำเป็นถ้ามีการจัดการ CORS แบบเข้มงวด

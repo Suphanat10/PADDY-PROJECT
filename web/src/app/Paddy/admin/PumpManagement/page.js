@@ -30,9 +30,16 @@ export default function PumpManagementPage() {
        const fetchPumps = async () => {
            try {
                const res = await apiFetch('/api/admin/getdata_Pump');
+
+                 if (!res || pumps.length === 0) {
+                  return res.json({success: true,
+    data: []
+  });
+}
               
                setPumps(res.data);
            } catch (error) {
+               setPumps([]);
                console.error('Error fetching pumps:', error);
            }
          };

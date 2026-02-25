@@ -1,7 +1,8 @@
-// export const API_BASE = "https://smart-paddy.space";
+// export const API_BASE = "http://localhost:8000";
 
 
 export const API_BASE = "https://smart-paddy.space";
+
 export async function apiFetch(path, options = {}) {
   const url = `${API_BASE}${path}`;
   const method = (options.method || "GET").toUpperCase();
@@ -11,9 +12,6 @@ export async function apiFetch(path, options = {}) {
   const headers = {
     ...(options.headers || {}),
   };
-
-
-
 
   if (body !== undefined && !(body instanceof FormData)) {
     body = JSON.stringify(body);

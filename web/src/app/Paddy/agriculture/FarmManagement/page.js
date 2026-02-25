@@ -586,9 +586,9 @@ export default function FarmManagement() {
                             <span className="text-sm font-medium text-gray-800">
                               {area.area_name}
                             </span>
-                            <span className="text-[10px] text-gray-400 font-mono">
+                            {/* <span className="text-[10px] text-gray-400 font-mono">
                               ID: {area.area_id}
-                            </span>
+                            </span> */}
                           </div>
                         )}
                         {editingSubAreaId !== area.area_id && (

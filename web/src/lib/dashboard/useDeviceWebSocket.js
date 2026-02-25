@@ -11,7 +11,7 @@ export function useDeviceWebSocket({ deviceIds, onStatus }) {
     if (!deviceIds || deviceIds.length === 0) return;
 
 
-    const socket = io("http://localhost:8000", {
+    const socket = io("https://smart-paddy.space", {
       transports: ["websocket"],
       withCredentials: true,
       reconnectionAttempts: 5, // พยายามต่อใหม่ 5 ครั้งถ้าหลุด

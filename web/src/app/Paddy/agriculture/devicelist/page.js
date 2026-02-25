@@ -91,7 +91,7 @@ export default function DeviceListPage() {
   const [sensorDevices, setSensorDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [isWsConnected, setIsWsConnected] = useState(false);
-  const [loading, setLoading] = useState(true); // เพิ่ม loading state
+  const [loading, setLoading] = useState(true); 
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("สถานะทั้งหมด");
@@ -117,14 +117,13 @@ export default function DeviceListPage() {
     fetchDevices();
   }, []);
 
-  // 2. เชื่อมต่อ Socket.IO
   useEffect(() => {
     if (sensorDevices.length === 0) return;
 
     const deviceIds = sensorDevices.map((d) => d.device_code);
 
     createSensorWebSocket({
-      url: "https://smart-paddy.space:8000",
+      url: "https://smart-paddy.space",
       deviceIds,
       onConnected: () => setIsWsConnected(true),
       onDisconnected: () => {

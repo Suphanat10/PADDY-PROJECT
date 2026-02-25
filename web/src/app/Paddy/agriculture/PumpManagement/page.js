@@ -277,7 +277,7 @@ const App = () => {
 
                 {mode === 'add' && addStep === 1 ? (
                   <div className="space-y-6">
-                    <input autoFocus type="text" maxLength={6} placeholder="ระบุรหัส 6 หลัก" className="w-full text-center text-4xl font-mono font-bold tracking-[0.3em] py-5 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 outline-none" value={formData.reg_code} onChange={(e) => setFormData({...formData, reg_code: e.target.value.replace(/\D/g, '')})} />
+                    <input autoFocus type="text" maxLength={6} placeholder="ระบุรหัส 6 หลัก" className="w-full text-center text-2xl  font-bold  py-5 border-2 border-gray-100 rounded-2xl focus:border-emerald-500 outline-none" value={formData.reg_code} onChange={(e) => setFormData({...formData, reg_code: e.target.value.replace(/\D/g, '')})} />
                     <button type="button" disabled={formData.reg_code.length !== 6} onClick={() => setAddStep(2)} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold shadow-lg">ถัดไป</button>
                   </div>
                 ) : (

@@ -39,20 +39,23 @@ const UserStatsModal = ({ isOpen, onClose, user, logs }) => {
   if (!isOpen || !user) return null;
 
   const statsData = useMemo(() => {
-    if (!user) return [];
+  if (!user || !logs) return [];
 
-    const userLogs = logsByUser.get(user.id) || [];
-    const counts = new Map();
+  // กรอง logs เฉพาะ user นี้
+  const userLogs = logs.filter(log => log.user_ID === user.id);
 
-    for (const log of userLogs) {
-      const action = log.action.replace(/_/g, " ");
-      counts.set(action, (counts.get(action) || 0) + 1);
-    }
+  const counts = new Map();
 
-    return Array.from(counts.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count); // O(k log k)
-  }, [user, logsByUser]);
+  for (const log of userLogs) {
+    const action = log.action.replace(/_/g, " ");
+    counts.set(action, (counts.get(action) || 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+}, [user, logs]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
