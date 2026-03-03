@@ -113,7 +113,7 @@ export default function SmartRiceMonitoring() {
       else if (res && (res.status === 422 || res.error === "Validation Error" || res.message)) {
         Swal.fire({
           title: "รูปภาพไม่ผ่านเกณฑ์",
-          text: res.message || "กรุณาตรวจสอบการเลือกประเภทการวิเคราะห์",
+          text: res.data.reason || "กรุณาตรวจสอบการเลือกประเภทการวิเคราะห์",
           icon: "warning",
           confirmButtonColor: "#f59e0b",
         });

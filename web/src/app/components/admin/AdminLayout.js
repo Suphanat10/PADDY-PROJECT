@@ -243,7 +243,7 @@ import {
   Computer,
   ClipboardClock,
   Bot,
-  X,
+  X,Airplay
 } from "lucide-react";
 import { SidebarItem } from "./AdminUI";
 import { apiFetch } from "@/lib/api";
@@ -376,6 +376,13 @@ const AdminSidebar = ({
                 href="/Paddy/admin/dashboard"
                 active={activeMenu === "Dashboard"}
                 onClick={() => setActiveMenu("Dashboard")}
+              />
+               <SidebarItem
+                icon={<Airplay size={20} />}
+                text="ภาพรวมระบบ"
+                href="/Paddy/admin/FarmDashboard"
+                active={activeMenu === "FarmDashboard"}
+                onClick={() => setActiveMenu("FarmDashboard")}
               />
               <SidebarItem
                 icon={<Users size={20} />}

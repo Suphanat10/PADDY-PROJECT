@@ -80,7 +80,7 @@ export function useSensorHistory(deviceId) {
         setHistoricalData(history);
 
       } catch (error) {
-        console.error("❌ Failed to fetch sensor data", error);
+        console.error("Failed to fetch sensor data", error);
         setHistoricalData([]);
       } finally {
         setIsLoading(false);

@@ -40,6 +40,7 @@ import {
   deleteSubAreaAPI ,
 } from "@/lib/admin/manage-users/user.api";
 import Swal from "sweetalert2";
+import { apiFetch } from "@/lib/api";
 
 
 const ConfirmModal = ({
@@ -545,6 +546,42 @@ const deleteSubArea = (areaId) => {
     setAiContent("");
   };
 
+
+
+
+const handleImpersonate = async (userId) => {
+  try {
+    const response = await apiFetch("/api/admin/impersonate", {
+      method: "POST",
+      body: {
+        target_user_id: userId,
+      },
+    });
+
+ 
+    if (!response.ok) {
+      Swal.fire({
+        icon: "error",
+        title: "ข้อผิดพลาด",
+        text: data.message || "ไม่สามารถเข้าสู่ระบบในฐานะผู้ใช้ได้",
+      });
+      return;
+    }
+
+    window.location.href = "/Paddy/agriculture/dashboard";
+
+  } catch (error) {
+    console.error("Impersonate Error:", error);
+
+    Swal.fire({
+      icon: "error",
+      title: "เกิดข้อผิดพลาด",
+      text: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้",
+    });
+  }
+};
+
+
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-600">
       <AdminSidebar
@@ -720,9 +757,7 @@ const deleteSubArea = (areaId) => {
                             <div className="text-sm font-medium text-slate-700">
                               ตำแหน่ง: {user.position}
                             </div>
-                            <div className="text-sm font-medium text-slate-700">
-                              เพศ: {user.gender}
-                            </div>
+                       
                           </div>
                         </td>
                         <td className="p-6 pr-8 text-right">
@@ -741,6 +776,15 @@ const deleteSubArea = (areaId) => {
                             >
                               <Trash2 size={18} />
                             </button>
+
+                                                        <button
+                              type="button"
+                              onClick={() => handleImpersonate(user.user_ID)}
+                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+
                           </div>
                         </td>
                       </tr>

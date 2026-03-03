@@ -27,6 +27,8 @@ export async function fetchSensorDetail(deviceCode) {
 export default function useSensorDetail(deviceCode) {
   const [currentData, setCurrentData] = useState(null);
   const [historicalData, setHistoricalData] = useState([]);
+  const [diseaseHistory, setDiseaseHistory] = useState([]);
+  const [growthHistory, setGrowthHistory] = useState([]);
   const [deviceInfo, setDeviceInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -64,21 +66,47 @@ export default function useSensorDetail(deviceCode) {
         });
 
         // --- 1. จัดการข้อมูลปัจจุบัน (Latest Data) ---
+        // Normalize sensor_type codes (e.g., "N","P","K","W") to readable keys
+        const normalizeType = (t) => {
+          if (!t) return t;
+          const s = String(t).trim();
+          switch (s) {
+            case "N":
+            case "Nitrogen (N)":
+              return "Nitrogen (N)";
+            case "P":
+            case "Phosphorus (P)":
+              return "Phosphorus (P)";
+            case "K":
+            case "Potassium (K)":
+              return "Potassium (K)";
+            case "W":
+            case "Water Level":
+            case "water_level":
+              return "Water Level";
+            case "Soil Moisture":
+            case "soil_moisture":
+              return "Soil Moisture";
+            default:
+              return s;
+          }
+        };
+
         const latestByType = {};
         let latestTime = "-";
 
         for (const row of res.sensor_data) {
-          if (!latestByType[row.sensor_type]) {
-            latestByType[row.sensor_type] = row;
-            // เก็บเวลาจากข้อมูลตัวที่ใหม่ที่สุดที่เจอ (ตัวแรกใน Array มักจะใหม่สุด)
+          const key = normalizeType(row.sensor_type);
+          if (!latestByType[key]) {
+            latestByType[key] = row;
             if (latestTime === "-") {
-                latestTime = row.measured_at.substring(0, 16).replace("T", " ");
+              latestTime = row.measured_at ? row.measured_at.substring(0, 16).replace("T", " ") : "-";
             }
           }
         }
 
         setCurrentData({
-          timestamp: latestTime, // ✅ เพิ่มเวลาล่าสุด
+          timestamp: latestTime,
           nitrogen: {
             value: latestByType["Nitrogen (N)"]?.value ?? "-",
             unit: "mg/kg",
@@ -149,6 +177,11 @@ export default function useSensorDetail(deviceCode) {
 
         setHistoricalData(sortedHistory);
 
+        // หาก API ส่งข้อมูลประวัติโรคข้าวหรือระยะการเติบโต ให้เก็บไว้
+        setDiseaseHistory(res.disease_history || res.diseases || []);
+        // Accept several possible field names including `growth_history`
+        setGrowthHistory(res.growth_history || res.growth_stage_history || res.growth_stages || []);
+
       } catch (err) {
         console.error(err);
         setError("ไม่สามารถโหลดข้อมูลอุปกรณ์ได้");
@@ -167,6 +200,8 @@ export default function useSensorDetail(deviceCode) {
   return {
     currentData,
     historicalData,
+    diseaseHistory,
+    growthHistory,
     deviceInfo,
     isLoading,
     error,

@@ -51,6 +51,8 @@ export default function SensorDetailPage() {
   const id = params?.id;
   const {
   historicalData,
+  diseaseHistory,
+  growthHistory,
   deviceInfo,
   isLoading,
   error,
@@ -198,6 +200,8 @@ const {
                             </div>
                         </div>
                     </div>
+                    
+                    
                 </div>
 
                 {currentData && (
@@ -394,9 +398,105 @@ const {
                 )}
               </section>
 
+
+
+               <div className="max-w-[1600px] mx-auto px-4 md:px-8 lg:px-12 pb-12">
+        <div className="mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <Leaf className="w-5 h-5 text-rose-500" />
+                  ประวัติโรคข้าว
+                </h3>
+              </div>
+
+              {diseaseHistory && diseaseHistory.length > 0 ? (
+                <ul className="space-y-3">
+                  {diseaseHistory.slice(0, 12).map((it, idx) => {
+                    const when = it.time || it.recorded_at || it.date || it.detected_at || it.created_at || "-";
+                    const name = it.disease_name || it.name || it.disease || "ไม่ระบุโรค";
+                    const severity = it.severity ? `ระดับ: ${it.severity}` : "";
+                    const confidence = it.confidence ? `${(Number(it.confidence) * 100).toFixed(1)}%` : null;
+                    return (
+                      <li key={idx} className="flex items-start gap-3">
+                        {it.image_url ? (
+                          <a href={it.image_url} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                            <img src={it.image_url} alt={name} className="w-24 h-16 object-cover rounded-md border border-slate-100 shadow-sm" />
+                          </a>
+                        ) : (
+                          <div className="w-24 h-16 bg-slate-50 rounded-md border border-slate-100" />
+                        )}
+
+                        <div className="flex-1">
+                          <div className="flex items-baseline justify-between">
+                            <div className="text-sm font-semibold text-slate-700">{name} <span className="text-xs text-slate-400 font-normal">{severity}</span></div>
+                            {confidence && <div className="text-xs text-emerald-600 font-medium">{confidence}</div>}
+                          </div>
+                          <div className="text-xs text-slate-400">{when}</div>
+                          {it.note && <div className="text-xs text-slate-500 mt-1">{it.note}</div>}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-400">ไม่มีข้อมูลประวัติโรคข้าว</p>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-emerald-500" />
+                  ประวัติระยะการเติบโต
+                </h3>
+              </div>
+
+              {growthHistory && growthHistory.length > 0 ? (
+                <ul className="space-y-3">
+                  {growthHistory.slice(0, 12).map((it, idx) => {
+                    const when = it.time || it.recorded_at || it.date || it.created_at || "-";
+                    const stage = it.stage || it.growth_stage || it.stage_name || "ไม่ระบุระยะ";
+                    const note = it.note || it.remark || "";
+                    const score = it.health_score ? `${(Number(it.health_score) * 100).toFixed(1)}%` : null;
+                    return (
+                      <li key={idx} className="flex items-start gap-3">
+                        {it.image_url ? (
+                          <a href={it.image_url} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                            <img src={it.image_url} alt={stage} className="w-24 h-16 object-cover rounded-md border border-slate-100 shadow-sm" />
+                          </a>
+                        ) : (
+                          <div className="w-24 h-16 bg-slate-50 rounded-md border border-slate-100" />
+                        )}
+
+                        <div className="flex-1">
+                          <div className="flex items-baseline justify-between">
+                            <div className="text-sm font-semibold text-slate-700">{stage}</div>
+                            {score && <div className="text-xs text-emerald-600 font-medium">{score}</div>}
+                          </div>
+                          <div className="text-xs text-slate-400">{when}</div>
+                          {note && <div className="text-xs text-slate-500 mt-1">{note}</div>}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-400">ไม่มีข้อมูลระยะการเติบโต</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
             </div>
           )}
         </main>
+
+      {/* Disease & Growth History (moved to bottom) */}
+     
+
       <Footer />
       </div>
          

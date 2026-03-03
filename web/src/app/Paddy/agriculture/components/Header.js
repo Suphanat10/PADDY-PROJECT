@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { 
-  Bell, Settings, User, ChevronDown, Menu, X, Sprout, 
-  LogOut, Shield, Activity, FileText, LayoutDashboard, 
+import {
+  Bell, Settings, User, ChevronDown, Menu, X, Sprout,
+  LogOut, Shield, Activity, FileText, LayoutDashboard,
   PlusCircle, Database, BarChart3, Map, ChevronRight,
-  CheckCircle, Clock ,Droplets
+  CheckCircle, Clock, Droplets
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import Swal from "sweetalert2";
@@ -30,17 +30,20 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // Analytics
+
   const NAV_ITEMS = [
     { name: "หน้าหลัก", href: "/Paddy/agriculture/dashboard", icon: LayoutDashboard },
+    // { name: "ภาพรวมระบบ", href: "/Paddy/agriculture/Analytics", icon: LayoutDashboard },
     { name: "ลงทะเบียนอุปกรณ์", href: "/Paddy/agriculture/registerdevice", icon: PlusCircle },
     { name: "จัดการพื้นที่", href: "/Paddy/agriculture/FarmManagement", icon: Map },
     { name: "ข้อมูลอุปกรณ์", href: "/Paddy/agriculture/devicelist", icon: Database },
-    { name: "จัดการปั๊มน้ำ", href: "/Paddy/agriculture/PumpManagement", icon: Droplets } ,
+    { name: "จัดการปั๊มน้ำ", href: "/Paddy/agriculture/PumpManagement", icon: Droplets },
     { name: "AI", href: "/Paddy/agriculture/AI", icon: BarChart3 },
   ];
 
   const handleMarkAsRead = (id) => {
-    setNotifications(prev => 
+    setNotifications(prev =>
       prev.map(notif => notif.id === id ? { ...notif, unread: false } : notif)
     );
     setUnreadCount(prev => Math.max(0, prev - 1));
@@ -79,7 +82,8 @@ export default function Header() {
           if (data.profile) {
             setUser({
               ...data.profile,
-              fullName: `${data.profile.first_name || ''} ${data.profile.last_name || ''}`.trim() || "ผู้ใช้งาน"
+              fullName: `${data.profile.first_name || ''} ${data.profile.last_name || ''}`.trim() || "ผู้ใช้งาน",
+              impersonated_by: data.impersonated_by || null
             });
           }
           if (data.devices && Array.isArray(data.devices)) {
@@ -95,10 +99,10 @@ export default function Header() {
             allAlerts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             const formatted = allAlerts.map(log => ({
               id: log.logs_alert_ID,
-              title: log.alert_message, 
+              title: log.alert_message,
               subTitle: `อุปกรณ์ ID: ${log.source_device_id}`,
               time: formatTimeAgo(log.created_at),
-              unread: true, 
+              unread: true,
             }));
             setNotifications(formatted);
             setUnreadCount(formatted.length);
@@ -126,25 +130,47 @@ export default function Header() {
   }, []);
 
   const logout = async () => {
-      const result = await apiFetch("/api/auth/logout", { method: "POST" });
-      if (result.ok) {
-         Swal.fire({
-          icon: "success",
-          title: "ออกจากระบบสำเร็จ",
-          timer: 1500,
-          showConfirmButton: false,
-        }).then(() => {
-          router.replace("/");
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "ออกจากระบบไม่สำเร็จ",  
-          text: result.message || "กรุณาลองใหม่อีกครั้งภายหลัง",
-        });
-      }
-    
+    const result = await apiFetch("/api/auth/logout", { method: "POST" });
+    if (result.ok) {
+      Swal.fire({
+        icon: "success",
+        title: "ออกจากระบบสำเร็จ",
+        timer: 1500,
+        showConfirmButton: false,
+      }).then(() => {
+        router.replace("/");
+      });
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "ออกจากระบบไม่สำเร็จ",
+        text: result.message || "กรุณาลองใหม่อีกครั้งภายหลัง",
+      });
+    }
+
   };
+
+
+  const logoutadmin = async () => {
+    const result = await apiFetch("/api/admin/exit-impersonation", { method: "POST" });
+    if (result.ok) {
+      Swal.fire({
+        icon: "success",
+        title: "ออกจากโหมดสวมสิทธิ์สำเร็จ",
+        timer: 1500,
+        showConfirmButton: false,
+      }).then(() => {
+        router.replace("/Paddy/admin/dashboard");
+      });
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "ออกจากโหมดสวมสิทธิ์ไม่สำเร็จ",
+        text: result.message || "กรุณาลองใหม่อีกครั้งภายหลัง",
+      });
+    }
+  };
+
 
   // --- Nav Components ---
   const NavItem = ({ href, children }) => (
@@ -162,9 +188,17 @@ export default function Header() {
   );
 
   return (
+
+     <>
+    {user?.impersonated_by && (
+      <div className="bg-gradient-to-r from-red-600 to-orange-500 text-white text-center py-2 text-sm font-semibold shadow-md">
+        ⚠️ โหมดผู้ดูแลระบบ: กำลังใช้งานแทนผู้ใช้
+      </div>
+    )}
+
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        
+
         {/* Brand */}
         <Link href="/Paddy/agriculture/dashboard" className="flex items-center">
           <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center mr-3 shadow-md">
@@ -185,7 +219,7 @@ export default function Header() {
 
         {/* Right Controls */}
         <div className="flex items-center space-x-2">
-          
+
           {/* Settings */}
           <div className="relative" ref={settingsRef}>
             <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`p-2 rounded-full hover:bg-gray-100 ${isSettingsOpen ? 'text-emerald-600' : 'text-gray-500'}`}>
@@ -221,7 +255,7 @@ export default function Header() {
                           <div className={`w-2 h-2 mt-1.5 rounded-full  'bg-emerald-500' : 'bg-transparent'}`}></div>
                           <div className="ml-3 flex-1">
                             <p className={`text-sm leading-tight ${notif.unread ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{notif.title}</p>
-                            <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><Clock className="w-3 h-3"/>{notif.time}</p>
+                            <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><Clock className="w-3 h-3" />{notif.time}</p>
                           </div>
                         </div>
                       </div>
@@ -250,7 +284,25 @@ export default function Header() {
                 </div>
                 <Link href="/Paddy/agriculture/profile" onClick={() => setIsUserMenuOpen(false)} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50"><User className="w-4 h-4 mr-3" /> โปรไฟล์</Link>
                 <Link href="/Paddy/agriculture/activity" onClick={() => setIsUserMenuOpen(false)} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50"><FileText className="w-4 h-4 mr-3" /> ประวัติการใช้งาน</Link>
-                <button onClick={logout} className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-50 mt-1"><LogOut className="w-4 h-4 mr-3" /> ออกจากระบบ</button>
+                {/* <button onClick={logout} className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-50 mt-1"><LogOut className="w-4 h-4 mr-3" /> ออกจากระบบ</button> */}
+                {user?.impersonated_by ? (
+  <button
+    onClick={async () => {logoutadmin();
+    }}
+    className="flex w-full items-center px-4 py-2 text-sm text-yellow-600 hover:bg-yellow-50 border-t border-gray-50 mt-1"
+  >
+    <Shield className="w-4 h-4 mr-3" />
+    ออกจากโหมดสวมสิทธิ์
+  </button>
+) : (
+  <button
+    onClick={logout}
+    className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-50 mt-1"
+  >
+    <LogOut className="w-4 h-4 mr-3" />
+    ออกจากระบบ
+  </button>
+)}
               </div>
             )}
           </div>
@@ -287,5 +339,6 @@ export default function Header() {
         </div>
       )}
     </header>
+    </>
   );
 }
