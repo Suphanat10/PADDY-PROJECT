@@ -141,7 +141,7 @@ export default function SystemLogsPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [Loading, setLoading] = useState(false);
-  const itemsPerPage = 6;
+  const itemsPerPage = 10;
   const [Data_logs, setData_logs] = useState([]);
 
   useEffect(() => {
@@ -400,7 +400,7 @@ if (Loading) {
             </div>
 
             {/* --- Table Container --- */}
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[calc(100vh-450px)] min-h-[400px]">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
               {/* Search Bar */}
               <div className="p-5 border-b border-slate-100 bg-white flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h3 className="font-bold text-slate-700 flex items-center gap-2 text-lg">
@@ -423,13 +423,12 @@ if (Loading) {
                 <table className="w-full text-left border-collapse">
                   <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 shadow-sm border-b border-slate-100">
                     <tr className="text-slate-500 text-xs uppercase font-semibold tracking-wider">
-                      <th className="px-6 py-4">ลำดับ</th>
-
-                      <th className="px-6 py-4 w-48">Time</th>
-                      <th className="px-6 py-4">User</th>
-                      <th className="px-6 py-4">Action</th>
-                      <th className="px-6 py-4">IP Address</th>
-                      <th className="px-6 py-4 w-24 text-center">Stats</th>
+                      <th className="px-6 py-4 text-center">ลำดับ</th>
+                      <th className="px-6 py-4 w-48">เวลา</th>
+                      <th className="px-6 py-4">ผู้ใช้งาน</th>
+                      <th className="px-6 py-4">กิจกรรม</th>
+                      <th className="px-6 py-4">ที่อยู่ IP</th>
+                      <th className="px-6 py-4 w-24 text-center">สถิติ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 text-sm">
@@ -438,7 +437,7 @@ if (Loading) {
                         key={log.logs_ID}
                         className="hover:bg-indigo-50/30 transition-colors group"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-slate-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-slate-500 text-center">
                           {indexOfFirstItem + index + 1}
                         </td>
 
@@ -492,7 +491,7 @@ if (Loading) {
                     {currentLogs.length === 0 && (
                       <tr>
                         <td
-                          colSpan="5"
+                          colSpan="6"
                           className="px-6 py-12 text-center text-slate-400"
                         >
                           <div className="flex flex-col items-center justify-center gap-2">
@@ -507,63 +506,52 @@ if (Loading) {
               </div>
 
               {/* Pagination Footer */}
-              <div className="p-4 border-t border-slate-100 bg-white flex items-center justify-between gap-4">
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-sm text-slate-500">
                   แสดง{" "}
-                  <span className="font-medium text-slate-700">
-                    {indexOfFirstItem + 1}
+                  <span className="font-semibold text-slate-700">
+                    {filteredLogs.length > 0 ? indexOfFirstItem + 1 : 0}
                   </span>{" "}
                   ถึง{" "}
-                  <span className="font-medium text-slate-700">
+                  <span className="font-semibold text-slate-700">
                     {Math.min(indexOfLastItem, filteredLogs.length)}
                   </span>{" "}
                   จากทั้งหมด{" "}
-                  <span className="font-medium text-slate-700">
+                  <span className="font-semibold text-slate-700">
                     {filteredLogs.length}
                   </span>{" "}
                   รายการ
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className={`px-3 py-2 rounded-lg border flex items-center gap-1.5 text-sm font-medium transition-all ${
+                      currentPage === 1
+                        ? "bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed"
+                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                    }`}
                   >
-                    <ChevronLeft className="w-4 h-4 text-slate-600" />
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">ก่อนหน้า</span>
                   </button>
 
-                  <div className="flex items-center gap-1 px-2">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum = i + 1;
-                      if (totalPages > 5 && currentPage > 3) {
-                        pageNum = currentPage - 2 + i;
-                        if (pageNum > totalPages) return null;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors
-                                            ${
-                                              currentPage === pageNum
-                                                ? "bg-green-600 text-white shadow-sm"
-                                                : "text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200"
-                                            }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                  <div className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg">
+                    {currentPage} / {totalPages || 1}
                   </div>
 
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className={`px-3 py-2 rounded-lg border flex items-center gap-1.5 text-sm font-medium transition-all ${
+                      currentPage === totalPages || totalPages === 0
+                        ? "bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed"
+                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                    }`}
                   >
-                    <ChevronRight className="w-4 h-4 text-slate-600" />
+                    <span className="hidden sm:inline">ถัดไป</span>
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>

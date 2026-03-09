@@ -6,7 +6,7 @@ let isLiffInitialized = false;
 
 export async function ensureLiffLogin() {
   try {
-    const liffId = "2007854586-9ogoEj2j";
+    const liffId = "2009328904-ZbEQcmyX";
     
     if (typeof window === 'undefined') return null;
 

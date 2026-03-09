@@ -1,5 +1,5 @@
 "use client";
-import { Sprout, MapPin, ChevronDown } from "lucide-react";
+import { Sprout, MapPin, ChevronDown, Clock, Calendar, AlertCircle, CheckCircle, Loader, ImageUp } from "lucide-react";
 import { WaterTankCard } from "./WaterTankCard";
 import { NPKGrid } from "./NPKGrid";
 import { DiseaseCard } from "./DiseaseCard";
@@ -107,11 +107,16 @@ function AreaCard({ area }) {
       {!isDeviceRegistered ? (
         <UnregisteredAreaMessage />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <WaterTankCard area={area} />
-          <NPKGrid sensor={area.sensor} />
-          <DiseaseCard area={area} />
-        </div>
+        <>
+          {/* Scheduler Status */}
+          {area.latest_scheduler && <SchedulerCard scheduler={area.latest_scheduler} />}
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <WaterTankCard area={area} />
+            <NPKGrid sensor={area.sensor} />
+            <DiseaseCard area={area} />
+          </div>
+        </>
       )}
     </div>
   );
@@ -135,6 +140,106 @@ function AreaHeader({ area }) {
           {area.latest_growth.growth_stage || area.latest_growth.stage}
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * Scheduler Status Card
+ */
+function SchedulerCard({ scheduler }) {
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case "due":
+        return {
+          color: "bg-amber-50 border-amber-200 text-amber-700",
+          icon: <AlertCircle className="text-amber-500" size={18} />,
+          label: "ถึงกำหนดวิเคราะห์",
+        };
+      case "checking":
+        return {
+          color: "bg-blue-50 border-blue-200 text-blue-700",
+          icon: <Loader className="text-blue-500" size={18} />,
+          label: "ออกคำสั่งแล้ว รอวิเคราะห์",
+        };
+      case "not_due":
+        return {
+          color: "bg-slate-50 border-slate-200 text-slate-700",
+          icon: <CheckCircle className="text-slate-500" size={18} />,
+          label: "ยังไม่ถึงกำหนด",
+        };
+      case "never_analyzed":
+        return {
+          color: "bg-amber-50 border-amber-200 text-amber-700",
+          icon: <Clock className="text-amber-500" size={18} />,
+          label: "ยังไม่เคยวิเคราะห์",
+        };
+      case "queued":
+        return {
+          color: "bg-blue-50 border-blue-200 text-blue-700",
+          icon: <ImageUp className="text-blue-500" size={18} />,
+          label: "ออกคำสั่งถ่ายภาพแล้ว รอดำเนินการ",
+        };
+      default:
+        return {
+          color: "bg-amber-50 border-amber-200 text-amber-700",
+          icon: <Clock className="text-amber-500" size={18} />,
+          label:"เกิดข้อผิดพลาด เนื่องจากอุปกรณ์ไม่ส่งข้อมูลสถานะการวิเคราะห์",
+        };
+    }
+  };
+
+  const config = getStatusConfig(scheduler.status);
+  
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleString("th-TH", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <div className={`mb-4 p-4 rounded-xl border ${config.color}`}>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          {config.icon}
+          <div>
+            <span className="font-bold text-sm">{config.label}</span>
+            {scheduler.status === "checking" && scheduler.created_at && (
+              <p className="text-xs opacity-80 mt-0.5">
+                เวลาออกคำสั่ง: {formatDate(scheduler.created_at)}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4 text-xs">
+          {scheduler.growth_period && (
+            <div className="flex items-center gap-1.5">
+              <Calendar size={14} className="opacity-60" />
+              <span>รอบวิเคราะห์: {scheduler.growth_period} วัน</span>
+            </div>
+          )}
+          {scheduler.days_remaining !== null && scheduler.days_remaining !== undefined && (
+            <div className="flex items-center gap-1.5 font-bold">
+              <Clock size={14} className="opacity-60" />
+              <span>
+                {scheduler.days_remaining > 0 
+                  ? `อีก ${scheduler.days_remaining} วัน` 
+                  : "ถึงกำหนดแล้ว"}
+              </span>
+            </div>
+          )}
+          {scheduler.days_since_last !== null && scheduler.days_since_last !== undefined && (
+            <div className="text-xs opacity-70">
+              วิเคราะห์ล่าสุด: {scheduler.days_since_last} วันที่แล้ว
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

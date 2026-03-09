@@ -39,6 +39,7 @@ export function transformApiFarms(apiFarms = []) {
       const latest_growth = primaryDevice?.latest_growth || null;
       const latest_disease = primaryDevice?.latest_disease || null;
       const latest_setting = primaryDevice?.latest_setting || null;
+      const latest_scheduler = primaryDevice?.latest_scheduler || null;
 
       return {
         area_id: area.area_id,
@@ -72,6 +73,7 @@ export function transformApiFarms(apiFarms = []) {
         latest_growth,
         latest_disease,
         latest_setting,
+        latest_scheduler,
         sensor: parseSensorData(latestSensors, latestSensor),
       };
     }),

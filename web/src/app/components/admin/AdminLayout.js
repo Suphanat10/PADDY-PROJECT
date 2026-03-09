@@ -422,7 +422,7 @@ const AdminSidebar = ({
 
               <SidebarItem
                 icon={<Send size={20} />}
-                text="ภาพรวมการส่งข้อมูล"
+                text="payload"
                 href="/Paddy/admin/send-data"
                 active={activeMenu === "SendData"}
                 onClick={() => setActiveMenu("SendData")}
@@ -433,6 +433,13 @@ const AdminSidebar = ({
                 href="/Paddy/admin/analytics"
                 active={activeMenu === "Analytics"}
                 onClick={() => setActiveMenu("Analytics")}
+              />
+              <SidebarItem
+                icon={<ClipboardClock size={20} />}
+                text="ตรวจสอบการวิเคราะห์ประจำวัน"
+                href="/Paddy/admin/daily-analysis-check"
+                active={activeMenu === "DailyAnalysisCheck"}
+                onClick={() => setActiveMenu("DailyAnalysisCheck")}
               />
 
                

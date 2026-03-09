@@ -72,7 +72,7 @@ export const UserTableRow = ({
       </span>
     </td>
     <td className="py-4 px-6">
-      <div className="flex items-center justify-end gap-1">
+      <div className="flex items-center justify-center gap-1">
         <ActionButton
           icon={Eye}
           onClick={() => onView(user)}
@@ -196,7 +196,7 @@ export const UserTable = ({
               <th className="py-4 px-6 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                 ตำแหน่ง
               </th>
-              <th className="py-4 px-6 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <th className="py-4 px-6 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
                 จัดการ
               </th>
             </tr>

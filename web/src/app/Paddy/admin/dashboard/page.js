@@ -61,6 +61,7 @@ export default function FarmDashboard() {
       // apiFetch returns { ok, status, data } where data is the API response
       // API response is { ok: true, data: [...farms...] }
       const apiData = response?.data;
+      console.log("Fetched farm data:", apiData);
       const farms = apiData?.data || apiData?.farms || apiData || [];
       setFarmData(transformApiFarms(farms));
     } catch (err) {
@@ -77,7 +78,7 @@ export default function FarmDashboard() {
   }, [fetchFarms]);
 
   // WebSocket connection with status tracking
-  const { isConnected, connectionError, reconnect } = useFarmSocket(setFarmData);
+  const { isConnected, connectionError, reconnect, dataSource, lastSocketUpdate, refreshFromDB } = useFarmSocket(setFarmData);
 
   // Computed statistics
   const stats = useMemo(() => {
@@ -129,9 +130,9 @@ export default function FarmDashboard() {
   }
 
   // No data state
-  if (!loading && farmData.length === 0) {
-    return <WaitingForDataScreen onRetry={fetchFarms} />;
-  }
+  // if (!loading && farmData.length === 0) {
+  //   return <WaitingForDataScreen onRetry={fetchFarms} />;
+  // }
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-600 overflow-hidden">
@@ -157,7 +158,12 @@ export default function FarmDashboard() {
           {error && <ErrorAlert error={error} onRetry={fetchFarms} />}
 
           {/* Summary Cards */}
-          <SummaryCards stats={stats} />
+          <SummaryCards 
+            stats={stats} 
+            dataSource={dataSource}
+            lastUpdate={lastSocketUpdate}
+            onRefresh={refreshFromDB}
+          />
 
           {/* Charts Section */}
           <ChartsSection
@@ -195,7 +201,7 @@ function LoadingScreen() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
       <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-4" />
       <p className="text-slate-500 font-bold animate-pulse">
-        กำลังดึงข้อมูลจากเซิร์ฟเวอร์...
+        กำลังโหลดข้อมูลฟาร์ม...
       </p>
     </div>
   );
@@ -295,7 +301,7 @@ function ErrorAlert({ error, onRetry }) {
 /**
  * Summary Cards Grid
  */
-function SummaryCards({ stats }) {
+function SummaryCards({ stats, dataSource, lastUpdate, onRefresh }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <StatCard
@@ -324,6 +330,9 @@ function SummaryCards({ stats }) {
         onlineCount={stats.onlineFarms}
         offlineCount={stats.offlineFarms}
         icon={<Wifi size={28} />}
+        dataSource={dataSource}
+        lastUpdate={lastUpdate}
+        onRefresh={onRefresh}
       />
     </div>
   );
@@ -404,7 +413,7 @@ function RiskAreasList({ farmData, expandedRisks, setExpandedRisks }) {
     <div className="lg:col-span-2 bg-white p-6 rounded-[24px] shadow-sm border border-slate-100">
       <h3 className="text-sm font-black text-slate-700 uppercase mb-4 flex items-center gap-2">
         <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
-        พื้นที่เสี่ยงในแต่ละฟาร์ม (ระดับน้ำ & โรค) + latest_setting
+        พื้นที่เสี่ยงในแต่ละฟาร์ม (ระดับน้ำ & โรค) 
       </h3>
       <div className="text-xs text-slate-500 mb-3">ค่าตั้งต้น: </div>
       <div className="max-h-[250px] overflow-y-auto space-y-3">

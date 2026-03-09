@@ -88,7 +88,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import liff from "@line/liff";
 
-const LIFF_ID = "2007854586-9ogoEj2j";
+const LIFF_ID = "2009328904-ZbEQcmyX";
 
 export default function LineLoginPage() {
   const router = useRouter();
@@ -105,7 +105,7 @@ export default function LineLoginPage() {
       });
 
       const params = new URLSearchParams(window.location.search);
-      const state = params.get("state") || "/";
+      const state = params.get("state") || "/Paddy/agriculture/dashboard";
 
       if (!liff.isLoggedIn()) {
         liff.login({ redirectUri: window.location.href });

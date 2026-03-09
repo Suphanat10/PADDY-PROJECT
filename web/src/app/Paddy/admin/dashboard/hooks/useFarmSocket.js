@@ -2,6 +2,7 @@
 import { useEffect, useCallback, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { transformApiFarms } from "../utils/transformApiFarms";
+import { apiFetch } from "../../../../../lib/api";
 
 const SOCKET_URL = "https://smart-paddy.space";
 
@@ -13,6 +14,9 @@ const SOCKET_CONFIG = {
   reconnectionDelayMax: 5000,
 };
 
+// Timeout (ms) to wait for socket data before falling back to API
+const SOCKET_DATA_TIMEOUT = 5000;
+
 /**
  * Custom hook for managing farm WebSocket connections with improved stability
  * @param {Function} setFarmData - State setter for farm data
@@ -22,11 +26,22 @@ export function useFarmSocket(setFarmData) {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
+  
+  // Track data source: "socket" = real-time, "database" = fetched from API
+  const [dataSource, setDataSource] = useState("database");
+  const [lastSocketUpdate, setLastSocketUpdate] = useState(null);
+  const lastSocketDataRef = useRef(null);
+  const fallbackTimeoutRef = useRef(null);
 
   // Handle device updates from socket
   const handleAllDevices = useCallback(
     (data) => {
       if (!Array.isArray(data)) return;
+
+      // Mark data as coming from socket
+      setDataSource("socket");
+      setLastSocketUpdate(new Date());
+      lastSocketDataRef.current = Date.now();
 
       setFarmData((prev) => {
         const copy = [...prev];
@@ -44,12 +59,12 @@ export function useFarmSocket(setFarmData) {
                 return {
                   ...area,
                   sensor: {
-                    n: device.n ?? area.sensor.n,
-                    p: device.p ?? area.sensor.p,
-                    k: device.k ?? area.sensor.k,
-                    ph: device.ph ?? area.sensor.ph,
-                    moisture: device.moisture ?? area.sensor.moisture,
-                    water_level: device.water_level ?? area.sensor.water_level,
+                    n: device.N ?? device.n ?? area.sensor.n,
+                    p: device.P ?? device.p ?? area.sensor.p,
+                    k: device.K ?? device.k ?? area.sensor.k,
+                    ph: device.pH ?? device.ph ?? area.sensor.ph,
+                    moisture: device.soil_moisture ?? device.S ?? device.moisture ?? area.sensor.moisture,
+                    water_level: device.water_level ?? device.W ?? area.sensor.water_level,
                   },
                 };
               }),
@@ -87,19 +102,26 @@ export function useFarmSocket(setFarmData) {
   const handleBulkUpdate = useCallback(
     (msg) => {
       if (Array.isArray(msg?.farms)) {
+        setDataSource("socket");
+        setLastSocketUpdate(new Date());
+        lastSocketDataRef.current = Date.now();
         setFarmData(transformApiFarms(msg.farms));
       }
     },
     [setFarmData]
   );
 
-  // Handle sensor data update
-  // Payload format: { device_code, data: { n, p, k, moisture, water_level, ... } }
+
   const handleSensorData = useCallback(
     (payload) => {
       if (!payload?.device_code || !payload?.data) return;
       
       const { device_code, data } = payload;
+      
+      // Mark data as coming from socket
+      setDataSource("socket");
+      setLastSocketUpdate(new Date());
+      lastSocketDataRef.current = Date.now();
 
       setFarmData((prev) =>
         prev.map((farm) => ({
@@ -109,12 +131,12 @@ export function useFarmSocket(setFarmData) {
             return {
               ...area,
               sensor: {
-                n: data.n ?? area.sensor.n,
-                p: data.p ?? area.sensor.p,
-                k: data.k ?? area.sensor.k,
-                ph: data.ph ?? area.sensor.ph,
-                moisture: data.moisture ?? area.sensor.moisture,
-                water_level: data.water_level ?? area.sensor.water_level,
+                n: data.N ?? data.n ?? area.sensor.n,
+                p: data.P ?? data.p ?? area.sensor.p,
+                k: data.K ?? data.k ?? area.sensor.k,
+                ph: data.pH ?? data.ph ?? area.sensor.ph,
+                moisture: data.soil_moisture ?? data.S ?? data.moisture ?? area.sensor.moisture,
+                water_level: data.water_level ?? data.W ?? area.sensor.water_level,
               },
             };
           }),
@@ -149,6 +171,33 @@ export function useFarmSocket(setFarmData) {
     },
     [setFarmData]
   );
+
+  // Fetch latest data from database when socket is not available
+  const fetchLatestFromDB = useCallback(async () => {
+    try {
+      console.log("📥 Fetching latest data from database...");
+      const response = await apiFetch("/api/data/admin/analysis");
+      const apiData = response?.data;
+      const farms = apiData?.data || apiData?.farms || apiData || [];
+      
+      if (farms.length > 0) {
+        setFarmData(transformApiFarms(farms));
+        setDataSource("database");
+        setLastSocketUpdate(new Date());
+        console.log("✅ Loaded latest data from database");
+      }
+    } catch (err) {
+      console.error("❌ Failed to fetch from database:", err);
+    }
+  }, [setFarmData]);
+
+  // Fallback to database when socket doesn't provide data
+  useEffect(() => {
+    // If not connected, fetch from database
+    if (!isConnected && connectionError) {
+      fetchLatestFromDB();
+    }
+  }, [isConnected, connectionError, fetchLatestFromDB]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -226,6 +275,11 @@ export function useFarmSocket(setFarmData) {
       socket.off("sensorData");
       socket.off("deviceStatus");
       socket.disconnect();
+      
+      // Clear fallback timeout on cleanup
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+      }
     };
   }, [
     handleAllDevices,
@@ -235,6 +289,31 @@ export function useFarmSocket(setFarmData) {
     handleDeviceStatus,
   ]);
 
+  // Set up timeout fallback: if no socket data within timeout, fetch from DB
+  useEffect(() => {
+    if (!isConnected) return;
+    
+    // Clear any existing timeout
+    if (fallbackTimeoutRef.current) {
+      clearTimeout(fallbackTimeoutRef.current);
+    }
+    
+    // Set timeout to check if we receive socket data
+    fallbackTimeoutRef.current = setTimeout(() => {
+      // If no socket data received, fetch from database
+      if (!lastSocketDataRef.current || Date.now() - lastSocketDataRef.current > SOCKET_DATA_TIMEOUT) {
+        console.log("⏱️ No socket data received within timeout, fetching from database...");
+        fetchLatestFromDB();
+      }
+    }, SOCKET_DATA_TIMEOUT);
+    
+    return () => {
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+      }
+    };
+  }, [isConnected, fetchLatestFromDB]);
+
   // Manual reconnect function
   const reconnect = useCallback(() => {
     if (socketRef.current) {
@@ -242,10 +321,19 @@ export function useFarmSocket(setFarmData) {
     }
   }, []);
 
+  // Manual refresh from database
+  const refreshFromDB = useCallback(() => {
+    setDataSource("database");
+    fetchLatestFromDB();
+  }, [fetchLatestFromDB]);
+
   return {
     socket: socketRef.current,
     isConnected,
     connectionError,
     reconnect,
+    dataSource,          // "socket" | "database"
+    lastSocketUpdate,    // Date object of last update
+    refreshFromDB,       // Function to manually fetch from DB
   };
 }

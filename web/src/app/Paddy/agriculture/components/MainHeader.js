@@ -209,6 +209,32 @@ export default function App() {
   [farmData, selectedFarmId]
 );
 
+  // Scheduler summary for selected farm
+  const schedulerSummary = useMemo(() => {
+    if (!selectedFarm) return { total: 0, due: 0, queued: 0, not_due: 0, never_analyzed: 0, nextCheck: null };
+    const summary = { total: 0, due: 0, queued: 0, not_due: 0, never_analyzed: 0 };
+    let nextCheck = null;
+    selectedFarm.areas.forEach((a) => {
+      if (!a.scheduler) return;
+      summary.total += 1;
+      const s = a.scheduler.status;
+      if (s === 'due') summary.due += 1;
+      else if (s === 'queued') summary.queued += 1;
+      else if (s === 'not_due') summary.not_due += 1;
+      else if (s === 'never_analyzed') summary.never_analyzed += 1;
+
+      // determine next check time: prefer last_check if available, otherwise use days_remaining to compute rough date
+      if (a.scheduler.last_check) {
+        const t = new Date(a.scheduler.last_check).getTime();
+        if (!nextCheck || t < nextCheck) nextCheck = t;
+      } else if (typeof a.scheduler.days_remaining === 'number') {
+        const approx = Date.now() + a.scheduler.days_remaining * 24 * 3600 * 1000;
+        if (!nextCheck || approx < nextCheck) nextCheck = approx;
+      }
+    });
+    return { ...summary, nextCheck };
+  }, [selectedFarm]);
+
   // Logic สำหรับข้อมูลพื้นที่ที่เลือก (ใช้สำหรับกราฟ)
   const activeArea = useMemo(() => {
     if (!selectedFarm) return null;
@@ -417,7 +443,8 @@ export default function App() {
                 </span>
               </div>
 
-            
+              {/* Scheduler per-device removed */}
+
             </div>
           </div>
         </div>

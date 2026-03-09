@@ -8,7 +8,7 @@ export default async function handleLineRegister(setIsLoading) {
 
     // 1. เริ่มต้น LIFF
     await liff.init({ 
-      liffId: "2007854586-9ogoEj2j",
+      liffId: "2009328904-ZbEQcmyX",
       withLoginOnExternalBrowser: true
     });
 
