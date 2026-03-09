@@ -9,7 +9,12 @@ export const getUsers = async (setUsers, setIsLoading) => {
       method: "GET",
     });
 
-    if (!res || res.length === 0) {
+    console.log("getUsers response:", res);
+
+    // API Response: { ok: true, status: 200, data: [...] }
+    const userData = res?.data;
+    
+    if (!userData || (Array.isArray(userData) && userData.length === 0)) {
       setUsers([]);
       Swal.fire({
         icon: "info",
@@ -18,7 +23,10 @@ export const getUsers = async (setUsers, setIsLoading) => {
       });
       return;
     }
-    setUsers(res.data);
+    
+    // Handle both formats: array directly or { data: [...] }
+    const users = Array.isArray(userData) ? userData : (userData.data || []);
+    setUsers(users);
 
   } catch (err) {
     console.error("FETCH USER ERROR:", err);
@@ -542,5 +550,31 @@ export const deleteSubAreaAPI = async (area_id) => {
       text: err.message || "ไม่สามารถลบพื้นที่ย่อยได้",
     });
     return false;
+  }
+};
+
+
+// ดึงข้อมูลฟาร์มพร้อมค่าเซนเซอร์และระยะข้าวของผู้ใช้
+export const getUserFarmSensorData = async (userId) => {
+  try {
+    if (!userId) {
+      return null;
+    }
+
+    const res = await apiFetch("/api/admin/analysis", {
+      method: "POST",
+      body: { userId: userId },
+    });
+
+    if (!res.ok) {
+      console.error("Failed to fetch farm analysis data:", res?.message);
+      return null;
+    }
+
+    // ส่งข้อมูลกลับตรงๆ เพราะ API ส่งข้อมูลมาพร้อมใช้แล้ว
+    return res.data || [];
+  } catch (err) {
+    console.error("GET USER FARM SENSOR DATA ERROR:", err);
+    return null;
   }
 };

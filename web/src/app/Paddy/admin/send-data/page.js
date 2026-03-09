@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Server,
   Wifi,
@@ -17,6 +17,12 @@ import {
   Droplets,
   Sprout,
   AlertCircle,
+  Filter,
+  ChevronDown,
+  Building2,
+  Layers,
+  X,
+  MapPin,
 } from "lucide-react";
 import {
   AdminSidebar,
@@ -35,6 +41,10 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   const [devices, setDevices] = useState([]);
   const [logs, setLogs] = useState([]);
   
+  // Filter states
+  const [selectedFarm, setSelectedFarm] = useState("all");
+  const [selectedArea, setSelectedArea] = useState("all");
+  
   // 🔹 เพิ่ม State สำหรับเก็บสถานะล่าสุดของแต่ละเครื่อง
   const [deviceStatusMap, setDeviceStatusMap] = useState({});
 
@@ -43,25 +53,81 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   // 🔹 โหลดอุปกรณ์จาก API
   useEffect(() => {
     fetchDevices()
-      .then((data) => {
-        setDevices(data);
+      .then((res) => {
+        // Handle nested data structure
+        const data = res?.data || res || [];
+        const deviceList = Array.isArray(data) ? data : [];
+        setDevices(deviceList);
         // ตั้งค่าเริ่มต้นให้ทุกเครื่องเป็น offline ก่อนจนกว่าจะมีสัญญาณมา
         const initialStatus = {};
-        data.forEach(d => initialStatus[d.device_code] = "offline");
+        deviceList.forEach(d => initialStatus[d.device_code] = d.status === "online" ? "online" : "offline");
         setDeviceStatusMap(initialStatus);
       })
       .catch(console.error);
   }, []);
 
+  // ดึงรายชื่อฟาร์มจากข้อมูล devices
+  const farms = useMemo(() => {
+    const farmMap = new Map();
+    devices.forEach(d => {
+      if (d.farm?.farm_id) {
+        farmMap.set(d.farm.farm_id, d.farm.farm_name);
+      }
+    });
+    return Array.from(farmMap, ([id, name]) => ({ id, name }));
+  }, [devices]);
+
+  // ดึงรายชื่อ areas ตามฟาร์มที่เลือก
+  const areas = useMemo(() => {
+    const areaMap = new Map();
+    devices.forEach(d => {
+      if (d.area?.area_id) {
+        // ถ้าเลือกฟาร์มแล้ว ให้แสดงเฉพาะ area ในฟาร์มนั้น
+        if (selectedFarm === "all" || d.farm?.farm_id === parseInt(selectedFarm)) {
+          areaMap.set(d.area.area_id, d.area.area_name);
+        }
+      }
+    });
+    return Array.from(areaMap, ([id, name]) => ({ id, name }));
+  }, [devices, selectedFarm]);
+
+  // Reset area filter เมื่อเปลี่ยนฟาร์ม
+  useEffect(() => {
+    setSelectedArea("all");
+  }, [selectedFarm]);
+
+  // กรองอุปกรณ์ตามตัวกรอง
+  const filteredDevices = useMemo(() => {
+    return devices.filter(d => {
+      if (selectedFarm !== "all" && d.farm?.farm_id !== parseInt(selectedFarm)) return false;
+      if (selectedArea !== "all" && d.area?.area_id !== parseInt(selectedArea)) return false;
+      return true;
+    });
+  }, [devices, selectedFarm, selectedArea]);
+
   const onlineDeviceCodes = devices.map((d) => d.device_code);
 
-  const totalDevices = devices.length;
-const onlineDevices = Object.values(deviceStatusMap).filter(s => s === "online").length;
+  const totalDevices = filteredDevices.length;
+  const onlineDevices = filteredDevices.filter(d => deviceStatusMap[d.device_code] === "online").length;
+  const offlineDevices = totalDevices - onlineDevices;
 
+  const hasActiveFilters = selectedFarm !== "all" || selectedArea !== "all";
 
-const activeSending = Object.keys(deviceStatusMap).filter(deviceId => {
-    return deviceStatusMap[deviceId] === "online";
-}).length;
+  // Device codes ที่ผ่านการกรอง
+  const filteredDeviceCodes = useMemo(() => {
+    return filteredDevices.map(d => d.device_code);
+  }, [filteredDevices]);
+
+  // กรอง logs ตาม device ที่เลือก
+  const filteredLogs = useMemo(() => {
+    if (!hasActiveFilters) return logs;
+    return logs.filter(log => filteredDeviceCodes.includes(log.deviceCode));
+  }, [logs, filteredDeviceCodes, hasActiveFilters]);
+
+  const clearFilters = () => {
+    setSelectedFarm("all");
+    setSelectedArea("all");
+  };
 
   useMonitorWebSocket(onlineDeviceCodes, (msg) => {
     if (isPaused) return;
@@ -81,23 +147,23 @@ const activeSending = Object.keys(deviceStatusMap).filter(deviceId => {
         moisture: data?.soil_moisture ?? "-",
       })}`;
 
-      setLogs((prev) => [...prev, { id: Date.now(), text: logLine }].slice(-1000));
+      setLogs((prev) => [...prev, { id: Date.now(), text: logLine, deviceCode: deviceId }].slice(-1000));
     }
 
     // 2. จัดการข้อมูลสถานะ (จาก MQTT Status Topic)
     if (msg.type === "DEVICE_STATUS") {
-  const { deviceId, status } = msg;
+      const { deviceId, status } = msg;
 
-  setDeviceStatusMap(prev => ({
-    ...prev,
-    [deviceId]: status.toLowerCase(), // online / offline
-  }));
+      setDeviceStatusMap(prev => ({
+        ...prev,
+        [deviceId]: status.toLowerCase(), // online / offline
+      }));
 
-  const logLine = `STATUS (${deviceId}) -> ${status.toUpperCase()}`;
-  setLogs(prev =>
-    [...prev, { id: Date.now(), text: logLine }].slice(-1000)
-  );
-}
+      const logLine = `STATUS (${deviceId}) -> ${status.toUpperCase()}`;
+      setLogs(prev =>
+        [...prev, { id: Date.now(), text: logLine, deviceCode: deviceId }].slice(-1000)
+      );
+    }
   });
 
   useEffect(() => {
@@ -117,15 +183,78 @@ const activeSending = Object.keys(deviceStatusMap).filter(deviceId => {
         <main className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
           {/* === PART 1: TOP SECTION (SUMMARY CARDS) === */}
           <div className="flex-none">
-            <div className="flex items-center gap-2 mb-4">
-              <Server className="w-6 h-6 text-indigo-600" />
-              <h2 className="text-xl font-bold text-slate-800">
-                Device Monitor (ภาพรวมระบบ)
-              </h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Server className="w-6 h-6 text-indigo-600" />
+                <h2 className="text-xl font-bold text-slate-800">
+                 Data Monitoring
+                </h2>
+              </div>
+            </div>
+
+            {/* Filter Section */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Filter className="w-4 h-4 text-slate-400" />
+                <span className="text-sm font-medium text-slate-700">ตัวกรอง</span>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="ml-auto flex items-center gap-1 text-xs text-slate-500 hover:text-rose-500 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                    ล้างตัวกรอง
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Farm Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                    <Building2 className="w-3 h-3 inline mr-1" />
+                    ฟาร์ม
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedFarm}
+                      onChange={(e) => setSelectedFarm(e.target.value)}
+                      className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+                    >
+                      <option value="all">ทุกฟาร์ม</option>
+                      {farms.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Area Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                    <Layers className="w-3 h-3 inline mr-1" />
+                    แปลง/พื้นที่
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedArea}
+                      onChange={(e) => setSelectedArea(e.target.value)}
+                      className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+                    >
+                      <option value="all">ทุกพื้นที่</option>
+                      {areas.map(a => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* 3 Summary Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {/* Card 1: Total */}
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
@@ -149,7 +278,7 @@ const activeSending = Object.keys(deviceStatusMap).filter(deviceId => {
                     กำลังส่งข้อมูล (Online)
                   </p>
                   <h3 className="text-2xl font-bold text-green-700">
-                      {activeSending}
+                      {onlineDevices}
                   </h3>
                 </div>
                 <div className="relative z-10 p-3 bg-green-100 rounded-lg text-green-600">
@@ -168,7 +297,7 @@ const activeSending = Object.keys(deviceStatusMap).filter(deviceId => {
                     ไม่ส่งข้อมูล (Offline)
                   </p>
                   <h3 className="text-2xl font-bold text-red-600">
-                    {totalDevices-onlineDevices}
+                    {offlineDevices}
                   </h3>
                 </div>
                 <div className="p-3 bg-red-50 rounded-lg text-red-500">
@@ -176,13 +305,10 @@ const activeSending = Object.keys(deviceStatusMap).filter(deviceId => {
                 </div>
               </div>
             </div>
-
-            {/* Device Cards Grid */}
-            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"> */}
           </div>
 
           {/* === PART 2: BOTTOM SECTION (SERIAL MONITOR) === */}
-          <div className="flex-1 flex flex-col min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-2">
+          <div className="flex-1 flex flex-col min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Console Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
               <div className="flex items-center gap-2">
@@ -193,18 +319,24 @@ const activeSending = Object.keys(deviceStatusMap).filter(deviceId => {
               </div>
 
               <div className="flex items-center gap-2">
-                {/*  */}
+                <button
+                  onClick={() => setLogs([])}
+                  className="text-xs text-slate-500 hover:text-rose-500 transition-colors flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear
+                </button>
               </div>
             </div>
 
             {/* Console Body */}
             <div className="flex-1 bg-[#1e1e1e] p-4 overflow-y-auto font-mono text-xs leading-relaxed custom-scrollbar">
-              {logs.length === 0 && (
+              {filteredLogs.length === 0 && (
                 <div className="text-gray-500 text-center mt-10 opacity-50">
-                  Waiting for data...
+                  {hasActiveFilters ? 'ไม่มีข้อมูลจากอุปกรณ์ในพื้นที่ที่เลือก...' : 'Waiting for data...'}
                 </div>
               )}
-              {logs.map((log,index) => (
+              {filteredLogs.map((log, index) => (
                 <div
                   key={index}
                   className="text-gray-300 border-l-2 border-transparent hover:border-green-500 pl-2 -ml-2 py-0.5"

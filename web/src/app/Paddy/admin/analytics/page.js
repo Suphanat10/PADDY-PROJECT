@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useMemo , useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Sprout,
   Search,
@@ -12,313 +12,714 @@ import {
   BarChart3,
   History,
   Info,
-  ImageIcon ,  Loader2
+  ImageIcon,
+  Loader2,
+  Filter,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Leaf,
+  Bug,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  X,
+  Building2,
+  Layers
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import Swal from "sweetalert2";
 import Footer from "@/app/components/Footer";
 import { AdminSidebar, AdminHeader } from '../../../components/admin/AdminLayout';
 
-
-
 export default function GrowthAnalysisPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-   const [RAW_DATA, setData] = useState([]);
-   const [isLoading, setIsLoading] = useState(false);
+  const [RAW_DATA, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const DISPLAY_LIMIT = 6;
+  // Filter states
+  const [selectedUser, setSelectedUser] = useState("all");
+  const [selectedFarm, setSelectedFarm] = useState("all");
+  const [selectedArea, setSelectedArea] = useState("all");
+  const [activeTab, setActiveTab] = useState("growth"); // "growth" or "disease"
 
-    useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-         const res = await apiFetch("/api/admin/get_data_growth_analysis", {
-             method: "GET",
-               headers: {
-                   "Content-Type": "application/json",
-               },
-         });
-         if (!res.ok) {
-             Swal.fire({
-               icon: "error",
-               title: "Fetch failed",
-               text: res.message || "Unknown error",
-             });
-               return;
-         }
-         setData(res.data);
+        const res = await apiFetch("/api/admin/get_data_growth_analysis", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) {
+          Swal.fire({
+            icon: "error",
+            title: "Fetch failed",
+            text: res.message || "Unknown error",
+          });
+          return;
+        }
+        // Handle nested data structure: res.data could be { data: [...] } or [...]
+        const rawData = res.data?.data || res.data || [];
+        setData(Array.isArray(rawData) ? rawData : []);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching growth analysis data:", error);
         setIsLoading(false);
       }
-      catch (error) {
-         console.error("Error fetching growth analysis data:", error);
-      }
-      };
-      fetchData();
-   }, []);
+    };
+    fetchData();
+  }, []);
 
-const allDevices = useMemo(() => {
-  if (!RAW_DATA?.length) return [];
-   
-  return RAW_DATA.flatMap(user =>
-    user.farms.flatMap(farm =>
-      farm.areas.flatMap(area =>
-        area.devices
-          .filter(d => d.growth_analysis?.length > 0)
-          .map(deviceInfo => {
-            const stageMap = new Map();
+  // ดึงรายชื่อ users ที่มีฟาร์ม
+  const users = useMemo(() => {
+    if (!RAW_DATA?.length) return [];
+    return RAW_DATA
+      .filter(u => u.farms?.length > 0)
+      .map(u => ({
+        id: u.user_id,
+        name: `${u.first_name} ${u.last_name}`
+      }));
+  }, [RAW_DATA]);
 
-            for (const record of deviceInfo.growth_analysis) {
-              stageMap.set(
-                record.growth_stage,
-                (stageMap.get(record.growth_stage) || 0) + 1
-              );
-            }
-
-            return {
-              key: deviceInfo.device_registration_id,
-
-              user: {
-                id: user.user_id,
-                name: `${user.first_name} ${user.last_name}`
-              },
-
-              farm: {
-                id: farm.farm_id,
-                name: farm.farm_name
-              },
-
-              area: {
-                id: area.area_id,
-                name: area.area_name
-              },
-
-              device: deviceInfo.device,
-              status: deviceInfo.status,
-
-              latestAnalysis:
-                deviceInfo.growth_analysis[
-                  deviceInfo.growth_analysis.length - 1
-                ],
-
-              stats: Array.from(stageMap, ([stage, count]) => ({
-                stage,
-                count
-              })),
-
-              totalAnalysis: deviceInfo.growth_analysis.length
-            };
-          })
-      )
-    )
-  );
-         
-
-}, [RAW_DATA]);
-
-
-  const filteredDevices = useMemo(() => {
-    return allDevices.filter(item => {
-      const lowerSearch = searchTerm.toLowerCase();
-      return (
-        item.device.device_code.toLowerCase().includes(lowerSearch) ||
-        item.user.name.toLowerCase().includes(lowerSearch) ||
-        item.farm.name.toLowerCase().includes(lowerSearch) ||
-        item.area.name.toLowerCase().includes(lowerSearch)
+  // ดึงรายชื่อฟาร์มตาม user ที่เลือก
+  const farms = useMemo(() => {
+    if (!RAW_DATA?.length) return [];
+    if (selectedUser === "all") {
+      return RAW_DATA.flatMap(u => 
+        u.farms?.map(f => ({ 
+          id: f.farm_id, 
+          name: f.farm_name,
+          userId: u.user_id 
+        })) || []
       );
+    }
+    const user = RAW_DATA.find(u => u.user_id === parseInt(selectedUser));
+    return user?.farms?.map(f => ({ 
+      id: f.farm_id, 
+      name: f.farm_name,
+      userId: user.user_id 
+    })) || [];
+  }, [RAW_DATA, selectedUser]);
+
+  // ดึงรายชื่อ areas ตามฟาร์มที่เลือก
+  const areas = useMemo(() => {
+    if (!RAW_DATA?.length) return [];
+    if (selectedFarm === "all") {
+      return RAW_DATA.flatMap(u =>
+        u.farms?.flatMap(f =>
+          f.areas?.map(a => ({
+            id: a.area_id,
+            name: a.area_name,
+            farmId: f.farm_id
+          })) || []
+        ) || []
+      );
+    }
+    const farm = RAW_DATA.flatMap(u => u.farms || []).find(f => f.farm_id === parseInt(selectedFarm));
+    return farm?.areas?.map(a => ({
+      id: a.area_id,
+      name: a.area_name,
+      farmId: farm.farm_id
+    })) || [];
+  }, [RAW_DATA, selectedFarm]);
+
+  // Reset filters เมื่อเปลี่ยน parent filter
+  useEffect(() => {
+    setSelectedFarm("all");
+    setSelectedArea("all");
+  }, [selectedUser]);
+
+  useEffect(() => {
+    setSelectedArea("all");
+  }, [selectedFarm]);
+
+  // รวมข้อมูลทั้งหมดจาก devices
+  const allAnalysisData = useMemo(() => {
+    if (!RAW_DATA?.length) return { growth: [], disease: [] };
+
+    const growth = [];
+    const disease = [];
+
+    RAW_DATA.forEach(user => {
+      if (selectedUser !== "all" && user.user_id !== parseInt(selectedUser)) return;
+
+      user.farms?.forEach(farm => {
+        if (selectedFarm !== "all" && farm.farm_id !== parseInt(selectedFarm)) return;
+
+        farm.areas?.forEach(area => {
+          if (selectedArea !== "all" && area.area_id !== parseInt(selectedArea)) return;
+
+          area.devices?.forEach(device => {
+            // Growth analysis
+            device.growth_analysis?.forEach(g => {
+              growth.push({
+                ...g,
+                device_code: device.device.device_code,
+                user_name: `${user.first_name} ${user.last_name}`,
+                farm_name: farm.farm_name,
+                area_name: area.area_name
+              });
+            });
+
+            // Disease analysis
+            device.disease_analysis?.forEach(d => {
+              disease.push({
+                ...d,
+                device_code: device.device.device_code,
+                user_name: `${user.first_name} ${user.last_name}`,
+                farm_name: farm.farm_name,
+                area_name: area.area_name
+              });
+            });
+          });
+        });
+      });
     });
-  }, [allDevices, searchTerm]);
 
-  const displayedDevices = useMemo(() => {
-      // กรณี 1: ไม่ได้ค้นหา -> ตัดเหลือแค่ DISPLAY_LIMIT (4 อัน)
-      if (!searchTerm) {
-          return filteredDevices.slice(0, DISPLAY_LIMIT);
-      }
-      // กรณี 2: มีการค้นหา -> แสดงทั้งหมดที่ค้นเจอ
-      return filteredDevices;
-  }, [filteredDevices, searchTerm]);
+    // Sort by date descending
+    growth.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    disease.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  const hiddenCount = filteredDevices.length - displayedDevices.length;
+    return { growth, disease };
+  }, [RAW_DATA, selectedUser, selectedFarm, selectedArea]);
+
+  const clearFilters = () => {
+    setSelectedUser("all");
+    setSelectedFarm("all");
+    setSelectedArea("all");
+  };
+
+  const hasActiveFilters = selectedUser !== "all" || selectedFarm !== "all" || selectedArea !== "all";
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-600  overflow-hidden">
+    <div className="flex h-screen bg-slate-50 text-slate-600 overflow-hidden">
       <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activeMenu="growth-analysis" />
 
       <div className="flex flex-1 flex-col relative z-0">
         <AdminHeader setSidebarOpen={setSidebarOpen} />
 
-
-
-
-              {isLoading && (
-              <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center">
-                <Loader2 className="animate-spin text-green-600" size={48} />
-              </div>
-            )}
-
-
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center">
+            <Loader2 className="animate-spin text-green-600" size={48} />
+          </div>
+        )}
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-7xl mx-auto space-y-6">
-            
+
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                    การวิเคราะห์การเจริญเติบโต 
-                    </h1>
-                    <p className="text-sm text-slate-500 mt-1">
-                        แสดงเฉพาะอุปกรณ์ที่มีประวัติการวิเคราะห์
-                    </p>
-                </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                  <BarChart3 className="w-7 h-7 text-green-600" />
+                   ประวัติการวิเคราะห์ระยะการเติบโตและโรคข้าว
+                </h1>
+               
+              </div>
+
+              {/* Tab Switch */}
+              <div className="flex bg-white rounded-xl p-1 border border-slate-200 shadow-sm">
+                <button
+                  onClick={() => setActiveTab("growth")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === "growth"
+                      ? "bg-green-500 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  <Sprout className="w-4 h-4" />
+                  การเติบโต
+                  <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                    activeTab === "growth" ? "bg-white/20" : "bg-green-100 text-green-700"
+                  }`}>
+                    {allAnalysisData.growth.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("disease")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    activeTab === "disease"
+                      ? "bg-rose-500 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  <Bug className="w-4 h-4" />
+                  โรคข้าว
+                  <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                    activeTab === "disease" ? "bg-white/20" : "bg-rose-100 text-rose-700"
+                  }`}>
+                    {allAnalysisData.disease.length}
+                  </span>
+                </button>
+              </div>
             </div>
 
-            {/* --- Search Bar --- */}
+            {/* Filter Section */}
             <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="relative w-full">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input 
-                        type="text"
-                        placeholder="ค้นหารหัสอุปกรณ์ / ชื่อฟาร์ม / เจ้าของ..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:ring-2 focus:ring-green-500 focus:bg-white outline-none transition-all"
-                    />
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="w-4 h-4 text-slate-400" />
+                <span className="text-sm font-medium text-slate-700">ตัวกรอง</span>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="ml-auto flex items-center gap-1 text-xs text-slate-500 hover:text-rose-500 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                    ล้างตัวกรอง
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* User Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                    <User className="w-3 h-3 inline mr-1" />
+                    เจ้าของ
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedUser}
+                      onChange={(e) => setSelectedUser(e.target.value)}
+                      className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:ring-2 focus:ring-green-500 focus:bg-white outline-none transition-all"
+                    >
+                      <option value="all">ทั้งหมด</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
+
+                {/* Farm Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                    <Building2 className="w-3 h-3 inline mr-1" />
+                    ฟาร์ม
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedFarm}
+                      onChange={(e) => setSelectedFarm(e.target.value)}
+                      className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:ring-2 focus:ring-green-500 focus:bg-white outline-none transition-all"
+                    >
+                      <option value="all">ทั้งหมด</option>
+                      {farms.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Area Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                    <Layers className="w-3 h-3 inline mr-1" />
+                    แปลง/พื้นที่
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedArea}
+                      onChange={(e) => setSelectedArea(e.target.value)}
+                      className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:ring-2 focus:ring-green-500 focus:bg-white outline-none transition-all"
+                    >
+                      <option value="all">ทั้งหมด</option>
+                      {areas.map(a => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* --- Info Banner (แสดงเมื่อมีรายการถูกซ่อน) --- */}
-            {!searchTerm && hiddenCount > 0 && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-center gap-2 text-sm text-blue-700 animate-in fade-in slide-in-from-top-2">
-                    <Info className="w-4 h-4 flex-shrink-0" />
-                    <span>
-                        แสดง <strong>{DISPLAY_LIMIT}</strong> รายการล่าสุด 
-                        (มีอีก {hiddenCount} รายการที่ซ่อนอยู่ กรุณาใช้ช่องค้นหาเพื่อดูข้อมูล)
-                    </span>
-                </div>
-            )}
-
-            {/* --- Results Grid --- */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {displayedDevices.map((item) => (
-                    <div key={item.key} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col md:flex-row hover:shadow-md transition-all duration-300 group">
-                        
-                        {/* 1. Left Side: Image & Info */}
-                        <div className="md:w-5/12 p-5 border-b md:border-b-0 md:border-r border-slate-100 bg-slate-50/30 flex flex-col">
-                            {/* Device Info */}
-                            <div className="mb-4">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm font-bold font-mono shadow-sm shadow-indigo-200">
-                                        {item.device.device_code}
-                                    </span>
-                                </div>
-                                <div className="text-xs text-slate-500 space-y-1.5 ml-1">
-                                    <div className="flex items-center gap-2">
-                                        <User className="w-3.5 h-3.5 text-slate-400" />
-                                        <span className="font-medium text-slate-700">{item.user.name}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="w-3.5 h-3.5 text-orange-400" />
-                                        <span className="truncate w-48">{item.farm.name} - {item.area.name}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Latest Image */}
-                            <div className="flex-1 mt-auto">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1">
-                                    <LayoutGrid className="w-3 h-3" /> ภาพถ่ายล่าสุด
-                                </p>
-                                <div className="relative w-full h-32 bg-slate-200 rounded-xl overflow-hidden border border-slate-200 shadow-sm group-hover:shadow transition-shadow">
-                                    <img 
-                                        src={item.latestAnalysis.image_url} 
-                                        alt="Latest" 
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                        // onError={(e) => { e.target.src = "https://via.placeholder.com/400x200?text=No+Image"; }}
-                                    />
-                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                                        <p className="text-white text-xs font-medium truncate">{item.latestAnalysis.growth_stage}</p>
-                                        <p className="text-[10px] text-slate-200">
-                                            {new Date(item.latestAnalysis.created_at).toLocaleDateString('th-TH')}
-                                        </p>
-                                    </div>
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <div className="bg-white/20 backdrop-blur-sm p-2 rounded-full">
-                                            <ImageIcon className="w-5 h-5 text-white" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 2. Right Side: Statistics Summary */}
-                        <div className="md:w-7/12 p-5 flex flex-col">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                    <BarChart3 className="w-4 h-4 text-green-600" />
-                                    สรุปผลการวิเคราะห์
-                                </h3>
-                                <span className="text-xs font-medium bg-green-50 text-green-700 px-2 py-1 rounded-md border border-green-100">
-                                    รวม {item.totalAnalysis} ครั้ง
-                                </span>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                                <div className="space-y-3">
-                                    {/* Table Header */}
-                                    <div className="flex justify-between text-[10px] uppercase font-bold text-slate-400 pb-1 border-b border-slate-50">
-                                        <span>ระยะการเติบโต</span>
-                                        <span>จำนวน (ครั้ง)</span>
-                                    </div>
-                                    
-                                    {/* Stats List */}
-                                    {item.stats.map((stat, idx) => (
-                                        <div key={idx} className="flex justify-between items-center group/item hover:bg-slate-50 p-2 rounded-lg transition-colors">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${['bg-yellow-400', 'bg-green-400', 'bg-blue-400', 'bg-purple-400'][idx % 4]}`}></div>
-                                                <span className="text-sm font-medium text-slate-600 group-hover/item:text-slate-800">{stat.stage}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-16 h-1.5 bg-slate-100 rounded-full hidden sm:block overflow-hidden">
-                                                    <div 
-                                                        className={`h-full rounded-full ${['bg-yellow-400', 'bg-green-400', 'bg-blue-400', 'bg-purple-400'][idx % 4]}`} 
-                                                        style={{ width: `${(stat.count / item.totalAnalysis) * 100}%` }}
-                                                    ></div>
-                                                </div>
-                                                <span className="text-sm font-bold text-slate-700 w-6 text-right">{stat.count}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Footer / Last Update */}
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400">
-                                <History className="w-3 h-3" />
-                                <span>อัปเดตล่าสุด: {new Date(item.latestAnalysis.created_at).toLocaleString('th-TH')}</span>
-                            </div>
-                        </div>
-
-                    </div>
-                ))}
-            </div>
-
-            {/* No Results State */}
-            {displayedDevices.length === 0 && (
-                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
-                    <Search className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500 font-medium">
-                        {searchTerm 
-                            ? "ไม่พบข้อมูลที่ตรงกับคำค้นหา" 
-                            : "ยังไม่มีอุปกรณ์ใดที่มีประวัติการวิเคราะห์"}
-                    </p>
-                </div>
+            {/* Timeline Content */}
+            {activeTab === "growth" ? (
+              <GrowthTimeline data={allAnalysisData.growth} />
+            ) : (
+              <DiseaseTimeline data={allAnalysisData.disease} />
             )}
 
           </div>
         </main>
         <Footer />
       </div>
+    </div>
+  );
+}
+
+// Pagination Component
+function Pagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  const pages = [];
+  const maxVisible = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+  if (endPage - startPage + 1 < maxVisible) {
+    startPage = Math.max(1, endPage - maxVisible + 1);
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i);
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-slate-100">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+      >
+        <ChevronLeft className="w-4 h-4 text-slate-600" />
+      </button>
+
+      {startPage > 1 && (
+        <>
+          <button
+            onClick={() => onPageChange(1)}
+            className="w-9 h-9 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all"
+          >
+            1
+          </button>
+          {startPage > 2 && <span className="text-slate-400">...</span>}
+        </>
+      )}
+
+      {pages.map(page => (
+        <button
+          key={page}
+          onClick={() => onPageChange(page)}
+          className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${
+            page === currentPage
+              ? 'bg-green-500 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          {page}
+        </button>
+      ))}
+
+      {endPage < totalPages && (
+        <>
+          {endPage < totalPages - 1 && <span className="text-slate-400">...</span>}
+          <button
+            onClick={() => onPageChange(totalPages)}
+            className="w-9 h-9 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all"
+          >
+            {totalPages}
+          </button>
+        </>
+      )}
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+      >
+        <ChevronRight className="w-4 h-4 text-slate-600" />
+      </button>
+    </div>
+  );
+}
+
+// Growth Analysis Timeline Component
+function GrowthTimeline({ data }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const totalPages = Math.ceil((data?.length || 0) / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = (data || []).slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to page 1 if data changes and current page is out of range
+  React.useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [data?.length, totalPages, currentPage]);
+
+  if (!data?.length) {
+    return (
+      <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+        <Sprout className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <p className="text-slate-500 font-medium">ไม่พบข้อมูลการวิเคราะห์ระยะการเติบโต</p>
+        <p className="text-sm text-slate-400 mt-1">ลองเปลี่ยนตัวกรองเพื่อดูข้อมูลอื่น</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <Sprout className="w-5 h-5 text-green-500" />
+          ไทม์ไลน์การวิเคราะห์ระยะการเติบโต
+        </h3>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-400">
+            แสดง {startIndex + 1}-{Math.min(startIndex + itemsPerPage, data.length)} จาก
+          </span>
+          <span className="text-sm text-slate-600 bg-slate-50 px-3 py-1 rounded-full font-medium">
+            {data.length} รายการ
+          </span>
+        </div>
+      </div>
+
+      <div className="relative">
+        {/* Timeline Line */}
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-green-300 via-green-200 to-transparent" />
+
+        <div className="space-y-6">
+          {paginatedData.map((item, idx) => {
+            const isFirst = idx === 0 && currentPage === 1;
+            const date = new Date(item.created_at);
+
+            return (
+              <div key={item.analysis_id || idx} className="relative flex gap-5 group">
+                {/* Timeline Node */}
+                <div className="relative z-10 flex-shrink-0">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-all group-hover:scale-110 ${
+                    isFirst ? 'bg-green-500 ring-4 ring-green-100' : 'bg-white border-2 border-green-300'
+                  }`}>
+                    <Sprout className={`w-5 h-5 ${isFirst ? 'text-white' : 'text-green-500'}`} />
+                  </div>
+                </div>
+
+                {/* Content Card */}
+                <div className="flex-1 pb-2">
+                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-green-200 hover:bg-green-50/20 transition-all">
+                    <div className="flex flex-col lg:flex-row gap-4">
+                      {/* Image */}
+                      {item.image_url && (
+                        <a href={item.image_url} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                          <img
+                            src={item.image_url}
+                            alt={item.growth_stage}
+                            className="w-full lg:w-48 h-32 object-cover rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                          />
+                        </a>
+                      )}
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <h4 className="text-base font-bold text-slate-800">{item.growth_stage}</h4>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                                <Activity className="w-3 h-3" />
+                                {item.device_code}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                {item.farm_name} • {item.area_name}
+                              </span>
+                            </div>
+                          </div>
+                          {item.confidence && (
+                            <span className="flex-shrink-0 text-sm font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                              {(Number(item.confidence) * 100).toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Advice */}
+                        {item.advice && (
+                          <p className="text-sm text-slate-600 mt-3 p-3 bg-white rounded-lg border border-slate-100">
+                            {item.advice}
+                          </p>
+                        )}
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                          <div className="flex items-center gap-1 text-xs text-slate-400">
+                            <User className="w-3 h-3" />
+                            <span>{item.user_name}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-slate-400">
+                            <Clock className="w-3 h-3" />
+                            <span>{date.toLocaleString('th-TH')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
+    </div>
+  );
+}
+
+// Disease Analysis Timeline Component
+function DiseaseTimeline({ data }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const totalPages = Math.ceil((data?.length || 0) / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = (data || []).slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to page 1 if data changes and current page is out of range
+  React.useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [data?.length, totalPages, currentPage]);
+
+  if (!data?.length) {
+    return (
+      <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+        <Bug className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <p className="text-slate-500 font-medium">ไม่พบข้อมูลการวิเคราะห์โรคข้าว</p>
+        <p className="text-sm text-slate-400 mt-1">ลองเปลี่ยนตัวกรองเพื่อดูข้อมูลอื่น</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <Bug className="w-5 h-5 text-rose-500" />
+          ไทม์ไลน์การตรวจจับโรคข้าว
+        </h3>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-400">
+            แสดง {startIndex + 1}-{Math.min(startIndex + itemsPerPage, data.length)} จาก
+          </span>
+          <span className="text-sm text-slate-600 bg-slate-50 px-3 py-1 rounded-full font-medium">
+            {data.length} รายการ
+          </span>
+        </div>
+      </div>
+
+      <div className="relative">
+        {/* Timeline Line */}
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-rose-300 via-rose-200 to-transparent" />
+
+        <div className="space-y-6">
+          {paginatedData.map((item, idx) => {
+            const isFirst = idx === 0 && currentPage === 1;
+            const date = new Date(item.created_at);
+            const isWarning = item.status === "warning";
+
+            return (
+              <div key={idx} className="relative flex gap-5 group">
+                {/* Timeline Node */}
+                <div className="relative z-10 flex-shrink-0">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-all group-hover:scale-110 ${
+                    isFirst ? 'bg-rose-500 ring-4 ring-rose-100' : 'bg-white border-2 border-rose-300'
+                  }`}>
+                    {isWarning ? (
+                      <AlertTriangle className={`w-5 h-5 ${isFirst ? 'text-white' : 'text-amber-500'}`} />
+                    ) : (
+                      <Bug className={`w-5 h-5 ${isFirst ? 'text-white' : 'text-rose-500'}`} />
+                    )}
+                  </div>
+                </div>
+
+                {/* Content Card */}
+                <div className="flex-1 pb-2">
+                  <div className={`rounded-2xl p-5 border transition-all ${
+                    isWarning 
+                      ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300' 
+                      : 'bg-slate-50 border-slate-100 hover:border-rose-200 hover:bg-rose-50/20'
+                  }`}>
+                    <div className="flex flex-col lg:flex-row gap-4">
+                      {/* Image */}
+                      {item.image_url && (
+                        <a href={item.image_url} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                          <img
+                            src={item.image_url}
+                            alt={item.disease_name}
+                            className="w-full lg:w-48 h-32 object-cover rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                          />
+                        </a>
+                      )}
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-base font-bold text-slate-800">{item.disease_name}</h4>
+                              {isWarning && (
+                                <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  เตือนภัย
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                                <Activity className="w-3 h-3" />
+                                {item.device_code}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                {item.farm_name} • {item.area_name}
+                              </span>
+                            </div>
+                          </div>
+                          {item.confidence && (
+                            <span className="flex-shrink-0 text-sm font-bold text-rose-600 bg-rose-100 px-3 py-1 rounded-full">
+                              {(Number(item.confidence) * 100).toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Advice */}
+                        {item.advice && (
+                          <p className="text-sm text-slate-600 mt-3 p-3 bg-white rounded-lg border border-slate-100">
+                            {item.advice}
+                          </p>
+                        )}
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                          <div className="flex items-center gap-1 text-xs text-slate-400">
+                            <User className="w-3 h-3" />
+                            <span>{item.user_name}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-slate-400">
+                            <Clock className="w-3 h-3" />
+                            <span>{date.toLocaleString('th-TH')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 }

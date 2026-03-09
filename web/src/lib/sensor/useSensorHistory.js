@@ -23,61 +23,30 @@ export function useSensorHistory(deviceId) {
 
         console.log("Raw API Response:", res);
 
-        if (!res || !Array.isArray(res.data?.sensor_data)) {
-          console.error("sensor_data missing or not array:", res);
+        // ✅ ใช้ sensor_history จาก backend ใหม่
+        const sensorHistory = res?.data?.sensor_history;
+
+        if (!Array.isArray(sensorHistory)) {
+          console.error("sensor_history missing or not array:", res);
           setHistoricalData([]);
           return;
         }
 
-        const sensorData = res.data.sensor_data;
+        // ✅ map format ให้ตรงกับกราฟ
+        const formatted = sensorHistory
+          .map((item) => ({
+            timestamp: item.timestamp,
+            time: item.time,
+            nitrogen: item.N ?? null,
+            phosphorus: item.P ?? null,
+            potassium: item.K ?? null,
+            humidity: item.S ?? null,
+            waterLevel: item.W ?? null,
+          }))
+          .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        const grouped = sensorData.reduce((acc, item) => {
-          if (!item.measured_at) return acc;
-
-          const dateKey = item.measured_at.substring(0, 16).replace("T", " ");
-          if (!acc[dateKey]) {
-            acc[dateKey] = {
-              time: dateKey,
-              nitrogen: null,
-              phosphorus: null,
-              potassium: null,
-              humidity: null,
-              waterLevel: null,
-            };
-          }
-
-          switch (item.sensor_type) {
-            case "N":
-              acc[dateKey].nitrogen = item.value;
-              break;
-            case "P":
-              acc[dateKey].phosphorus = item.value;
-              break;
-            case "K":
-              acc[dateKey].potassium = item.value;
-              break;
-            case "soil_moisture":
-              acc[dateKey].humidity = item.value;
-              break;
-            case "water_level":
-              acc[dateKey].waterLevel = item.value;
-              break;
-            default:
-              break;
-          }
-
-          return acc;
-        }, {});
-
-
-
-        const history = Object.values(grouped).sort((a, b) =>
-          new Date(a.time) - new Date(b.time)
-        );
-
-
-        console.log("History for chart:", history);
-        setHistoricalData(history);
+        console.log("History for chart:", formatted);
+        setHistoricalData(formatted);
 
       } catch (error) {
         console.error("Failed to fetch sensor data", error);

@@ -379,10 +379,10 @@ const AdminSidebar = ({
               />
                <SidebarItem
                 icon={<Airplay size={20} />}
-                text="ภาพรวมระบบ"
-                href="/Paddy/admin/FarmDashboard"
-                active={activeMenu === "FarmDashboard"}
-                onClick={() => setActiveMenu("FarmDashboard")}
+                text="Device Monitoring"
+                href="/Paddy/admin/DeviceMonitoring"
+                active={activeMenu === "DeviceMonitoring"}
+                onClick={() => setActiveMenu("DeviceMonitoring")}
               />
               <SidebarItem
                 icon={<Users size={20} />}

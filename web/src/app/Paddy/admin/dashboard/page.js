@@ -1,260 +1,584 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  Smartphone,
-  Users,
-  Tractor,
-  Map as MapIcon,
+  LayoutDashboard,
   Sprout,
   Wifi,
-  WifiOff,
+  Bug,
+  Target,
   Search,
-  Activity,
-  Signal,
-  Zap, // เพิ่มสำหรับ Active Sending
+  Loader2,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+} from "recharts";
 
-import { AdminSidebar, AdminHeader } from "../../../components/admin/AdminLayout";
-import { apiFetch } from "@/lib/api";
+// Layout Components
+import {
+  AdminSidebar,
+  AdminHeader,
+} from "../../../components/admin/AdminLayout";
 import Footer from "@/app/components/Footer";
-import { useDeviceWebSocket } from "@/lib/dashboard/useDeviceWebSocket";
 
-const StatCard = ({ title, value, unit, icon: Icon, theme = "blue" }) => {
-  const themes = {
-    blue: "bg-blue-50 text-blue-600 border-blue-100",
-    green: "bg-emerald-50 text-emerald-600 border-emerald-100",
-    orange: "bg-orange-50 text-orange-600 border-orange-100",
-    indigo: "bg-indigo-50 text-indigo-600 border-indigo-100",
-    amber: "bg-amber-50 text-amber-600 border-amber-100", 
-  };
-  const activeTheme = themes[theme] || themes.blue;
+// Local Components
+import { StatCard, ConnectionCard, FarmAccordion } from "./components";
 
-  return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-200">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-          <h3 className="text-3xl font-bold text-slate-800">
-            {value}{" "}
-            <span className="text-sm font-normal text-slate-400">{unit}</span>
-          </h3>
-        </div>
-        <div className={`p-3 rounded-xl ${activeTheme}`}>
-          <Icon size={24} />
-        </div>
-      </div>
-    </div>
-  );
-};
+// Hooks & Utils
+import { useFarmSocket } from "./hooks/useFarmSocket";
+import { transformApiFarms } from "./utils/transformApiFarms";
+import { apiFetch } from "../../../../lib/api";
 
-const DeviceStatusCard = ({ device }) => {
-  const isOnline = device.status === "online";
-  const isSending = device.is_sending;
+// Constants
+const PIE_COLORS = ["#10b981", "#ef4444"];
 
-  return (
-    <div
-      className={`group relative rounded-2xl border p-5 transition-all duration-300 ${
-        isOnline
-          ? "bg-white border-emerald-200 shadow-lg shadow-emerald-100/50"
-          : "bg-slate-50 border-slate-200 hover:shadow-sm"
-      }`}
-    >
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex items-center gap-3">
-          <div
-            className={`p-2.5 rounded-lg ${
-              isOnline ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-500"
-            }`}
-          >
-            <Wifi size={20} />
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-800 text-lg">{device.device_code}</h4>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end gap-2">
-          {/* สถานะการเชื่อมต่อ */}
-          {isOnline ? (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              ออนไลน์
-            </span>
-          ) : (
-            <span className="px-2.5 py-1 rounded-full bg-slate-200 text-slate-500 text-[10px] font-semibold">
-              ออฟไลน์
-            </span>
-          )}
-
-          {/* สถานะการส่งข้อมูล (Active) */}
-          {isSending && isOnline && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[9px] font-black animate-bounce">
-              <Zap size={10} fill="currentColor" />
-              กำลังส่งข้อมูล
-            </span>
-          )}
-        </div>
-      </div>
-
-      <hr className="border-slate-100 my-3" />
-
-      <div className="flex justify-between items-center text-sm">
-        <div className="flex items-center gap-2 text-slate-500">
-          {isOnline ? (
-            <>
-              <Activity size={16} className={`text-emerald-500 ${isSending ? 'animate-pulse' : ''}`} />
-              <span className="text-xs uppercase font-bold tracking-tighter">
-                {isSending ? "Active Data Flow" : "Standby"}
-              </span>
-            </>
-          ) : (
-            <>
-              <WifiOff size={16} className="text-slate-400" />
-              <span className="text-xs">ขาดการติดต่อ</span>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default function DashboardPage() {
+/**
+ * Farm Dashboard Page
+ * Admin dashboard for monitoring all farms in the system
+ */
+export default function FarmDashboard() {
+  // UI State
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedFarmId, setExpandedFarmId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [devices, setDevices] = useState([]);
-  const [summary, setSummary] = useState({});
+  const [expandedRisks, setExpandedRisks] = useState([]);
 
-  useEffect(() => {
-    const getData = async () => {
-      const res = await apiFetch("/api/admin/get_dashboard_overview", { method: "GET" });
-      if (res.ok) {
-        setDevices(res.data.devices);
-        setSummary(res.data.summary);
-      }
-    };
-    getData();
+  // Data State
+  const [farmData, setFarmData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch farms data
+  const fetchFarms = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiFetch("/api/data/admin/analysis");
+      // apiFetch returns { ok, status, data } where data is the API response
+      // API response is { ok: true, data: [...farms...] }
+      const apiData = response?.data;
+      const farms = apiData?.data || apiData?.farms || apiData || [];
+      setFarmData(transformApiFarms(farms));
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError(err.message || "Failed to fetch farm data");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const deviceCodes = useMemo(() => devices.map((d) => d.device_code), [devices]);
+  // Initial fetch
+  useEffect(() => {
+    fetchFarms();
+  }, [fetchFarms]);
 
-  useDeviceWebSocket({
-    deviceIds: deviceCodes,
-    onStatus: (deviceCode, status) => {
-      setDevices((prev) =>
-        prev.map((d) =>
-          d.device_code === deviceCode
-            ? { ...d, status, is_sending: status === "online" ? d.is_sending : false }
-            : d
-        )
-      );
-    },
-  
-  });
+  // WebSocket connection with status tracking
+  const { isConnected, connectionError, reconnect } = useFarmSocket(setFarmData);
 
-  const filteredDevices = useMemo(() => {
-    return devices.filter((d) =>
-      d.device_code.toLowerCase().includes(searchTerm.toLowerCase())
+  // Computed statistics
+  const stats = useMemo(() => {
+    const totalFarms = farmData.length;
+    const totalAreas = farmData.reduce(
+      (acc, farm) => acc + (farm.areas?.length || 0),
+      0
     );
-  }, [devices, searchTerm]);
+    const warningDiseases = farmData.reduce(
+      (acc, farm) =>
+        acc +
+        (farm.areas?.filter((a) => a.disease.status === "warning").length || 0),
+      0
+    );
+    const onlineFarms = farmData.filter((f) => f.status === "Online").length;
+
+    return {
+      totalFarms,
+      totalAreas,
+      warningDiseases,
+      onlineFarms,
+      offlineFarms: totalFarms - onlineFarms,
+    };
+  }, [farmData]);
+
+  // Chart data
+  const statusData = useMemo(
+    () => [
+      { name: "Online", value: stats.onlineFarms },
+      { name: "Offline", value: stats.offlineFarms },
+    ],
+    [stats]
+  );
+
+  // Filtered farms
+  const filteredFarms = useMemo(
+    () =>
+      farmData.filter(
+        (farm) =>
+          (farm.farm_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (farm.location || "").toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [farmData, searchTerm]
+  );
+
+  // Loading state
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  // No data state
+  if (!loading && farmData.length === 0) {
+    return <WaitingForDataScreen onRetry={fetchFarms} />;
+  }
 
   return (
-    <div className="flex h-screen bg-slate-50/50 overflow-hidden">
-      <AdminSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activeMenu="dashboard" />
+    <div className="flex h-screen bg-slate-50 text-slate-600 overflow-hidden">
+      <AdminSidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        activeMenu="dashboard"
+      />
 
-      <div className="flex flex-1 flex-col relative">
+      <div className="flex flex-1 flex-col relative z-0">
         <AdminHeader setSidebarOpen={setSidebarOpen} />
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-7xl mx-auto space-y-8">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-800">ภาพรวมระบบ</h1>
-              <p className="text-slate-500 mt-1">ติดตามสถานะอุปกรณ์และข้อมูลฟาร์มแบบเรียลไทม์</p>
-            </div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-12">
+          {/* Header with Connection Status */}
+          <PageHeader isConnected={isConnected} />
 
-            {/* STATS GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              <StatCard title="อุปกรณ์ทั้งหมด" value={summary.total_devices} icon={Smartphone} theme="blue" />
-              
-              {/* สถิติ Real-time จาก State devices */}
-              <StatCard 
-                title="กำลังส่งข้อมูล (Active)" 
-                value={devices.filter((d) => d.status === "online" && d.is_sending).length} 
-                icon={Zap} 
-                theme="amber" 
-              />
-              
-              <StatCard 
-                title="ออนไลน์ (Standby)" 
-                value={devices.filter((d) => d.status === "online").length} 
-                icon={Wifi} 
-                theme="green" 
-              />
-              
-              <StatCard 
-                title="ผู้ใช้งาน" 
-                value={summary.agriculture_users} 
-                icon={Users} 
-                theme="orange" 
-              />
-              
-              {/* แถวที่ 2 */}
-              <StatCard title="จำนวนฟาร์ม" value={summary.total_farms} icon={Tractor} theme="green" />
-              <StatCard title="พื้นที่ย่อย" value={summary.total_areas} icon={MapIcon} theme="green" />
-              <StatCard 
-                title="อุปกรณ์ออฟไลน์" 
-                value={devices.filter((d) => d.status !== "online").length} 
-                icon={WifiOff} 
-                theme="blue" 
-              />
-            </div>
+          {/* Socket Error Alert */}
+          {connectionError && (
+            <SocketErrorAlert error={connectionError} onReconnect={reconnect} />
+          )}
 
-            {/* DEVICE MONITOR SECTION */}
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <Activity className="text-emerald-500" />
-                  สถานะอุปกรณ์
-                  <span className="text-sm font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {filteredDevices.length} เครื่อง
-                  </span>
-                </h2>
+          {/* Error Alert */}
+          {error && <ErrorAlert error={error} onRetry={fetchFarms} />}
 
-                <div className="relative w-full md:w-80">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <input
-                    type="text"
-                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all shadow-sm"
-                    placeholder="ค้นหารหัสอุปกรณ์..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
+          {/* Summary Cards */}
+          <SummaryCards stats={stats} />
 
-              {filteredDevices.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredDevices.map((device) => (
-                    <DeviceStatusCard key={device.device_code} device={device} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
-                  <Search className="mx-auto h-12 w-12 text-slate-300 mb-3" />
-                  <h3 className="text-lg font-medium text-slate-900">ไม่พบอุปกรณ์</h3>
+          {/* Charts Section */}
+          <ChartsSection
+            statusData={statusData}
+            farmData={farmData}
+            expandedRisks={expandedRisks}
+            setExpandedRisks={setExpandedRisks}
+          />
+
+          {/* Farm List */}
+          <FarmList
+            farms={filteredFarms}
+            expandedFarmId={expandedFarmId}
+            onToggle={(farmId) =>
+              setExpandedFarmId(expandedFarmId === farmId ? null : farmId)
+            }
+          />
+        </main>
+
+        <Footer />
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Sub-components
+// ============================================
+
+/**
+ * Loading Screen
+ */
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+      <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-4" />
+      <p className="text-slate-500 font-bold animate-pulse">
+        กำลังดึงข้อมูลจากเซิร์ฟเวอร์...
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Waiting For Data Screen
+ */
+function WaitingForDataScreen({ onRetry }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+      <div className="bg-white rounded-3xl p-12 shadow-lg border border-slate-100 text-center max-w-md">
+        <div className="w-20 h-20 mx-auto mb-6 bg-amber-50 rounded-full flex items-center justify-center">
+          <Wifi className="w-10 h-10 text-amber-500 animate-pulse" />
+        </div>
+        <h2 className="text-xl font-black text-slate-800 mb-2">กำลังรอข้อมูล...</h2>
+        <p className="text-slate-500 text-sm mb-6">
+          ยังไม่มีข้อมูลฟาร์มในระบบ หรือกำลังรอการเชื่อมต่อ
+        </p>
+        <button
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-600 transition-colors"
+        >
+          <Loader2 size={16} />
+          ลองใหม่อีกครั้ง
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Page Header with Connection Status
+ */
+function PageHeader({ isConnected }) {
+  return (
+    <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div>
+        <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
+          <LayoutDashboard className="text-emerald-600" size={32} />
+          แผงควบคุมภาพรวม
+        </h1>
+        <p className="text-slate-500 mt-1">
+          ติดตามสถานะการเจริญเติบโตและระบบเซนเซอร์แบบ Real-time
+        </p>
+      </div>
+      {/* Connection Status Indicator */}
+      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold ${
+        isConnected 
+          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
+          : 'bg-amber-50 text-amber-600 border border-amber-200'
+      }`}>
+        <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+        {isConnected ? 'เชื่อมต่อ Real-time' : 'กำลังเชื่อมต่อ...'}
+      </div>
+    </header>
+  );
+}
+
+/**
+ * Socket Error Alert
+ */
+function SocketErrorAlert({ error, onReconnect }) {
+  return (
+    <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Wifi size={18} className="text-amber-500" />
+        <div className="text-sm font-bold">การเชื่อมต่อ Real-time: {error}</div>
+      </div>
+      <button
+        onClick={onReconnect}
+        className="ml-4 bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 transition-colors text-sm font-bold"
+      >
+        เชื่อมต่อใหม่
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Error Alert
+ */
+function ErrorAlert({ error, onRetry }) {
+  return (
+    <div className="mb-4 p-4 rounded-lg bg-rose-50 border border-rose-100 text-rose-700 flex items-center justify-between">
+      <div className="text-sm font-bold">ไม่สามารถโหลดข้อมูล: {error}</div>
+      <button
+        onClick={onRetry}
+        className="ml-4 bg-rose-600 text-white px-3 py-1 rounded"
+      >
+        ลองใหม่
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Summary Cards Grid
+ */
+function SummaryCards({ stats }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <StatCard
+        title="ฟาร์มทั้งหมด"
+        value={stats.totalFarms}
+        icon={<Sprout />}
+        unit="ฟาร์ม"
+        color="text-emerald-600"
+      />
+      <StatCard
+        title="พื้นที่ดูแล"
+        value={stats.totalAreas}
+        icon={<Target />}
+        unit="แปลง"
+        color="text-blue-600"
+      />
+      <StatCard
+        title="ความเสี่ยงโรค"
+        value={stats.warningDiseases}
+        icon={<Bug />}
+        unit="จุด"
+        color="text-rose-500"
+        isAlert={stats.warningDiseases > 0}
+      />
+      <ConnectionCard
+        onlineCount={stats.onlineFarms}
+        offlineCount={stats.offlineFarms}
+        icon={<Wifi size={28} />}
+      />
+    </div>
+  );
+}
+
+/**
+ * Charts Section
+ */
+function ChartsSection({ statusData, farmData, expandedRisks, setExpandedRisks }) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+      {/* Device Status Pie Chart */}
+      <DeviceStatusChart statusData={statusData} />
+
+      {/* Risk Areas List */}
+      <RiskAreasList
+        farmData={farmData}
+        expandedRisks={expandedRisks}
+        setExpandedRisks={setExpandedRisks}
+      />
+    </div>
+  );
+}
+
+/**
+ * Device Status Pie Chart
+ */
+function DeviceStatusChart({ statusData }) {
+  return (
+    <div className="bg-white p-6 rounded-[24px] shadow-sm border border-slate-100">
+      <h3 className="text-sm font-black text-slate-700 uppercase mb-6 flex items-center gap-2">
+        <div className="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
+        สถานะอุปกรณ์
+      </h3>
+      <div className="h-[220px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={statusData}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={85}
+              paddingAngle={8}
+              dataKey="value"
+            >
+              {statusData.map((_, i) => (
+                <Cell key={i} fill={PIE_COLORS[i]} stroke="none" />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                borderRadius: "16px",
+                border: "none",
+                boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex justify-center gap-6 mt-4">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+          <div className="w-3 h-3 rounded-full bg-emerald-500"></div> เชื่อมต่อ
+        </div>
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+          <div className="w-3 h-3 rounded-full bg-rose-500"></div> ขาดการติดต่อ
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Risk Areas List
+ */
+function RiskAreasList({ farmData, expandedRisks, setExpandedRisks }) {
+  return (
+    <div className="lg:col-span-2 bg-white p-6 rounded-[24px] shadow-sm border border-slate-100">
+      <h3 className="text-sm font-black text-slate-700 uppercase mb-4 flex items-center gap-2">
+        <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
+        พื้นที่เสี่ยงในแต่ละฟาร์ม (ระดับน้ำ & โรค) + latest_setting
+      </h3>
+      <div className="text-xs text-slate-500 mb-3">ค่าตั้งต้น: </div>
+      <div className="max-h-[250px] overflow-y-auto space-y-3">
+        {farmData.map((farm, index) => (
+          <RiskFarmItem
+            key={farm.farm_id || `farm-${index}`}
+            farm={farm}
+            isExpanded={expandedRisks.includes(farm.farm_id)}
+            onToggle={() =>
+              setExpandedRisks((prev) =>
+                prev.includes(farm.farm_id)
+                  ? prev.filter((id) => id !== farm.farm_id)
+                  : [...prev, farm.farm_id]
+              )
+            }
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Risk Farm Item
+ */
+function RiskFarmItem({ farm, isExpanded, onToggle }) {
+  const setting = farm.latest_setting || {
+    data_send_interval_days: 1,
+    growth_analysis_period: 7,
+    water_level_max: 10,
+    water_level_min: 5,
+  };
+
+  const reasons = [];
+
+  (farm.areas || []).forEach((area) => {
+    const code = String(area.device_code ?? "").trim().toUpperCase();
+    if (!code || code === "N/A" || code === "NA") return;
+
+    // Disease check
+    if (area.latest_disease || area.disease?.status === "warning") {
+      const name =
+        area.latest_disease?.disease_name ||
+        area.disease?.name ||
+        "ความเสี่ยงโรค";
+      reasons.push({ type: "disease", text: `${area.area_name}: พบโรค ${name}` });
+    }
+
+    // Water level check
+    const waterLevel = area.sensor?.water_level;
+    if (
+      waterLevel != null &&
+      (waterLevel > (setting.water_level_max ?? 10) ||
+        waterLevel < (setting.water_level_min ?? 5))
+    ) {
+      const type =
+        waterLevel > (setting.water_level_max ?? 10) ? "water-high" : "water-low";
+      const direction = type === "water-high" ? "สูงกว่า" : "ต่ำกว่า";
+      reasons.push({
+        type,
+        text: `${area.area_name}: ระดับน้ำ ${waterLevel}cm (${direction}เกณฑ์)`,
+      });
+    }
+  });
+
+  const riskCount = reasons.length;
+  const displayedReasons = isExpanded ? reasons : reasons.slice(0, 3);
+
+  return (
+    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-bold text-slate-800 truncate">{farm.farm_name}</div>
+          <div className="text-[11px] text-slate-400 mt-1">
+            พื้นที่เสี่ยง:{" "}
+            <span className="font-black text-rose-500">{riskCount}</span>
+          </div>
+
+          {reasons.length > 0 && (
+            <div className="mt-2">
+              <ul className="text-[12px] text-slate-600 space-y-1">
+                {displayedReasons.map((r, i) => (
+                  <li key={i} className="truncate flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        r.type === "disease"
+                          ? "bg-rose-100 text-rose-600"
+                          : r.type === "water-high"
+                            ? "bg-orange-100 text-orange-600"
+                            : "bg-blue-100 text-blue-600"
+                      }`}
+                    >
+                      {r.type === "disease"
+                        ? "โรค"
+                        : r.type === "water-high"
+                          ? "น้ำ-สูง"
+                          : "น้ำ-ต่ำ"}
+                    </span>
+                    <span className="truncate">{r.text}</span>
+                  </li>
+                ))}
+              </ul>
+              {reasons.length > 3 && (
+                <div className="mt-1">
+                  <button
+                    onClick={onToggle}
+                    className="text-xs text-emerald-600 hover:underline"
+                  >
+                    {isExpanded ? "ย่อ" : `ดูทั้งหมด (${reasons.length})`}
+                  </button>
                 </div>
               )}
             </div>
+          )}
+        </div>
+
+        <div className="text-right text-[11px] text-slate-500">
+          <div>
+            W max:{" "}
+            <span className="font-bold text-slate-700">
+              {setting.water_level_max}
+            </span>
           </div>
-        </main>
-        <Footer />
+          <div>
+            W min:{" "}
+            <span className="font-bold text-slate-700">
+              {setting.water_level_min}
+            </span>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Farm List Section
+ */
+function FarmList({ farms, expandedFarmId, onToggle }) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between px-2">
+        <h2 className="text-xl font-black text-slate-800">
+          รายชื่อฟาร์มในระบบ ({farms.length})
+        </h2>
+        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full italic">
+          อัปเดตล่าสุด: เมื่อสักครู่
+        </span>
+      </div>
+
+      {farms.length > 0 ? (
+        farms.map((farm, index) => (
+          <FarmAccordion
+            key={farm.farm_id || `farm-list-${index}`}
+            farm={farm}
+            isExpanded={expandedFarmId === farm.farm_id}
+            onToggle={() => onToggle(farm.farm_id)}
+          />
+        ))
+      ) : (
+        <EmptyFarmMessage />
+      )}
+    </section>
+  );
+}
+
+/**
+ * Empty Farm Message
+ */
+function EmptyFarmMessage() {
+  return (
+    <div className="bg-white rounded-3xl p-20 text-center border-2 border-dashed border-slate-200">
+      <Search size={48} className="mx-auto text-slate-300 mb-4" />
+      <p className="text-slate-500 font-bold">ไม่พบข้อมูลฟาร์มที่ค้นหา</p>
     </div>
   );
 }

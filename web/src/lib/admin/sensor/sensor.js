@@ -8,8 +8,8 @@ export async function fetchSensorDetail(deviceCode) {
     body: { device_code: deviceCode },
   });
 
-  if (response.status === 404) {
-    return [];
+  if (!response || response.status === 404) {
+    return null;
   }
 
   if (!response.ok) {
@@ -18,7 +18,7 @@ export async function fetchSensorDetail(deviceCode) {
       title: "ข้อผิดพลาด",
       text: response.message || "Fetch failed",
     });
-    return [];
+    return null;
   }
 
   return response.data;
@@ -45,7 +45,7 @@ export default function useSensorDetail(deviceCode) {
 
         const res = await fetchSensorDetail(deviceCode);
 
-        if (res.length === 0) {
+        if (!res) {
           if (isMounted) {
             setError("ไม่พบอุปกรณ์ที่ระบุ");
             setIsLoading(false);
@@ -55,132 +55,77 @@ export default function useSensorDetail(deviceCode) {
 
         if (!isMounted) return;
 
+        // -----------------------
+        // Device Info
+        // -----------------------
         setDeviceInfo({
           device: res.device,
           area: res.area,
-          owner: {
-            user_id: res.owner.user_id,
-            first_name: res.owner.first_name,
-            last_name: res.owner.last_name,
-          },
+          owner: res.owner,
         });
 
-        // --- 1. จัดการข้อมูลปัจจุบัน (Latest Data) ---
-        // Normalize sensor_type codes (e.g., "N","P","K","W") to readable keys
-        const normalizeType = (t) => {
-          if (!t) return t;
-          const s = String(t).trim();
-          switch (s) {
-            case "N":
-            case "Nitrogen (N)":
-              return "Nitrogen (N)";
-            case "P":
-            case "Phosphorus (P)":
-              return "Phosphorus (P)";
-            case "K":
-            case "Potassium (K)":
-              return "Potassium (K)";
-            case "W":
-            case "Water Level":
-            case "water_level":
-              return "Water Level";
-            case "Soil Moisture":
-            case "soil_moisture":
-              return "Soil Moisture";
-            default:
-              return s;
-          }
-        };
+        // -----------------------
+        // Historical Data (ใช้ตรงจาก backend)
+        // -----------------------
+          const history = Array.isArray(res.sensor_history)
+  ? res.sensor_history
+      .map(item => ({
+        time: item.time,
+        nitrogen: item.N ?? 0,
+        phosphorus: item.P ?? 0,
+        potassium: item.K ?? 0,
+        humidity: item.S ?? 0,
+        waterLevel: item.W ?? 0,
+        timestamp: item.timestamp, // เก็บไว้เผื่อใช้
+      }))
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+  : [];
 
-        const latestByType = {};
-        let latestTime = "-";
+setHistoricalData(history);
 
-        for (const row of res.sensor_data) {
-          const key = normalizeType(row.sensor_type);
-          if (!latestByType[key]) {
-            latestByType[key] = row;
-            if (latestTime === "-") {
-              latestTime = row.measured_at ? row.measured_at.substring(0, 16).replace("T", " ") : "-";
-            }
-          }
+        // -----------------------
+        // Current Data (ตัวล่าสุด)
+        // -----------------------
+        const latest = history[0];
+
+        if (latest) {
+          setCurrentData({
+            timestamp: latest.time,
+            nitrogen: {
+              value: latest.N ?? "-",
+              unit: "mg/kg",
+              trend: "stable",
+            },
+            phosphorus: {
+              value: latest.P ?? "-",
+              unit: "mg/kg",
+              trend: "stable",
+            },
+            potassium: {
+              value: latest.K ?? "-",
+              unit: "mg/kg",
+              trend: "stable",
+            },
+            humidity: {
+              value: latest.S ?? "-",
+              unit: "%",
+              trend: "stable",
+            },
+            waterLevel: {
+              value: latest.W ?? "-",
+              unit: "cm",
+              trend: "stable",
+            },
+          });
+        } else {
+          setCurrentData(null);
         }
 
-        setCurrentData({
-          timestamp: latestTime,
-          nitrogen: {
-            value: latestByType["Nitrogen (N)"]?.value ?? "-",
-            unit: "mg/kg",
-            trend: "stable",
-          },
-          phosphorus: {
-            value: latestByType["Phosphorus (P)"]?.value ?? "-",
-            unit: "mg/kg",
-            trend: "stable",
-          },
-          potassium: {
-            value: latestByType["Potassium (K)"]?.value ?? "-",
-            unit: "mg/kg",
-            trend: "stable",
-          },
-          humidity: {
-            value: latestByType["Soil Moisture"]?.value ?? "-",
-            unit: "%",
-            trend: "stable",
-          },
-          waterLevel: {
-            value: latestByType["Water Level"]?.value ?? "-",
-            unit: "cm",
-            trend: "stable",
-          },
-        });
-
-        // --- 2. จัดการข้อมูลประวัติ (Historical Data) ตามวันเวลา ---
-        const grouped = {};
-
-        res.sensor_data.forEach((row) => {
-          // ✅ จัดรูปแบบเวลาเป็น YYYY-MM-DD HH:mm
-          const timeKey = row.measured_at.substring(0, 16).replace("T", " ");
-
-          if (!grouped[timeKey]) {
-              grouped[timeKey] = { time: timeKey };
-          }
-
-          // ตรวจสอบ sensor_type ให้ตรงกับที่ DB ส่งมา (N, P, K หรือชื่อเต็ม)
-          switch (row.sensor_type) {
-            case "Nitrogen (N)":
-            case "N":
-              grouped[timeKey].nitrogen = row.value;
-              break;
-            case "Phosphorus (P)":
-            case "P":
-              grouped[timeKey].phosphorus = row.value;
-              break;
-            case "Potassium (K)":
-            case "K":
-              grouped[timeKey].potassium = row.value;
-              break;
-            case "Soil Moisture":
-            case "soil_moisture":
-              grouped[timeKey].humidity = row.value;
-              break;
-            case "Water Level":
-            case "water_level":
-              grouped[timeKey].waterLevel = row.value;
-              break;
-          }
-        });
-
-        // แปลง Object เป็น Array และเรียงลำดับเวลา (ใหม่ไปเก่า)
-        const sortedHistory = Object.values(grouped).sort((a, b) => 
-            new Date(b.time) - new Date(a.time)
-        );
-
-        setHistoricalData(sortedHistory);
-
-        // หาก API ส่งข้อมูลประวัติโรคข้าวหรือระยะการเติบโต ให้เก็บไว้
-        setDiseaseHistory(res.disease_history || res.diseases || []);
-        // Accept several possible field names including `growth_history`
-        setGrowthHistory(res.growth_history || res.growth_stage_history || res.growth_stages || []);
+        // -----------------------
+        // Other Histories
+        // -----------------------
+        setDiseaseHistory(res.disease_history || []);
+        setGrowthHistory(res.growth_history || []);
 
       } catch (err) {
         console.error(err);
@@ -205,8 +150,6 @@ export default function useSensorDetail(deviceCode) {
     deviceInfo,
     isLoading,
     error,
-    isSocketConnected: false, 
+    isSocketConnected: false,
   };
 }
-
-

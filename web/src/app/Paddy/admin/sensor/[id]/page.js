@@ -400,95 +400,185 @@ const {
 
 
 
-               <div className="max-w-[1600px] mx-auto px-4 md:px-8 lg:px-12 pb-12">
-        <div className="mt-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <Leaf className="w-5 h-5 text-rose-500" />
-                  ประวัติโรคข้าว
-                </h3>
-              </div>
+               {/* Timeline Section */}
+               <section className="pt-10 border-t border-slate-200">
+                 <div className="flex items-center gap-4 mb-8">
+                   <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
+                     <History className="w-6 h-6 text-purple-600" />
+                   </div>
+                   <div>
+                     <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+                       ไทม์ไลน์การวิเคราะห์
+                     </h2>
+                     <p className="text-sm text-slate-500 mt-1">
+                       ประวัติการตรวจจับโรคและระยะการเติบโต
+                     </p>
+                   </div>
+                 </div>
 
-              {diseaseHistory && diseaseHistory.length > 0 ? (
-                <ul className="space-y-3">
-                  {diseaseHistory.slice(0, 12).map((it, idx) => {
-                    const when = it.time || it.recorded_at || it.date || it.detected_at || it.created_at || "-";
-                    const name = it.disease_name || it.name || it.disease || "ไม่ระบุโรค";
-                    const severity = it.severity ? `ระดับ: ${it.severity}` : "";
-                    const confidence = it.confidence ? `${(Number(it.confidence) * 100).toFixed(1)}%` : null;
-                    return (
-                      <li key={idx} className="flex items-start gap-3">
-                        {it.image_url ? (
-                          <a href={it.image_url} target="_blank" rel="noreferrer" className="flex-shrink-0">
-                            <img src={it.image_url} alt={name} className="w-24 h-16 object-cover rounded-md border border-slate-100 shadow-sm" />
-                          </a>
-                        ) : (
-                          <div className="w-24 h-16 bg-slate-50 rounded-md border border-slate-100" />
-                        )}
+                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                   {/* Disease History Timeline */}
+                   <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                     <div className="flex items-center justify-between mb-6">
+                       <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                         <Leaf className="w-5 h-5 text-rose-500" />
+                         ประวัติโรคข้าว
+                       </h3>
+                       <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
+                         {diseaseHistory?.length || 0} รายการ
+                       </span>
+                     </div>
 
-                        <div className="flex-1">
-                          <div className="flex items-baseline justify-between">
-                            <div className="text-sm font-semibold text-slate-700">{name} <span className="text-xs text-slate-400 font-normal">{severity}</span></div>
-                            {confidence && <div className="text-xs text-emerald-600 font-medium">{confidence}</div>}
-                          </div>
-                          <div className="text-xs text-slate-400">{when}</div>
-                          {it.note && <div className="text-xs text-slate-500 mt-1">{it.note}</div>}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="text-sm text-slate-400">ไม่มีข้อมูลประวัติโรคข้าว</p>
-              )}
-            </div>
+                     {diseaseHistory && diseaseHistory.length > 0 ? (
+                       <div className="relative max-h-[500px] overflow-y-auto pr-2">
+                         {/* Timeline Line */}
+                         <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-rose-300 via-rose-200 to-transparent" />
+                         
+                         <div className="space-y-6">
+                           {diseaseHistory.slice(0, 12).map((it, idx) => {
+                             const when = it.time || it.recorded_at || it.date || it.detected_at || it.created_at || "-";
+                             const name = it.disease_name || it.name || it.disease || "ไม่ระบุโรค";
+                             const severity = it.severity ? `ระดับ: ${it.severity}` : "";
+                             const confidence = it.confidence ? `${(Number(it.confidence) * 100).toFixed(1)}%` : null;
+                             const isFirst = idx === 0;
+                             
+                             return (
+                               <div key={idx} className="relative flex gap-4 group">
+                                 {/* Timeline Node */}
+                                 <div className="relative z-10 flex-shrink-0">
+                                   <div className={`w-6 h-6 rounded-full flex items-center justify-center shadow-sm transition-all group-hover:scale-110 ${isFirst ? 'bg-rose-500 ring-4 ring-rose-100' : 'bg-white border-2 border-rose-300'}`}>
+                                     <Leaf className={`w-3 h-3 ${isFirst ? 'text-white' : 'text-rose-400'}`} />
+                                   </div>
+                                 </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-emerald-500" />
-                  ประวัติระยะการเติบโต
-                </h3>
-              </div>
+                                 {/* Content Card */}
+                                 <div className={`flex-1 pb-2 ${isFirst ? '' : 'opacity-90'}`}>
+                                   <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-rose-200 hover:bg-rose-50/30 transition-all">
+                                     <div className="flex items-start gap-3">
+                                       {it.image_url ? (
+                                         <a href={it.image_url} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                                           <img src={it.image_url} alt={name} className="w-32 h-24 object-cover rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow" />
+                                         </a>
+                                       ) : (
+                                         <div className="w-32 h-24 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center">
+                                           <Leaf className="w-6 h-6 text-slate-300" />
+                                         </div>
+                                       )}
+                                       
+                                       <div className="flex-1 min-w-0">
+                                         <div className="flex items-start justify-between gap-2">
+                                           <div>
+                                             <h4 className="text-sm font-semibold text-slate-700 leading-tight">{name}</h4>
+                                             {severity && <span className="text-xs text-slate-400">{severity}</span>}
+                                           </div>
+                                           {confidence && (
+                                             <span className="flex-shrink-0 text-xs font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full">
+                                               {confidence}
+                                             </span>
+                                           )}
+                                         </div>
+                                         <div className="flex items-center gap-1 mt-1.5 text-xs text-slate-400">
+                                           <History className="w-3 h-3" />
+                                           <span>{when}</span>
+                                         </div>
+                                         {it.note && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{it.note}</p>}
+                                       </div>
+                                     </div>
+                                   </div>
+                                 </div>
+                               </div>
+                             );
+                           })}
+                         </div>
+                       </div>
+                     ) : (
+                       <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                         <Leaf className="w-12 h-12 mb-3 opacity-30" />
+                         <p className="text-sm font-medium">ไม่มีข้อมูลประวัติโรคข้าว</p>
+                       </div>
+                     )}
+                   </div>
 
-              {growthHistory && growthHistory.length > 0 ? (
-                <ul className="space-y-3">
-                  {growthHistory.slice(0, 12).map((it, idx) => {
-                    const when = it.time || it.recorded_at || it.date || it.created_at || "-";
-                    const stage = it.stage || it.growth_stage || it.stage_name || "ไม่ระบุระยะ";
-                    const note = it.note || it.remark || "";
-                    const score = it.health_score ? `${(Number(it.health_score) * 100).toFixed(1)}%` : null;
-                    return (
-                      <li key={idx} className="flex items-start gap-3">
-                        {it.image_url ? (
-                          <a href={it.image_url} target="_blank" rel="noreferrer" className="flex-shrink-0">
-                            <img src={it.image_url} alt={stage} className="w-24 h-16 object-cover rounded-md border border-slate-100 shadow-sm" />
-                          </a>
-                        ) : (
-                          <div className="w-24 h-16 bg-slate-50 rounded-md border border-slate-100" />
-                        )}
+                   {/* Growth History Timeline */}
+                   <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                     <div className="flex items-center justify-between mb-6">
+                       <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                         <Activity className="w-5 h-5 text-emerald-500" />
+                         ประวัติระยะการเติบโต
+                       </h3>
+                       <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
+                         {growthHistory?.length || 0} รายการ
+                       </span>
+                     </div>
 
-                        <div className="flex-1">
-                          <div className="flex items-baseline justify-between">
-                            <div className="text-sm font-semibold text-slate-700">{stage}</div>
-                            {score && <div className="text-xs text-emerald-600 font-medium">{score}</div>}
-                          </div>
-                          <div className="text-xs text-slate-400">{when}</div>
-                          {note && <div className="text-xs text-slate-500 mt-1">{note}</div>}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="text-sm text-slate-400">ไม่มีข้อมูลระยะการเติบโต</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+                     {growthHistory && growthHistory.length > 0 ? (
+                       <div className="relative max-h-[500px] overflow-y-auto pr-2">
+                         {/* Timeline Line */}
+                         <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-emerald-300 via-emerald-200 to-transparent" />
+                         
+                         <div className="space-y-6">
+                           {growthHistory.slice(0, 12).map((it, idx) => {
+                             const when = it.time || it.recorded_at || it.date || it.created_at || "-";
+                             const stage = it.stage || it.growth_stage || it.stage_name || "ไม่ระบุระยะ";
+                             const note = it.note || it.remark || it.advice || "";
+                             const score = it.health_score || it.confidence ? `${(Number(it.health_score || it.confidence) * 100).toFixed(1)}%` : null;
+                             const isFirst = idx === 0;
+                             
+                             return (
+                               <div key={idx} className="relative flex gap-4 group">
+                                 {/* Timeline Node */}
+                                 <div className="relative z-10 flex-shrink-0">
+                                   <div className={`w-6 h-6 rounded-full flex items-center justify-center shadow-sm transition-all group-hover:scale-110 ${isFirst ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-white border-2 border-emerald-300'}`}>
+                                     <Activity className={`w-3 h-3 ${isFirst ? 'text-white' : 'text-emerald-400'}`} />
+                                   </div>
+                                 </div>
+
+                                 {/* Content Card */}
+                                 <div className={`flex-1 pb-2 ${isFirst ? '' : 'opacity-90'}`}>
+                                   <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all">
+                                     <div className="flex items-start gap-3">
+                                       {it.image_url ? (
+                                         <a href={it.image_url} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                                           <img src={it.image_url} alt={stage} className="w-32 h-24 object-cover rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow" />
+                                         </a>
+                                       ) : (
+                                         <div className="w-32 h-24 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center">
+                                           <Activity className="w-6 h-6 text-slate-300" />
+                                         </div>
+                                       )}
+                                       
+                                       <div className="flex-1 min-w-0">
+                                         <div className="flex items-start justify-between gap-2">
+                                           <h4 className="text-sm font-semibold text-slate-700 leading-tight">{stage}</h4>
+                                           {score && (
+                                             <span className="flex-shrink-0 text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                               {score}
+                                             </span>
+                                           )}
+                                         </div>
+                                         <div className="flex items-center gap-1 mt-1.5 text-xs text-slate-400">
+                                           <History className="w-3 h-3" />
+                                           <span>{when}</span>
+                                         </div>
+                                         {note && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{note}</p>}
+                                       </div>
+                                     </div>
+                                   </div>
+                                 </div>
+                               </div>
+                             );
+                           })}
+                         </div>
+                       </div>
+                     ) : (
+                       <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                         <Activity className="w-12 h-12 mb-3 opacity-30" />
+                         <p className="text-sm font-medium">ไม่มีข้อมูลระยะการเติบโต</p>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               </section>
 
             </div>
           )}

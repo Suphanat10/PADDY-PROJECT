@@ -25,9 +25,11 @@ export async  function getdataDevices(setIsLoading, setDevices) {
        setIsLoading(false);
       return;
       }
-      setDevices(res.data);
+      // Handle nested response: { ok, data: { ok, data: [...] } }
+      const devicesData = res.data?.data || res.data || [];
+      setDevices(Array.isArray(devicesData) ? devicesData : []);
       setIsLoading(false);
-      console.log("DEVICES DATA:", res.data);
+      console.log("DEVICES DATA:", devicesData);
    } catch (err) {
       console.error("FETCH DEVICES ERROR:", err);
       } finally {

@@ -15,11 +15,9 @@ export default async function handleLineLogin(setIsLoading) {
         title: "เข้าสู่ระบบสำเร็จ",
         confirmButtonText: "ตกลง",
       }).then(() => {
-        const next =
-          new URLSearchParams(window.location.search).get("next") ||
-          "/Paddy/agriculture/dashboard";
-        window.location.replace
-(next);
+    const next ="/Paddy/agriculture/dashboard";
+
+router.replace(next);
       });
       
     } else {

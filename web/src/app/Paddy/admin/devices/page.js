@@ -26,6 +26,8 @@ import {
   Sprout,
   QrCode,
   Ban,
+  Building2,
+  MapPin,
 } from "lucide-react";
 
 import {
@@ -264,6 +266,8 @@ export default function AdminDashboardPage() {
                 <thead className="bg-slate-50/50 border-b border-slate-100 text-slate-500 text-xs uppercase font-semibold tracking-wider">
                   <tr>
                     <th className="p-6 pl-8">Device Info</th>
+                    <th className="p-6">ฟาร์ม</th>
+                    <th className="p-6">พื้นที่</th>
                     <th className="p-6">สถานะ (Status)</th>
                     <th className="p-6">วันที่สร้าง</th>
                     <th className="p-6 text-right pr-8">จัดการ</th>
@@ -284,6 +288,28 @@ export default function AdminDashboardPage() {
                               </div>
                             </div>
                           </div>
+                        </td>
+
+                        <td className="p-6">
+                          {device.farm ? (
+                            <div className="flex items-center gap-2">
+                              <Building2 size={14} className="text-green-500" />
+                              <span className="text-sm font-medium text-slate-700">{device.farm.farm_name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">รอการลงทะเบียน</span>
+                          )}
+                        </td>
+
+                        <td className="p-6">
+                          {device.area ? (
+                            <div className="flex items-center gap-2">
+                              <MapPin size={14} className="text-orange-500" />
+                              <span className="text-sm font-medium text-slate-700">{device.area.area_name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">รอการลงทะเบียน</span>
+                          )}
                         </td>
 
                         <td className="p-6">
@@ -335,7 +361,7 @@ export default function AdminDashboardPage() {
                   ) : (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={6}
                         className="p-8 text-center text-slate-400"
                       >
                         ไม่พบข้อมูลอุปกรณ์
