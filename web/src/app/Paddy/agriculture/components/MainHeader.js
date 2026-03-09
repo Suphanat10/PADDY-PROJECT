@@ -731,8 +731,8 @@ export default function App() {
                           
                           {/* Current Level Label (Right side) */}
                           <div 
-                            className="absolute -right-16 transition-all duration-1000 flex items-center"
-                            style={{ bottom: `calc(${Math.min((waterLevel / maxScale) * 100, 100)}% - 10px)` }}
+                            className="absolute -left-16 transition-all duration-1000 flex items-center"
+                            style={{ bottom: `calc(${Math.min((waterLevel / maxScale) * 100, 100)}% - 8px)` }}
                           >
                             <div className="bg-rose-500 text-white px-2 py-1 rounded-lg text-sm font-bold whitespace-nowrap">
                               {waterLevel} ซม.
@@ -744,7 +744,7 @@ export default function App() {
                             className="absolute -right-12 transition-all duration-300 flex items-center"
                             style={{ bottom: `calc(${(maxThreshold / maxScale) * 100}% - 8px)` }}
                           >
-                            <span className="text-xs font-bold text-amber-600">MAX</span>
+                             <span className="text-xs font-bold text-amber-600">{maxScale} ซม.</span>
                           </div>
                           
                           {/* MIN Label (Right side) */}
@@ -752,7 +752,7 @@ export default function App() {
                             className="absolute -right-12 transition-all duration-300 flex items-center"
                             style={{ bottom: `calc(${(minThreshold / maxScale) * 100}% - 8px)` }}
                           >
-                            <span className="text-xs font-bold text-rose-600">MIN</span>
+                             <span className="text-xs font-bold text-amber-600">{minThreshold} ซม.</span>
                           </div>
                         </div>
                       </div>
@@ -1108,6 +1108,69 @@ export default function App() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* Scheduler summary (below graphs) */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase tracking-widest">
+                  <Calendar className="w-4 h-4 text-emerald-500" /> ตารางวิเคราะห์
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeArea && activeArea.scheduler ? (
+                  <div key={activeArea.area_id} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-3">
+                          <Calendar className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                          <div className="truncate">
+                            <div className="font-bold text-sm text-slate-800 truncate">{activeArea.area_name}</div>
+                            <div className="text-[12px] text-slate-500 truncate">{activeArea.device_code || "-"}</div>
+                          </div>
+                        </div>
+                        <div className="mt-3 text-sm text-slate-600 flex items-center gap-2">
+                          <span className="inline-flex items-center gap-2">
+                            <svg className="w-3 h-3 text-slate-400" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4" /></svg>
+                            <span className="font-medium">
+                              {activeArea.scheduler.status === "due"
+                                ? "ถึงกำหนดวิเคราะห์"
+                                : activeArea.scheduler.status === "queued"
+                                ? "ออกคำสั่งแล้ว รอวิเคราะห์"
+                                : activeArea.scheduler.status === "not_due"
+                                ? "ยังไม่ถึงกำหนด"
+                                : activeArea.scheduler.status === "never_analyzed"
+                                ? "ยังไม่เคยวิเคราะห์"
+                                : "ไม่ทราบสถานะ"}
+                            </span>
+                          </span>
+                          <span className="text-slate-400">·</span>
+                          <span className="text-slate-500">
+                            {typeof activeArea.scheduler.days_remaining === "number"
+                              ? `${activeArea.scheduler.days_remaining} วัน คงเหลือ`
+                              : activeArea.scheduler.last_check
+                              ? `${new Date(activeArea.scheduler.last_check).toLocaleString("th-TH", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                              : "-"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 flex flex-col items-end">
+                        <div className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+                          activeArea.scheduler.status === 'due' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                          activeArea.scheduler.status === 'queued' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                          activeArea.scheduler.status === 'not_due' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                          'bg-slate-50 text-slate-600 border border-slate-100'
+                        }` }>
+                          {activeArea.scheduler.status === 'due' ? 'ถึงกำหนด' : activeArea.scheduler.status === 'queued' ? 'คิว' : activeArea.scheduler.status === 'not_due' ? 'ยังไม่ถึง' : activeArea.scheduler.status}
+                        </div>
+                        <div className="mt-2 text-[11px] text-slate-400">ล่าสุด: {activeArea.scheduler.last_check ? new Date(activeArea.scheduler.last_check).toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-400 col-span-full">ยังไม่มีข้อมูลตารางวิเคราะห์สำหรับพื้นที่ที่เลือก</div>
+                )}
               </div>
             </div>
 

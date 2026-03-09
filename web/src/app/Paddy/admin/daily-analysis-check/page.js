@@ -78,7 +78,7 @@ export default function DailyAnalysisCheckPage() {
   const [selectedFarm, setSelectedFarm] = useState("");
   const [selectedSubArea, setSelectedSubArea] = useState("");
   const [expandedDates, setExpandedDates] = useState({});
-  const [capturingDevice, setCapturingDevice] = useState(null); // Track which device is being captured
+  const [capturingDevice, setCapturingDevice] = useState(null);
 
   // Toggle date expansion
   const toggleDateExpand = (logDate) => {
@@ -177,6 +177,8 @@ export default function DailyAnalysisCheckPage() {
       setCapturingDevice(null);
     }
   }, [capturingDevice]);
+
+  // Fetch on mount
 
   // Fetch on mount
   useEffect(() => {
