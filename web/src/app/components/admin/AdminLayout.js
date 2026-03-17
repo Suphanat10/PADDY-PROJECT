@@ -476,6 +476,12 @@ const AdminSidebar = ({
                     active: activeMenu === "Settings-General",
                     onClick: () => setActiveMenu("Settings-General"),
                   },
+                  {
+                    text: "ตั้งค่าเวลาการทำงาน",
+                    href: "/Paddy/admin/settings/time",
+                    active: activeMenu === "Settings-Time",
+                    onClick: () => setActiveMenu("Settings-Time"),
+                  },
                 ]}
               />
             </nav>

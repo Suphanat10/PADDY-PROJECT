@@ -178,9 +178,6 @@ export default function DailyAnalysisCheckPage() {
     }
   }, [capturingDevice]);
 
-  // Fetch on mount
-
-  // Fetch on mount
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);

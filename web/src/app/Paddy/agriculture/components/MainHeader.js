@@ -100,6 +100,9 @@ function useDeviceWebSocket({ deviceIds = [], onSensor, onStatus }) {
 }
 
 export default function App() {
+    // Fallback logic state
+    const [wsDataReceived, setWsDataReceived] = useState(false);
+    const [fallbackTriggered, setFallbackTriggered] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState("");
   const [weather, setWeather] = useState(null);
   const [farmData, setFarmData] = useState([]);
@@ -191,6 +194,7 @@ export default function App() {
         ),
       })),
     );
+    setWsDataReceived(true);
   }, []);
 
   const allDeviceIds = useMemo(
@@ -218,6 +222,7 @@ export default function App() {
       if (!a.scheduler) return;
       summary.total += 1;
       const s = a.scheduler.status;
+    setWsDataReceived(true);
       if (s === 'due') summary.due += 1;
       else if (s === 'queued') summary.queued += 1;
       else if (s === 'not_due') summary.not_due += 1;
@@ -637,9 +642,9 @@ export default function App() {
                   }
                   
                   const waterLevel = area.sensor?.water_level ?? 0;
-                  const minThreshold = area.setting?.Water_level_min ?? area.thresholds?.min ?? 5;
-                  const maxThreshold = area.setting?.Water_level_mxm ?? area.setting?.Water_level_max ?? area.thresholds?.max ?? 15;
-                  const maxScale = 30; // ความสูงถังสูงสุด 30 ซม.
+                  const minThreshold = area.thresholds?.min ?? 5;
+                  const maxThreshold = area.thresholds?.Water_level_mxm ?? area.setting?.thresholds ?? area.thresholds?.max ?? 15;
+                  const maxScale = 30; 
                   
                   // คำนวณสถานะระดับน้ำ
                   let waterStatus = 'normal';
@@ -744,7 +749,7 @@ export default function App() {
                             className="absolute -right-12 transition-all duration-300 flex items-center"
                             style={{ bottom: `calc(${(maxThreshold / maxScale) * 100}% - 8px)` }}
                           >
-                             <span className="text-xs font-bold text-amber-600">{maxScale} ซม.</span>
+                             <span className="text-xs font-bold text-amber-600">{maxThreshold} ซม.</span>
                           </div>
                           
                           {/* MIN Label (Right side) */}

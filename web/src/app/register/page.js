@@ -103,9 +103,9 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-              <div>
+{/* 
+              <div className="grid grid-cols-2 gap-4"> */}
+              {/* <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   เพศ 
                 </label>
@@ -120,8 +120,8 @@ export default function RegisterPage() {
                   <option value="female">หญิง</option>
                   <option value="other">อื่นๆ</option>
                 </select>
-              </div>
-              <div>
+              </div> */}
+              {/* <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                 วันเกิด 
                 </label>
@@ -132,8 +132,8 @@ export default function RegisterPage() {
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                 />
-              </div>
-            </div>
+              </div> */}
+            {/* </div> */}
 
 
             {/* เบอร์โทร */}
