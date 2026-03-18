@@ -115,22 +115,49 @@ const WaterLevelCard = ({ value, minLevel = 5, maxLevel = 15, tankHeight = 30, i
 };
 
 // NPK & Humidity Sensor Card
-const SensorDisplayCard = ({ label, value, unit, icon: Icon, gradientFrom, gradientTo }) => (
-  <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col">
-    <div className="flex items-center gap-2 mb-4">
-      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center`}>
-        <Icon size={16} className="text-white" />
+const SensorDisplayCard = ({ label, value, unit, icon: Icon, gradientFrom, gradientTo }) => {
+  const v = Number(value ?? 0);
+
+  // Compute level label for N/P/K
+  let levelLabel = null;
+  if (label.includes("ไนโตรเจน") || label.includes("N")) {
+    const calculatedOM = v / 500;
+    levelLabel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
+    levelLabel = `ระดับ: OM ${levelLabel}`;
+  } else if (label.includes("ฟอสฟอรัส") || label.includes("P")) {
+    levelLabel = v < 5 ? "ต่ำ" : v <= 10 ? "ปานกลาง" : "สูง";
+    levelLabel = `ระดับ: ${levelLabel}`;
+  } else if (label.includes("โพแทสเซียม") || label.includes("K")) {
+    levelLabel = v < 60 ? "ต่ำ" : v <= 80 ? "ปานกลาง" : "สูง";
+    levelLabel = `ระดับ: ${levelLabel}`;
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col">
+      <div className="flex items-center gap-2 mb-4">
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center`}>
+          <Icon size={16} className="text-white" />
+        </div>
+        <span className="text-sm font-semibold text-slate-600">{label}</span>
       </div>
-      <span className="text-sm font-semibold text-slate-600">{label}</span>
+      <div className="mt-auto text-right">
+        <div>
+          <span className="text-3xl font-black text-slate-800">
+            {value !== null && value !== undefined ? value : "-"}
+          </span>
+          <span className="text-sm font-medium text-slate-400 ml-1">{unit}</span>
+        </div>
+        {levelLabel && (
+          <div className="mt-2">
+            <span className={`text-xs font-bold ${label.includes("ไนโตรเจน") ? "text-emerald-600" : label.includes("ฟอสฟอรัส") ? "text-orange-600" : label.includes("โพแทสเซียม") ? "text-purple-600" : "text-slate-500"}`}>
+              {levelLabel}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
-    <div className="mt-auto">
-      <span className="text-3xl font-black text-slate-800">
-        {value !== null && value !== undefined ? value : "-"}
-      </span>
-      <span className="text-sm font-medium text-slate-400 ml-1">{unit}</span>
-    </div>
-  </div>
-);
+  );
+};
 
 // Growth Info Card
 const GrowthInfoCard = ({ growth }) => {

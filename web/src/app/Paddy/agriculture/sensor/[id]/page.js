@@ -153,7 +153,10 @@ const { id } = useParams();
               {data.value}
               <span className="text-lg text-gray-500 mb-1">{data.unit}</span>
             </div>
-           
+            {/* แสดงระดับปุ๋ย/คำอธิบาย หากถูกส่งมาใน data.levelLabel */}
+            {data.levelLabel && (
+              <p className={`${color} text-xs mt-2 font-bold`}>ระดับ: {data.levelLabel}</p>
+            )}
           </div>
         </div>
       </div>
@@ -250,27 +253,45 @@ const { id } = useParams();
 
               {/* Sensor Cards Grid */}
               <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <MetricCard
-                  title="ไนโตรเจน (N)"
-                  icon={Leaf}
-                  data={currentData.nitrogen}
-                  color="text-green-600"
-                  bgColor="bg-green-50"
-                />
-                <MetricCard
-                  title="ฟอสฟอรัส (P)"
-                  icon={Leaf}
-                  data={currentData.phosphorus}
-                  color="text-orange-600"
-                  bgColor="bg-orange-50"
-                />
-                <MetricCard
-                  title="โพแทสเซียม (K)"
-                  icon={Leaf}
-                  data={currentData.potassium}
-                  color="text-purple-600"
-                  bgColor="bg-purple-50"
-                />
+                  {(() => {
+                    const n_mgkg = Number(currentData.nitrogen?.value ?? 0);
+                    const p_mgkg = Number(currentData.phosphorus?.value ?? 0);
+                    const k_mgkg = Number(currentData.potassium?.value ?? 0);
+                    const calculatedOM = n_mgkg / 500;
+                    const omLevel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
+                    const pLevel = p_mgkg < 5 ? "ต่ำ" : p_mgkg <= 10 ? "ปานกลาง" : "สูง";
+                    const kLevel = k_mgkg < 60 ? "ต่ำ" : k_mgkg <= 80 ? "ปานกลาง" : "สูง";
+
+                    const nitrogenData = { ...currentData.nitrogen, levelLabel: `OM: ${omLevel}` };
+                    const phosphorusData = { ...currentData.phosphorus, levelLabel: pLevel };
+                    const potassiumData = { ...currentData.potassium, levelLabel: kLevel };
+
+                    return (
+                      <>
+                        <MetricCard
+                          title="ไนโตรเจน (N)"
+                          icon={Leaf}
+                          data={nitrogenData}
+                          color="text-green-600"
+                          bgColor="bg-green-50"
+                        />
+                        <MetricCard
+                          title="ฟอสฟอรัส (P)"
+                          icon={Leaf}
+                          data={phosphorusData}
+                          color="text-orange-600"
+                          bgColor="bg-orange-50"
+                        />
+                        <MetricCard
+                          title="โพแทสเซียม (K)"
+                          icon={Leaf}
+                          data={potassiumData}
+                          color="text-purple-600"
+                          bgColor="bg-purple-50"
+                        />
+                      </>
+                    );
+                  })()}
                 <MetricCard
                   title="ความชื้นดิน"
                   icon={Droplets}

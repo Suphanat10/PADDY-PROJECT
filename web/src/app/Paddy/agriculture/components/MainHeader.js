@@ -67,7 +67,7 @@ function useDeviceWebSocket({ deviceIds = [], onSensor, onStatus }) {
   const socketRef = useRef(null);
   useEffect(() => {
     if (!deviceIds.length) return;
-    const socket = io("https://smart-paddy.space", {
+    const socket = io("http://smart-paddy.space", {
       transports: ["websocket"],
       reconnection: true,
     });
@@ -118,10 +118,8 @@ export default function App() {
     let diseaseIssue = false;
     if (area.sensor && area.status === "online") {
       const val = area.sensor.water_level;
-      // อ่าน thresholds จาก area.setting (Water_level_min, Water_level_mxm) หรือ area.thresholds
       const min = area.setting?.Water_level_min ?? area.thresholds?.min ?? 5;
       const max = area.setting?.Water_level_mxm ?? area.setting?.Water_level_max ?? area.thresholds?.max ?? 15;
-      console.log(`Checking water level for ${area.area_name}: ${val} (min: ${min}, max: ${max})`);
       if (val < min) {
         alerts.push({ type: "water", msg: `น้ำต่ำ (${val} cm)` });
         waterIssue = true;
@@ -131,11 +129,24 @@ export default function App() {
         waterIssue = true;
       }
     }
-    if (area.disease?.status === "warning") {
+    // ตรวจสอบข้อความผลวิเคราะห์โรคข้าว
+    const diseaseNormalKeywords = [
+      "ข้าวปกติ",
+      "ใบข้าวสุขภาพดี",
+      "ใบข้าวที่ดี"
+    ];
+    const diseaseName = (area.disease?.name || "").trim();
+    const isDiseaseNormal =
+      area.disease?.status === "safe" ||
+      diseaseNormalKeywords.some((kw) => diseaseName.includes(kw));
+
+    if (area.disease?.status === "warning" && !isDiseaseNormal) {
       alerts.push({ type: "disease", msg: `ตรวจพบ: ${area.disease.name}` });
       diseaseIssue = true;
     }
-    return { isCritical: alerts.length > 0, alerts, waterIssue, diseaseIssue };
+    // ถ้าโรคข้าวปกติ/สุขภาพดี/ไม่พบโรค ไม่ถือเป็นวิกฤต
+    const isCritical = alerts.length > 0 && !isDiseaseNormal;
+    return { isCritical, alerts, waterIssue, diseaseIssue, isDiseaseNormal };
   }, []);
 
   const loadDashboard = async () => {
@@ -484,18 +495,20 @@ export default function App() {
                     .filter((a) => checkHealth(a).isCritical)
                     .map((area, idx) => {
                       const health = checkHealth(area);
+                      // ถ้าผลวิเคราะห์โรคข้าวปกติ/สุขภาพดี/ไม่พบโรค ให้แสดงสถานะปกติ (สีเขียว/ข้อความปกติ)
+                      const isDiseaseNormal = health.isDiseaseNormal;
                       return (
                         <div
                           key={area.area_id || idx}
-                          className="bg-white border-2 border-rose-100 p-6 rounded-4xl flex flex-col gap-4 shadow-xl shadow-rose-500/5 group relative overflow-hidden"
+                          className={`bg-white border-2 ${isDiseaseNormal ? "border-emerald-400" : "border-rose-100"} p-6 rounded-4xl flex flex-col gap-4 shadow-xl ${isDiseaseNormal ? "shadow-emerald-500/10" : "shadow-rose-500/5"} group relative overflow-hidden`}
                         >
                           <div className="flex justify-between items-start z-10">
                             <div>
                               <h4 className="font-black text-slate-800 text-xl">
                                 {area.area_name}
                               </h4>
-                              <p className="text-[10px] text-rose-400 font-bold uppercase tracking-widest">
-                                🚨 ภาวะวิกฤต
+                              <p className={`text-[10px] font-bold uppercase tracking-widest ${isDiseaseNormal ? "text-emerald-600" : "text-rose-400"}`}>
+                                {isDiseaseNormal ? "✔️ ปกติ (ไม่พบโรค)" : "🚨 ภาวะวิกฤต"}
                               </p>
                             </div>
                             <div className="flex gap-1.5">
@@ -504,7 +517,8 @@ export default function App() {
                                   <Droplet className="w-5 h-5" />
                                 </div>
                               )}
-                              {health.diseaseIssue && (
+                              {/* แสดง Bug icon เฉพาะถ้าไม่ใช่ปกติ */}
+                              {health.diseaseIssue && !isDiseaseNormal && (
                                 <div className="p-2.5 bg-rose-50 text-rose-500 rounded-2xl border border-rose-100">
                                   <Bug className="w-5 h-5" />
                                 </div>
@@ -515,7 +529,7 @@ export default function App() {
                             {health.alerts.map((alert, i) => (
                               <div
                                 key={i}
-                                className={`flex items-center gap-3 p-3 rounded-2xl text-[12px] font-bold border ${alert.type === "water" ? "bg-blue-50/50 border-blue-100 text-blue-700" : "bg-rose-50/50 border-rose-100 text-rose-700"}`}
+                                className={`flex items-center gap-3 p-3 rounded-2xl text-[12px] font-bold border ${alert.type === "water" ? "bg-blue-50/50 border-blue-100 text-blue-700" : isDiseaseNormal ? "bg-emerald-50 border-emerald-400 text-emerald-700" : "bg-rose-50/50 border-rose-100 text-rose-700"}`}
                               >
                                 <AlertCircle className="w-4 h-4" />
                                 <span>{alert.msg}</span>
@@ -611,6 +625,15 @@ export default function App() {
               {selectedFarm.areas
                 .filter((a) => a.area_id === activeAreaId)
                 .map((area) => {
+                  // คำนวณระดับ OM, N, P, K
+                  const n_mgkg = Number(area.sensor?.n ?? 0);
+                  const p_mgkg = Number(area.sensor?.p ?? 0);
+                  const k_mgkg = Number(area.sensor?.k ?? 0);
+                  const calculatedOM = n_mgkg / 500;
+                  const omLevel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
+                  const pLevel = p_mgkg < 5 ? "ต่ำ" : p_mgkg <= 10 ? "ปานกลาง" : "สูง";
+                  const kLevel = k_mgkg < 60 ? "ต่ำ" : k_mgkg <= 80 ? "ปานกลาง" : "สูง";
+                  const nLevel = n_mgkg < 10 ? "ต่ำ" : n_mgkg <= 20 ? "ปานกลาง" : "สูง";
                   // ตรวจสอบว่ามีข้อมูลเซนเซอร์หรือไม่
                   const hasNoSensorData = !area.sensor || (
                     area.sensor.water_level === null && 
@@ -811,10 +834,9 @@ export default function App() {
                       <div className="p-8 text-center">
                         <p className="text-3xl font-black text-emerald-500">
                           {area.sensor?.n}{" "}
-                          <span className="text-sm text-slate-400 ml-1">
-                            mg/kg
-                          </span>
+                          <span className="text-sm text-slate-400 ml-1">mg/kg</span>
                         </p>
+                        <p className="text-xs mt-2 font-bold text-emerald-600">ระดับ: {nLevel}</p>
                       </div>
                     </div>
                     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -836,10 +858,9 @@ export default function App() {
                       <div className="p-8 text-center">
                         <p className="text-3xl font-black text-orange-500">
                           {area.sensor?.p}{" "}
-                          <span className="text-sm text-slate-400 ml-1">
-                            mg/kg
-                          </span>
+                          <span className="text-sm text-slate-400 ml-1">mg/kg</span>
                         </p>
+                        <p className="text-xs mt-2 font-bold text-orange-600">ระดับ: {pLevel}</p>
                       </div>
                     </div>
                     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -861,10 +882,9 @@ export default function App() {
                       <div className="p-8 text-center">
                         <p className="text-3xl font-black text-purple-500">
                           {area.sensor?.k}{" "}
-                          <span className="text-sm text-slate-400 ml-1">
-                            mg/kg
-                          </span>
+                          <span className="text-sm text-slate-400 ml-1">mg/kg</span>
                         </p>
+                        <p className="text-xs mt-2 font-bold text-purple-600">ระดับ: {kLevel}</p>
                       </div>
                     </div>
                     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -1250,17 +1270,17 @@ export default function App() {
                     {/* Disease Status Item */}
                     <div className="relative">
                       {/* Timeline Dot */}
-                      <div className={`absolute -left-10 top-2 w-7 h-7 rounded-full flex items-center justify-center shadow-lg ${activeArea.disease?.status === 'safe' ? 'bg-emerald-500 shadow-emerald-200' : activeArea.disease?.status ? 'bg-rose-500 shadow-rose-200 animate-pulse' : 'bg-slate-300 shadow-slate-100'}`}>
-                        {activeArea.disease?.status === 'safe' ? (
+                      <div className={`absolute -left-10 top-2 w-7 h-7 rounded-full flex items-center justify-center shadow-lg ${activeArea.disease?.name === 'ใบข้าวที่ดี' ? 'bg-emerald-500 shadow-emerald-200' : activeArea.disease?.name ? 'bg-rose-500 shadow-rose-200 animate-pulse' : 'bg-slate-300 shadow-slate-100'}`}>
+                        {activeArea.disease?.name === 'ใบข้าวที่ดี' ? (
                           <ShieldCheck className="w-3.5 h-3.5 text-white" />
-                        ) : activeArea.disease?.status ? (
+                        ) : activeArea.disease?.name ? (
                           <Bug className="w-3.5 h-3.5 text-white" />
                         ) : (
                           <AlertCircle className="w-3.5 h-3.5 text-white" />
                         )}
                       </div>
                       {/* Content Card */}
-                      <div className={`border rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow ${activeArea.disease?.status === 'safe' ? 'bg-white border-slate-100' : activeArea.disease?.status ? 'bg-rose-50/50 border-rose-100' : 'bg-slate-50/50 border-slate-100'}`}>
+                      <div className={`border rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow ${activeArea.disease?.name === 'ใบข้าวที่ดี' ? 'bg-white border-emerald-100' : activeArea.disease?.name ? 'bg-rose-50/50 border-rose-100' : 'bg-slate-50/50 border-slate-100'}`}>
                         {activeArea.disease?.status ? (
                           <div className="flex flex-col sm:flex-row items-start gap-5">
                             <div className="w-32 h-32 rounded-2xl overflow-hidden bg-slate-100 shrink-0 shadow-inner border-2 border-white">
@@ -1272,20 +1292,20 @@ export default function App() {
                               />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${activeArea.disease?.status === 'safe' ? 'text-emerald-500' : 'text-rose-500'}`}>สถานะโรคข้าว</p>
-                              <h4 className={`text-xl font-black mb-2 ${activeArea.disease?.status === 'safe' ? 'text-slate-800' : 'text-rose-700'}`}>
+                              <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${activeArea.disease?.name === 'ใบข้าวที่ดี' ? 'text-emerald-500' : 'text-rose-500'}`}>สถานะโรคข้าว</p>
+                              <h4 className={`text-xl font-black mb-2 ${activeArea.disease?.name === 'ใบข้าวที่ดี' ? 'text-slate-800' : 'text-rose-700'}`}>
                                 {activeArea.disease?.name || 'ไม่พบโรค'}
                               </h4>
                               <div className="flex items-center gap-2 mb-2">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeArea.disease?.status === 'safe' ? 'bg-emerald-50' : 'bg-rose-100'}`}>
-                                  {activeArea.disease?.status === 'safe' ? (
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeArea.disease?.name === 'ใบข้าวที่ดี' ? 'bg-emerald-50' : 'bg-rose-100'}`}>
+                                  {activeArea.disease?.name === 'ใบข้าวที่ดี' ? (
                                     <ShieldCheck className="w-5 h-5 text-emerald-500" />
                                   ) : (
                                     <Bug className="w-5 h-5 text-rose-500" />
                                   )}
                                 </div>
-                                <p className={`text-sm font-bold ${activeArea.disease?.status === 'safe' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                  {activeArea.disease?.status === 'safe' ? 'ปลอดภัย' : 'ต้องดูแลเป็นพิเศษ'}
+                                <p className={`text-sm font-bold ${activeArea.disease?.name === 'ใบข้าวที่ดี' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {activeArea.disease?.name === 'ใบข้าวที่ดี' ? 'ปลอดภัย' : 'ต้องดูแลเป็นพิเศษ'}
                                 </p>
                               </div>
                               {activeArea.disease?.advice && (

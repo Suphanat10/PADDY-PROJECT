@@ -6,24 +6,36 @@ import { Sprout, Droplets, Zap, Thermometer, Loader2 } from "lucide-react";
  * Displays NPK and moisture sensor readings
  */
 export function NPKGrid({ sensor }) {
+  // คำนวณระดับปุ๋ยจากค่าที่ได้จากเซ็นเซอร์
+  const n_mgkg = Number(sensor?.n ?? 0);
+  const p_mgkg = Number(sensor?.p ?? 0);
+  const k_mgkg = Number(sensor?.k ?? 0);
+  const calculatedOM = n_mgkg / 500;
+  const omLevel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
+  const pLevel = p_mgkg < 5 ? "ต่ำ" : p_mgkg <= 10 ? "ปานกลาง" : "สูง";
+  const kLevel = k_mgkg < 60 ? "ต่ำ" : k_mgkg <= 80 ? "ปานกลาง" : "สูง";
+
   const items = [
     {
       label: "ไนโตรเจน (N)",
       value: sensor.n,
       color: "emerald",
       icon: <Sprout size={16} />,
+      levelLabel: `OM: ${omLevel}`,
     },
     {
       label: "ฟอสฟอรัส (P)",
       value: sensor.p,
       color: "orange",
       icon: <Droplets size={16} />,
+      levelLabel: pLevel,
     },
     {
       label: "โพแทสเซียม (K)",
       value: sensor.k,
       color: "purple",
       icon: <Zap size={16} />,
+      levelLabel: kLevel,
     },
     {
       label: "ความชื้นดิน",
@@ -77,6 +89,39 @@ function NPKCard({ label, value, color, icon }) {
           </div>
         )}
       </div>
+      {/* แสดงระดับปุ๋ย หากมี */}
+      {hasData && label.includes("ไนโตรเจน") && (
+        <div className="mt-2 text-right">
+          <span className="text-xs font-bold text-emerald-600">ระดับ: {sensorLevelLabel(value, 'N')}</span>
+        </div>
+      )}
+      {hasData && label.includes("ฟอสฟอรัส") && (
+        <div className="mt-2 text-right">
+          <span className="text-xs font-bold text-orange-600">ระดับ: {sensorLevelLabel(value, 'P')}</span>
+        </div>
+      )}
+      {hasData && label.includes("โพแทสเซียม") && (
+        <div className="mt-2 text-right">
+          <span className="text-xs font-bold text-purple-600">ระดับ: {sensorLevelLabel(value, 'K')}</span>
+        </div>
+      )}
     </div>
   );
+}
+
+// ช่วยแปลงค่า level โดยรับ value (string/number) และ type
+function sensorLevelLabel(value, type) {
+  const v = Number(value ?? 0);
+  if (type === 'N') {
+    const om = v / 500;
+    const omLevel = om < 1.0 ? 'ต่ำ' : om <= 2.0 ? 'ปานกลาง' : 'สูง';
+    return `OM: ${omLevel}`;
+  }
+  if (type === 'P') {
+    return v < 5 ? 'ต่ำ' : v <= 10 ? 'ปานกลาง' : 'สูง';
+  }
+  if (type === 'K') {
+    return v < 60 ? 'ต่ำ' : v <= 80 ? 'ปานกลาง' : 'สูง';
+  }
+  return '';
 }
