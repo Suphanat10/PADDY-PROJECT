@@ -37,12 +37,6 @@ export function NPKGrid({ sensor }) {
       icon: <Zap size={16} />,
       levelLabel: kLevel,
     },
-    {
-      label: "ความชื้นดิน",
-      value: sensor.moisture,
-      color: "blue",
-      icon: <Thermometer size={16} />,
-    },
   ];
 
   return (

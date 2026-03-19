@@ -62,7 +62,6 @@ import {
 } from "recharts";
 import { io } from "socket.io-client";
 
-// --- Custom Hook สำหรับ WebSocket ---
 function useDeviceWebSocket({ deviceIds = [], onSensor, onStatus }) {
   const socketRef = useRef(null);
   useEffect(() => {
@@ -73,7 +72,6 @@ function useDeviceWebSocket({ deviceIds = [], onSensor, onStatus }) {
     });
     socketRef.current = socket;
     const emitJoinEvents = () => {
-      // Filter out invalid IDs (empty, N/A, null-like) and deduplicate
       const validIds = Array.from(new Set(deviceIds || []))
         .map((id) => (typeof id === "string" ? id.trim() : id))
         .filter((id) => id && id !== "N/A" && id !== "undefined" && id !== "null");
@@ -250,6 +248,17 @@ export default function App() {
     });
     return { ...summary, nextCheck };
   }, [selectedFarm]);
+
+  const getNPKLevel = (k, val) => {
+    const v = Number(val ?? 0);
+    if (k === "N") {
+      const om = v / 500;
+      return { level: om < 1.0 ? "ต่ำ" : om <= 2.0 ? "ปานกลาง" : "สูง", om: om };
+    }
+    if (k === "P") return { level: v < 5 ? "ต่ำ" : v <= 10 ? "ปานกลาง" : "สูง" };
+    if (k === "K") return { level: v < 60 ? "ต่ำ" : v <= 80 ? "ปานกลาง" : "สูง" };
+    return { level: "", om: 0 };
+  };
 
   // Logic สำหรับข้อมูลพื้นที่ที่เลือก (ใช้สำหรับกราฟ)
   const activeArea = useMemo(() => {
@@ -469,7 +478,7 @@ export default function App() {
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Synchronizing Data...
+              กำลังโหลดข้อมูล...
             </p>
           </div>
         ) : !selectedFarm ? (
@@ -573,19 +582,25 @@ export default function App() {
                   สมดุลธาตุอาหารรวม (NPK)
                 </p>
                 <div className="grid grid-cols-3 gap-3 mt-2">
-                  {["N", "P", "K"].map((k) => (
-                    <div
-                      key={k}
-                      className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100"
-                    >
-                      <p className="text-[8px] font-bold text-slate-400 mb-0.5">
-                        {k} Value
-                      </p>
-                      <p className="text-lg font-black text-slate-700">
-                        {farmInsights[`avg${k}`]}
-                      </p>
-                    </div>
-                  ))}
+                  {["N", "P", "K"].map((k) => {
+                    const val = farmInsights[`avg${k}`] ?? 0;
+                    const info = getNPKLevel(k, val);
+                    return (
+                      <div
+                        key={k}
+                        className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100"
+                      >
+                        <p className="text-[8px] font-bold text-slate-400 mb-0.5">
+                          {k} Value
+                        </p>
+                        <p className="text-lg font-black text-slate-700">{val}</p>
+                        {k === "N" && (
+                          <p className="text-xs text-slate-400 mt-1">ค่าปุ๋ย (OM): {Number(info.om ?? 0).toFixed(2)}</p>
+                        )}
+                        {/* level removed as requested */}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -887,29 +902,7 @@ export default function App() {
                         <p className="text-xs mt-2 font-bold text-purple-600">ระดับ: {kLevel}</p>
                       </div>
                     </div>
-                    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                      <div className="bg-blue-50/50 px-6 py-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm border border-blue-100">
-                            <Droplets className="w-4 h-4 text-blue-500" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-slate-800">
-                              ความชื้นดิน
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-bold">
-                              ค่าปัจจุบัน
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="p-8 text-center">
-                        <p className="text-3xl font-black text-blue-600">
-                            {area.sensor?.s ?? 0}{" "}
-                          <span className="text-sm text-slate-400 ml-1">%</span>
-                        </p>
-                      </div>
-                    </div>
+                    {/* soil moisture removed as requested */}
                   </div>
                 )})}
             </div>

@@ -63,7 +63,7 @@ export function useFarmSocket(setFarmData) {
                     p: device.P ?? device.p ?? area.sensor.p,
                     k: device.K ?? device.k ?? area.sensor.k,
                     ph: device.pH ?? device.ph ?? area.sensor.ph,
-                    moisture: device.soil_moisture ?? device.S ?? device.moisture ?? area.sensor.moisture,
+                    // soil moisture intentionally omitted
                     water_level: device.water_level ?? device.W ?? area.sensor.water_level,
                   },
                 };
@@ -135,7 +135,7 @@ export function useFarmSocket(setFarmData) {
                 p: data.P ?? data.p ?? area.sensor.p,
                 k: data.K ?? data.k ?? area.sensor.k,
                 ph: data.pH ?? data.ph ?? area.sensor.ph,
-                moisture: data.soil_moisture ?? data.S ?? data.moisture ?? area.sensor.moisture,
+                // soil moisture intentionally omitted
                 water_level: data.water_level ?? data.W ?? area.sensor.water_level,
               },
             };

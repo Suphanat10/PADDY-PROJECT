@@ -292,13 +292,7 @@ const { id } = useParams();
                       </>
                     );
                   })()}
-                <MetricCard
-                  title="ความชื้นดิน"
-                  icon={Droplets}
-                  data={currentData.humidity}
-                  color="text-blue-600"
-                  bgColor="bg-blue-50"
-                />
+                        {/* soil moisture removed */}
                 <MetricCard
                   title="อุณหภูมิ"
                   icon={Thermometer}
@@ -388,15 +382,7 @@ const { id } = useParams();
                       />
 
                       {/* ความชื้น (ฟ้า) */}
-                      <Area
-                        type="monotone"
-                        dataKey="humidity"
-                        stackId="1"
-                        stroke="#6666CC"
-                        fill="#6666CC"
-                        fillOpacity={0.6}
-                        name="ความชื้น (%)"
-                      />
+                      {/* humidity removed from stacked chart */}
 
                       {/* ระดับน้ำ (น้ำเงินอมเขียว) */}
                       <Area
@@ -448,32 +434,7 @@ const { id } = useParams();
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <Droplets className="w-5 h-5 mr-2 text-blue-600" />
-                    ความชื้นดิน (Humidity)
-                  </h3>
-                </div>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsLineChart data={historicalData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e0f2fe" />
-                      <XAxis dataKey="time" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                         dataKey= "humidity"
-                        stroke="#0ea5e9"
-                        strokeWidth={2}
-                        name="ความชื้น (%)"
-                      />
-                    </RechartsLineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+              {/* humidity historical chart removed */}
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 xl:col-span-2">
                 <div className="flex items-center justify-between mb-6">

@@ -158,7 +158,6 @@ export function useSensorWebSocket(deviceId) {
           nitrogen: { value: data.N || 0, unit: "mg/kg" },
           phosphorus: { value: data.P || 0, unit: "mg/kg" },
           potassium: { value: data.K || 0, unit: "mg/kg" },
-          humidity: { value: data.soil_moisture || 0, unit: "%" }, 
           waterLevel: { value: data.water_level || 0, unit: "ซม." },
           
         });

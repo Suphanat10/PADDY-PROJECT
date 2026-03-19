@@ -63,11 +63,7 @@ export function useSensorWebSocket(deviceId) {
             unit: "mg/kg",
             trend: calcTrend(lastValueRef.current.K, msgData.K),
           },
-          humidity: {
-            value: msgData.soil_moisture ?? prev?.humidity?.value ?? "-",
-            unit: "%",
-            trend: calcTrend(lastValueRef.current.humidity, msgData.soil_moisture),
-          },
+          // soil moisture removed per UI request
           waterLevel: {
             value: msgData.water_level ?? prev?.waterLevel?.value ?? "-",
             unit: "cm",
@@ -81,7 +77,6 @@ export function useSensorWebSocket(deviceId) {
           N: msgData.N,
           P: msgData.P,
           K: msgData.K,
-          humidity: msgData.soil_moisture,
           waterLevel: msgData.water_level,
         };
 

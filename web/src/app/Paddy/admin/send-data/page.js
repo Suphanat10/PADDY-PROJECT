@@ -143,8 +143,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
         N: data?.N ?? "-",
         P: data?.P ?? "-",
         K: data?.K ?? "-",
-        water: data?.water_level ?? "-",
-        moisture: data?.soil_moisture ?? "-",
+        water: data?.water_level ?? "-"
       })}`;
 
       setLogs((prev) => [...prev, { id: Date.now(), text: logLine, deviceCode: deviceId }].slice(-1000));

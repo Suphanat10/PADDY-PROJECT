@@ -83,7 +83,6 @@ function combineNPK(sensor) {
   return [
     { type: "NPK", label: "ธาตุอาหาร (NPK)", values: { N: val(sensor?.N), P: val(sensor?.P), K: val(sensor?.K) } },
     { type: "water_level", label: "ระดับน้ำ", current: val(sensor?.water_level), unit: "cm" },
-    { type: "soil_moisture", label: "ความชื้นดิน", current: val(sensor?.soil_moisture), unit: "%" },
   ];
 }
 

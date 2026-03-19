@@ -51,7 +51,6 @@ export function createSensorWebSocket({
       P: rawData.P,
       K: rawData.K,
       water_level: rawData.water_level,
-      soil_moisture: rawData.soil_moisture,
     };
 
     const timestamp =

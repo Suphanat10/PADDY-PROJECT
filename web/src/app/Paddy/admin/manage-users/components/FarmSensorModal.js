@@ -364,7 +364,6 @@ export const FarmSensorModal = ({
         N: msgData.N,
         P: msgData.P,
         K: msgData.K,
-        soil_moisture: msgData.soil_moisture,
         water_level: msgData.water_level,
         timestamp: payload.measured_at,
       });
@@ -576,14 +575,7 @@ export const FarmSensorModal = ({
                         gradientFrom="from-amber-400"
                         gradientTo="to-yellow-500"
                       />
-                      <SensorDisplayCard
-                        label="ความชื้นดิน"
-                        value={sensorData.soil_moisture ?? sensorData.S ?? sensorData.humidity}
-                        unit="%"
-                        icon={Droplets}
-                        gradientFrom="from-cyan-400"
-                        gradientTo="to-blue-500"
-                      />
+                      {/* soil moisture display removed */}
                     </div>
 
                     {/* Growth & Disease Info */}

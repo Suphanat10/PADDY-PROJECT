@@ -249,13 +249,7 @@ const {
                         color="text-violet-600"
                         bgColor="bg-violet-50"
                       />
-                      <MetricCard
-                        title="ความชื้นดิน"
-                        icon={Droplets}
-                        data={currentData.humidity}
-                        color="text-blue-600"
-                        bgColor="bg-blue-50"
-                      />
+                      {/* soil moisture card removed */}
                       <MetricCard
                         title="อุณหภูมิ"
                         icon={Thermometer}
@@ -340,7 +334,7 @@ const {
                             <Area type="monotone" dataKey="nitrogen" stackId="1" stroke="#10B981" fill="url(#colorN)" name="ไนโตรเจน" />
                             <Area type="monotone" dataKey="phosphorus" stackId="1" stroke="#F59E0B" fill="url(#colorP)" name="ฟอสฟอรัส" />
                             <Area type="monotone" dataKey="potassium" stackId="1" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.6} name="โพแทสเซียม" />
-                            <Area type="monotone" dataKey="humidity" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.4} name="ความชื้น" />
+                            {/* humidity removed from stacked chart */}
                           </AreaChart>
                         </ResponsiveContainer>
                       </div>
@@ -369,25 +363,7 @@ const {
                     </div>
 
                     {/* Chart 3 */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                          <Droplets className="w-5 h-5 text-blue-500" />
-                          ประวัติความชื้นดิน
-                        </h3>
-                      </div>
-                      <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsLineChart data={historicalData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                            <XAxis dataKey="time" stroke="#94a3b8" tick={{fontSize: 11}} axisLine={false} tickLine={false} />
-                            <YAxis stroke="#94a3b8" tick={{fontSize: 11}} axisLine={false} tickLine={false} />
-                            <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                            <Line type="monotone" dataKey="humidity" stroke="#3B82F6" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
-                          </RechartsLineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
+                    {/* humidity history removed */}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center p-16 bg-white rounded-2xl border border-dashed border-slate-300 text-slate-400">

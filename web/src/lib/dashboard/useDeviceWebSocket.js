@@ -14,7 +14,7 @@ export function useDeviceWebSocket({ deviceIds, onStatus }) {
     const socket = io("https://smart-paddy.space", {
       transports: ["websocket"],
       withCredentials: true,
-      reconnectionAttempts: 5, // พยายามต่อใหม่ 5 ครั้งถ้าหลุด
+      reconnectionAttempts: 5, 
     });
 
     socketRef.current = socket;
