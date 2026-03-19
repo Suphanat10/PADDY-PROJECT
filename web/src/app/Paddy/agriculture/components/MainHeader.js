@@ -66,7 +66,7 @@ function useDeviceWebSocket({ deviceIds = [], onSensor, onStatus }) {
   const socketRef = useRef(null);
   useEffect(() => {
     if (!deviceIds.length) return;
-    const socket = io("http://smart-paddy.space", {
+    const socket = io("https://smart-paddy.space", {
       transports: ["websocket"],
       reconnection: true,
     });
