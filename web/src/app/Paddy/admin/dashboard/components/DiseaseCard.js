@@ -7,8 +7,11 @@ import { ShieldCheck, AlertCircle, ChevronDown } from "lucide-react";
  * Displays disease detection status and details link
  */
 export function DiseaseCard({ area }) {
+
+  // ถ้า disease_name เป็น 'ใบข้าวที่ดี' ให้ถือว่าไม่พบโรค
+  const isGoodLeaf = area.latest_disease && area.latest_disease.disease_name === "ใบข้าวที่ดี";
   const hasDisease =
-    area.latest_disease || area.disease?.status === "warning";
+    area.latest_disease && !isGoodLeaf || area.disease?.status === "warning";
 
   return (
     <div className="lg:col-span-3 bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
@@ -28,7 +31,7 @@ export function DiseaseCard({ area }) {
       >
         <div className="flex flex-col items-center text-center">
           {area.latest_disease ? (
-            <DiseaseWarning disease={area.latest_disease} />
+            isGoodLeaf ? <HealthyStatus /> : <DiseaseWarning disease={area.latest_disease} />
           ) : (
             <HealthyStatus />
           )}

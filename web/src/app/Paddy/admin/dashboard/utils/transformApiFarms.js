@@ -50,7 +50,10 @@ export function transformApiFarms(apiFarms = []) {
           : area.device_count > 0
             ? "active"
             : "offline",
-        thresholds: { min: 0, max: 100 },
+        thresholds: {
+          min: latest_setting?.water_level_min ?? 0,
+          max: latest_setting?.water_level_max ?? 100,
+        },
         growth: {
           stage:
             latest_growth?.growth_stage ||

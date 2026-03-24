@@ -87,10 +87,12 @@ export default function FarmDashboard() {
       (acc, farm) => acc + (farm.areas?.length || 0),
       0
     );
-    const warningDiseases = farmData.reduce(
-      (acc, farm) =>
-        acc +
-        (farm.areas?.filter((a) => a.disease.status === "warning").length || 0),
+    const warningDiseases = farmData.reduce((acc, farm) =>
+      acc +
+      (farm.areas?.filter((a) => {
+        const diseaseName = a.latest_disease?.disease_name || a.disease?.name || "";
+        return a.disease.status === "warning" && diseaseName !== "ใบข้าวที่ดี";
+      }).length || 0),
       0
     );
     const onlineFarms = farmData.filter((f) => f.status === "Online").length;
@@ -409,6 +411,8 @@ function DeviceStatusChart({ statusData }) {
  * Risk Areas List
  */
 function RiskAreasList({ farmData, expandedRisks, setExpandedRisks }) {
+
+  
   return (
     <div className="lg:col-span-2 bg-white p-6 rounded-[24px] shadow-sm border border-slate-100">
       <h3 className="text-sm font-black text-slate-700 uppercase mb-4 flex items-center gap-2">
@@ -440,12 +444,16 @@ function RiskAreasList({ farmData, expandedRisks, setExpandedRisks }) {
  * Risk Farm Item
  */
 function RiskFarmItem({ farm, isExpanded, onToggle }) {
-  const setting = farm.latest_setting || {
-    data_send_interval_days: 1,
-    growth_analysis_period: 7,
-    water_level_max: 10,
-    water_level_min: 5,
-  };
+
+  console.log("Evaluating risk for farm:", farm);
+  // รวม min/max ของทุก area ในฟาร์ม (ถ้ามี device)
+  const areaThresholds = (farm.areas || [])
+    .filter(a => a.device_code && a.device_code !== 'N/A' && a.thresholds)
+    .map(a => a.thresholds);
+
+  // หา min/max ที่แท้จริงจากทุก area (หรือ fallback เป็น null)
+  const minW = areaThresholds.length > 0 ? Math.min(...areaThresholds.map(t => t.min ?? Infinity)) : null;
+  const maxW = areaThresholds.length > 0 ? Math.max(...areaThresholds.map(t => t.max ?? -Infinity)) : null;
 
   const reasons = [];
 
@@ -453,24 +461,25 @@ function RiskFarmItem({ farm, isExpanded, onToggle }) {
     const code = String(area.device_code ?? "").trim().toUpperCase();
     if (!code || code === "N/A" || code === "NA") return;
 
-    // Disease check
-    if (area.latest_disease || area.disease?.status === "warning") {
-      const name =
-        area.latest_disease?.disease_name ||
-        area.disease?.name ||
-        "ความเสี่ยงโรค";
+    // Disease check (ไม่นับใบข้าวที่ดีเป็นจุดเสี่ยง)
+    const diseaseName = area.latest_disease?.disease_name || area.disease?.name || "";
+    const isGoodLeaf = diseaseName === "ใบข้าวที่ดี";
+    if ((area.latest_disease || area.disease?.status === "warning") && !isGoodLeaf) {
+      const name = diseaseName || "ความเสี่ยงโรค";
       reasons.push({ type: "disease", text: `${area.area_name}: พบโรค ${name}` });
     }
 
-    // Water level check
+    // Water level check (ใช้ min/max ของแต่ละ area)
     const waterLevel = area.sensor?.water_level;
+    const min = area.thresholds?.min;
+    const max = area.thresholds?.max;
     if (
       waterLevel != null &&
-      (waterLevel > (setting.water_level_max ?? 10) ||
-        waterLevel < (setting.water_level_min ?? 5))
+      min != null &&
+      max != null &&
+      (waterLevel > max || waterLevel < min)
     ) {
-      const type =
-        waterLevel > (setting.water_level_max ?? 10) ? "water-high" : "water-low";
+      const type = waterLevel > max ? "water-high" : "water-low";
       const direction = type === "water-high" ? "สูงกว่า" : "ต่ำกว่า";
       reasons.push({
         type,
@@ -534,13 +543,13 @@ function RiskFarmItem({ farm, isExpanded, onToggle }) {
           <div>
             W max:{" "}
             <span className="font-bold text-slate-700">
-              {setting.water_level_max}
+              {maxW !== null ? maxW : '-'}
             </span>
           </div>
           <div>
             W min:{" "}
             <span className="font-bold text-slate-700">
-              {setting.water_level_min}
+              {minW !== null ? minW : '-'}
             </span>
           </div>
         </div>

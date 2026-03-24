@@ -41,6 +41,7 @@ export async function loadGrowthAnalysis(fetcher) {
           analysis_id: ga.analysis_id,
           growth_stage: stageTh,
           image_url: ga.image_url,
+          type: ga.type,
           confidence: ga.confidence,
           advice: ga.advice,
           created_at: ga.created_at,
@@ -55,19 +56,22 @@ export async function loadGrowthAnalysis(fetcher) {
     // จัดการข้อมูลการวิเคราะห์โรค (Disease_Analysis - D ตัวใหญ่ตาม JSON)
     if (Array.isArray(device.Disease_Analysis)) {
       device.Disease_Analysis.forEach((da, index) => {
-        diseaseList.push({
-          // สร้าง unique id สำหรับ React key
-          id: `disease-${device.device_registrations_id}-${index}`,
-          image_url: da.image_url,
-          disease_name : da.disease_name,
-          confidence: da.confidence,
-          advice: da.advice,
-          created_at: da.created_at,
-          device_info: {
-            reg_id: device.device_registrations_id,
-            device_code: device.device_code
-          }
-        });
+        // แสดงเฉพาะ USER_UPLOAD และ ESP32 เท่านั้น
+        if (da.type === 'USER_UPLOAD' || da.type === 'ESP32') {
+          diseaseList.push({
+            id: `disease-${device.device_registrations_id}-${index}`,
+            image_url: da.image_url,
+            disease_name : da.disease_name,
+            confidence: da.confidence,
+            type: da.type,
+            advice: da.advice,
+            created_at: da.created_at,
+            device_info: {
+              reg_id: device.device_registrations_id,
+              device_code: device.device_code
+            }
+          });
+        }
       });
     }
   });

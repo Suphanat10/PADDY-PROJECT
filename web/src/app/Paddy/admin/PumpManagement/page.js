@@ -26,25 +26,22 @@ export default function PumpManagementPage() {
   const [viewMode, setViewMode] = useState("table"); 
   const [pumps, setPumps] = useState([]);
 
-   useEffect(() => {
-       const fetchPumps = async () => {
-           try {
-               const res = await apiFetch('/api/admin/getdata_Pump');
-
-                 if (!res || pumps.length === 0) {
-                  return res.json({success: true,
-    data: []
-  });
-}
-              
-               setPumps(res.data);
-           } catch (error) {
-               setPumps([]);
-               console.error('Error fetching pumps:', error);
-           }
-         };
-         fetchPumps();
-   }, []);
+        useEffect(() => {
+            const fetchPumps = async () => {
+                try {
+                    const res = await apiFetch('/api/admin/getdata_Pump');
+                    if (!res || !res.data || res.data.length === 0) {
+                      setPumps([]);
+                      return;
+                    }
+                    setPumps(res.data);
+                } catch (error) {
+                    setPumps([]);
+                    console.error('Error fetching pumps:', error);
+                }
+              };
+              fetchPumps();
+        }, []);
 
 
  

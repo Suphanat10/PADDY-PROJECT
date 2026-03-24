@@ -130,40 +130,39 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   };
 
   useMonitorWebSocket(onlineDeviceCodes, (msg) => {
-    if (isPaused) return;
+  if (isPaused) return;
 
-    // 1. จัดการข้อมูลเซนเซอร์
-    if (msg.type === "SENSOR_UPDATE") {
-      const { deviceId, data, measured_at } = msg;
+  if (msg.type === "SENSOR_UPDATE") {
+    const { deviceId, data, measured_at } = msg;
+    const thaiTime = new Date(measured_at).toLocaleString("th-TH", {
+  timeZone: "Asia/Bangkok",
+});
 
-      // อัปเดตสถานะเป็น online ทันทีที่มีข้อมูลส่งมา
+    // ตรวจสอบ log ล่าสุดของ device นี้
+    const lastLog = logs.slice().reverse().find(l => l.deviceCode === deviceId && l.text.includes('RECV'));
+    let isCache = false;
+    if (lastLog && lastLog.text.includes(`[${thaiTime}]`)) {
+      isCache = true;
+    }
+
+    // ถ้าเป็น cache: ไม่อัปเดตสถานะเป็น online
+    if (!isCache) {
       setDeviceStatusMap(prev => ({ ...prev, [deviceId]: "online" }));
-
-      const logLine = `[${measured_at || ''}] RECV (${deviceId}) -> ${JSON.stringify({
-        N: data?.N ?? "-",
-        P: data?.P ?? "-",
-        K: data?.K ?? "-",
-        water: data?.water_level ?? "-"
-      })}`;
-
-      setLogs((prev) => [...prev, { id: Date.now(), text: logLine, deviceCode: deviceId }].slice(-1000));
+    } else {
+      setDeviceStatusMap(prev => ({ ...prev, [deviceId]: "offline" })); 
     }
 
-    // 2. จัดการข้อมูลสถานะ (จาก MQTT Status Topic)
-    if (msg.type === "DEVICE_STATUS") {
-      const { deviceId, status } = msg;
+    // เพิ่ม log ตามปกติ
+    const logLine = `[${thaiTime}] RECV (${deviceId}) -> ${JSON.stringify({
+      N: data?.N ?? "-",
+      P: data?.P ?? "-",
+      K: data?.K ?? "-",
+      water: data?.water_level ?? "-"
+    })}${isCache ? " [CACHE]" : ""}`;
 
-      setDeviceStatusMap(prev => ({
-        ...prev,
-        [deviceId]: status.toLowerCase(), // online / offline
-      }));
-
-      const logLine = `STATUS (${deviceId}) -> ${status.toUpperCase()}`;
-      setLogs(prev =>
-        [...prev, { id: Date.now(), text: logLine, deviceCode: deviceId }].slice(-1000)
-      );
-    }
-  });
+    setLogs((prev) => [...prev, { id: Date.now(), text: logLine, deviceCode: deviceId }].slice(-1000));
+  }
+});
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });

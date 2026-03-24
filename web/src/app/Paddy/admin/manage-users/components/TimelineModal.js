@@ -40,9 +40,24 @@ const TimelineCard = ({
           <div className="w-full h-full overflow-y-auto p-4">
             {data.map((item, index) => (
               <div key={index} className="flex items-start gap-3 mb-3 last:mb-0">
-                <div className={`w-2.5 h-2.5 rounded-full mt-1.5 ${iconBg}`} />
+                {/* ถ้า label เป็น 'ใบข้าวที่ดี' ให้ใช้สีเขียว */}
+                <div
+                  className={`w-2.5 h-2.5 rounded-full mt-1.5 ${
+                    item.label === "ใบข้าวที่ดี"
+                      ? "bg-emerald-500"
+                      : iconBg
+                  }`}
+                />
                 <div>
-                  <p className="font-semibold text-slate-800 text-sm">{item.label}</p>
+                  <p
+                    className={`font-semibold text-sm ${
+                      item.label === "ใบข้าวที่ดี"
+                        ? "text-emerald-600"
+                        : "text-slate-800"
+                    }`}
+                  >
+                    {item.label}
+                  </p>
                   {item.date && (
                     <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                       <Clock size={10} /> {item.date}
