@@ -52,6 +52,19 @@ export default function Header() {
     return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
   };
 
+  const formatFullDateTime = (dateString) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleString("th-TH", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  };
+
   const handleMarkAsRead = (id) => {
     setNotifications(prev =>
       prev.map(notif => notif.id === id ? { ...notif, unread: false } : notif)
@@ -196,7 +209,7 @@ export default function Header() {
                   <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                     <h3 className="text-sm font-bold text-gray-900">การแจ้งเตือน</h3>
                   </div>
-                  <div className="max-h-[350px] overflow-y-auto">
+                  <div className="max-h-[75vh] overflow-y-auto">
                     {notifications.length === 0 ? (
                       <div className="p-10 text-center text-gray-400 text-sm">ไม่มีการแจ้งเตือน</div>
                     ) : (
@@ -206,7 +219,11 @@ export default function Header() {
                             <div className={`w-2 h-2 mt-1.5 rounded-full ${notif.unread ? 'bg-emerald-500' : 'bg-transparent'}`}></div>
                             <div className="ml-3 flex-1">
                               <p className={`text-sm leading-tight ${notif.unread ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{notif.title}</p>
-                              <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><Clock className="w-3 h-3" />{notif.time}</p>
+                              <p className="text-[11px] text-gray-500 mt-1">{notif.subTitle}</p>
+                              <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {notif.time} ({formatFullDateTime(notif.created_at)})
+                              </p>
                             </div>
                           </div>
                         </div>

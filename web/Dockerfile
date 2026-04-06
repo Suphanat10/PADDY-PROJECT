@@ -1,7 +1,7 @@
 # -------------------------
 # Base
 # -------------------------
-FROM node:20-alpine AS base
+FROM node:20-bookworm-slim AS base
 WORKDIR /app
 
 
@@ -10,17 +10,14 @@ WORKDIR /app
 # Dependencies
 # -------------------------
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
-
 COPY package.json package-lock.json* ./
 
-RUN npm ci   # จะลง devDependencies ด้วย
+RUN --mount=type=cache,id=npm-cache,target=/root/.npm npm ci --omit=optional --no-audit --no-fund --prefer-offline --progress=false
 
 # -------------------------
 # Build
 # -------------------------
 FROM base AS builder
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -31,7 +28,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

@@ -1,5 +1,16 @@
 node_modules
+.next
 npm-debug.log
+yarn-error.log
+pnpm-debug.log
 .git
+.github
 .env
+.env.*
 dist
+coverage
+.vscode
+.idea
+*.log
+Dockerfile*
+docker-compose*.yml
