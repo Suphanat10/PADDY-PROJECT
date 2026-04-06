@@ -29,7 +29,8 @@ export function useDeviceWebSocket({ deviceIds, onStatus }) {
 
     socket.on("deviceStatus", (msg) => {
       if (msg && msg.device_code) {
-        onStatus?.(msg.device_code, msg.status);
+        // ✅ ส่ง device_code, status, reason, และ timestamp ไปที่ callback
+        onStatus?.(msg.device_code, msg.status, msg.reason, msg.timestamp);
       }
     });
 

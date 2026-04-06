@@ -24,7 +24,7 @@ import {
 const SOCKET_URL = "https://smart-paddy.space";
 
 // Water Level Visual Component
-const WaterLevelCard = ({ value, minLevel = 5, maxLevel = 15, tankHeight = 30, isLive = false }) => {
+const WaterLevelCard = ({ value, minLevel , maxLevel , tankHeight = 30, isLive = false }) => {
   const numValue = parseFloat(value) || 0;
   // Calculate percentage based on tank height (30cm)
   const percentage = Math.min(Math.max((numValue / tankHeight) * 100, 0), 100);
@@ -116,20 +116,45 @@ const WaterLevelCard = ({ value, minLevel = 5, maxLevel = 15, tankHeight = 30, i
 
 // NPK & Humidity Sensor Card
 const SensorDisplayCard = ({ label, value, unit, icon: Icon, gradientFrom, gradientTo }) => {
-  const v = Number(value ?? 0);
+  const n_mgkg = Number(value ?? 0);
+  const p_mgkg = Number(value ?? 0);
+  const k_mgkg = Number(value ?? 0);
+  const nPercent = n_mgkg / 10000;
+
+  const getNLevel = (val) => {
+    if (val < 0.05) return "ต่ำมาก";
+    if (val <= 0.09) return "ต่ำ";
+    if (val <= 0.14) return "ปานกลาง";
+    return "สูง";
+  };
+
+  const getPLevel = (val) => {
+    if (val < 3) return "ต่ำมาก";
+    if (val <= 10) return "ต่ำ";
+    if (val <= 25) return "ปานกลาง";
+    if (val <= 45) return "สูง";
+    return "สูงมาก";
+  };
+
+  const getKLevel = (val) => {
+    if (val < 31) return "ต่ำมาก";
+    if (val <= 60) return "ต่ำ";
+    if (val <= 90) return "ปานกลาง";
+    if (val <= 120) return "สูง";
+    return "สูงมาก";
+  };
+
+  const isNitrogen = label.includes("ไนโตรเจน") || label.includes("N");
+  const nPercentLabel = isNitrogen ? nPercent.toFixed(4) : null;
 
   // Compute level label for N/P/K
   let levelLabel = null;
-  if (label.includes("ไนโตรเจน") || label.includes("N")) {
-    const calculatedOM = v / 500;
-    levelLabel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
-    levelLabel = `ระดับ: OM ${levelLabel}`;
+  if (isNitrogen) {
+    levelLabel = `ระดับ: ${getNLevel(nPercent)}`;
   } else if (label.includes("ฟอสฟอรัส") || label.includes("P")) {
-    levelLabel = v < 5 ? "ต่ำ" : v <= 10 ? "ปานกลาง" : "สูง";
-    levelLabel = `ระดับ: ${levelLabel}`;
+    levelLabel = `ระดับ: ${getPLevel(p_mgkg)}`;
   } else if (label.includes("โพแทสเซียม") || label.includes("K")) {
-    levelLabel = v < 60 ? "ต่ำ" : v <= 80 ? "ปานกลาง" : "สูง";
-    levelLabel = `ระดับ: ${levelLabel}`;
+    levelLabel = `ระดับ: ${getKLevel(k_mgkg)}`;
   }
 
   return (
@@ -152,6 +177,9 @@ const SensorDisplayCard = ({ label, value, unit, icon: Icon, gradientFrom, gradi
             <span className={`text-xs font-bold ${label.includes("ไนโตรเจน") ? "text-emerald-600" : label.includes("ฟอสฟอรัส") ? "text-orange-600" : label.includes("โพแทสเซียม") ? "text-purple-600" : "text-slate-500"}`}>
               {levelLabel}
             </span>
+            {nPercentLabel && (
+              <div className="text-[11px] font-semibold text-emerald-500 mt-1">N%: {nPercentLabel}</div>
+            )}
           </div>
         )}
       </div>
@@ -542,10 +570,10 @@ export const FarmSensorModal = ({
                       {/* Water Level - Takes more space */}
                       <div className="lg:row-span-2">
                         <WaterLevelCard 
-                          value={sensorData.water_level ?? sensorData.W} 
+                          value={sensorData.water_level ?? sensorData.W}
                           isLive={isSocketConnected && liveData !== null}
-                          minLevel={5}
-                          maxLevel={15}
+                          minLevel={selectedArea?.thresholds?.min ?? sensorData.min_water_level ?? 5}
+                          maxLevel={selectedArea?.thresholds?.max ?? sensorData.max_water_level ?? 15}
                           tankHeight={30}
                         />
                       </div>

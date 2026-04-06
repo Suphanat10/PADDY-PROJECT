@@ -446,14 +446,37 @@ function RiskAreasList({ farmData, expandedRisks, setExpandedRisks }) {
 function RiskFarmItem({ farm, isExpanded, onToggle }) {
 
   console.log("Evaluating risk for farm:", farm);
-  // รวม min/max ของทุก area ในฟาร์ม (ถ้ามี device)
-  const areaThresholds = (farm.areas || [])
-    .filter(a => a.device_code && a.device_code !== 'N/A' && a.thresholds)
-    .map(a => a.thresholds);
+  
+  // Collect all thresholds from all areas
+  const allThresholds = (farm.areas || [])
+    .map(a => {
+      // Priority: use thresholds from area, then from farm settings
+      if (a.thresholds && (a.thresholds.min != null || a.thresholds.max != null)) {
+        return a.thresholds;
+      }
+      // Fallback to farm-level settings
+      return {
+        min: farm.latest_setting?.water_level_min,
+        max: farm.latest_setting?.water_level_max,
+      };
+    })
+    .filter(t => t && (t.min != null || t.max != null));
 
-  // หา min/max ที่แท้จริงจากทุก area (หรือ fallback เป็น null)
-  const minW = areaThresholds.length > 0 ? Math.min(...areaThresholds.map(t => t.min ?? Infinity)) : null;
-  const maxW = areaThresholds.length > 0 ? Math.max(...areaThresholds.map(t => t.max ?? -Infinity)) : null;
+  // Calculate min and max from all areas
+  let minW = null;
+  let maxW = null;
+
+  if (allThresholds.length > 0) {
+    const mins = allThresholds.map(t => t.min).filter(v => v != null);
+    const maxs = allThresholds.map(t => t.max).filter(v => v != null);
+    
+    if (mins.length > 0) minW = Math.min(...mins);
+    if (maxs.length > 0) maxW = Math.max(...maxs);
+  }
+  
+  // Fallback to defaults if still no value
+  if (minW === null) minW = farm.latest_setting?.water_level_min ?? 5;
+  if (maxW === null) maxW = farm.latest_setting?.water_level_max ?? 15;
 
   const reasons = [];
 

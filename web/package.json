@@ -9,7 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@cropper/element-canvas": "^2.1.0",
+    "@cropper/element-handle": "^2.1.0",
+    "@cropper/element-image": "^2.1.0",
     "@line/liff": "^2.27.1",
+    "cropperjs": "^2.1.0",
     "eslint-config-next": "16.0.6",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.542.0",
@@ -17,6 +21,7 @@
     "next": "16.0.6",
     "react": "19.2.1",
     "react-dom": "19.2.1",
+    "react-easy-crop": "^5.5.7",
     "recharts": "^3.1.2",
     "socket.io-client": "^4.8.2",
     "sweetalert2": "^11.22.5"

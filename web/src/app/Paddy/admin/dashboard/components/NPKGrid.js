@@ -6,36 +6,24 @@ import { Sprout, Droplets, Zap, Thermometer, Loader2 } from "lucide-react";
  * Displays NPK and moisture sensor readings
  */
 export function NPKGrid({ sensor }) {
-  // คำนวณระดับปุ๋ยจากค่าที่ได้จากเซ็นเซอร์
-  const n_mgkg = Number(sensor?.n ?? 0);
-  const p_mgkg = Number(sensor?.p ?? 0);
-  const k_mgkg = Number(sensor?.k ?? 0);
-  const calculatedOM = n_mgkg / 500;
-  const omLevel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
-  const pLevel = p_mgkg < 5 ? "ต่ำ" : p_mgkg <= 10 ? "ปานกลาง" : "สูง";
-  const kLevel = k_mgkg < 60 ? "ต่ำ" : k_mgkg <= 80 ? "ปานกลาง" : "สูง";
-
   const items = [
     {
       label: "ไนโตรเจน (N)",
       value: sensor.n,
       color: "emerald",
       icon: <Sprout size={16} />,
-      levelLabel: `OM: ${omLevel}`,
     },
     {
       label: "ฟอสฟอรัส (P)",
       value: sensor.p,
       color: "orange",
       icon: <Droplets size={16} />,
-      levelLabel: pLevel,
     },
     {
       label: "โพแทสเซียม (K)",
       value: sensor.k,
       color: "purple",
       icon: <Zap size={16} />,
-      levelLabel: kLevel,
     },
   ];
 
@@ -87,6 +75,9 @@ function NPKCard({ label, value, color, icon }) {
       {hasData && label.includes("ไนโตรเจน") && (
         <div className="mt-2 text-right">
           <span className="text-xs font-bold text-emerald-600">ระดับ: {sensorLevelLabel(value, 'N')}</span>
+          <div>
+            <span className="text-[11px] font-semibold text-emerald-500">N%: {formatNPercent(value)}</span>
+          </div>
         </div>
       )}
       {hasData && label.includes("ฟอสฟอรัส") && (
@@ -106,16 +97,31 @@ function NPKCard({ label, value, color, icon }) {
 // ช่วยแปลงค่า level โดยรับ value (string/number) และ type
 function sensorLevelLabel(value, type) {
   const v = Number(value ?? 0);
-  if (type === 'N') {
-    const om = v / 500;
-    const omLevel = om < 1.0 ? 'ต่ำ' : om <= 2.0 ? 'ปานกลาง' : 'สูง';
-    return `OM: ${omLevel}`;
+  if (type === "N") {
+    const nPercent = v / 10000;
+    if (nPercent < 0.05) return "ต่ำมาก";
+    if (nPercent <= 0.09) return "ต่ำ";
+    if (nPercent <= 0.14) return "ปานกลาง";
+    return "สูง";
   }
-  if (type === 'P') {
-    return v < 5 ? 'ต่ำ' : v <= 10 ? 'ปานกลาง' : 'สูง';
+  if (type === "P") {
+    if (v < 3) return "ต่ำมาก";
+    if (v <= 10) return "ต่ำ";
+    if (v <= 25) return "ปานกลาง";
+    if (v <= 45) return "สูง";
+    return "สูงมาก";
   }
-  if (type === 'K') {
-    return v < 60 ? 'ต่ำ' : v <= 80 ? 'ปานกลาง' : 'สูง';
+  if (type === "K") {
+    if (v < 31) return "ต่ำมาก";
+    if (v <= 60) return "ต่ำ";
+    if (v <= 90) return "ปานกลาง";
+    if (v <= 120) return "สูง";
+    return "สูงมาก";
   }
-  return '';
+  return "";
+}
+
+function formatNPercent(value) {
+  const v = Number(value ?? 0);
+  return (v / 10000).toFixed(4);
 }

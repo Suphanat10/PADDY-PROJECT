@@ -7,9 +7,9 @@ import { Loader2 } from "lucide-react";
  */
 export function WaterTankCard({ area }) {
   const waterLevel = area.sensor?.water_level ?? 0;
-  const minThreshold = area.latest_setting?.water_level_min ;
-  const maxThreshold = area.latest_setting?.water_level_max ;
-  const maxScale = 30;
+  const minThreshold = area.latest_setting?.water_level_min ?? area.thresholds?.min ?? 5;
+  const maxThreshold = area.latest_setting?.water_level_max ?? area.thresholds?.max ?? 15;
+  const maxScale = Math.max(maxThreshold, 25);
   
   // Check if we have actual water level data
   const hasData = area.sensor?.water_level !== null && 

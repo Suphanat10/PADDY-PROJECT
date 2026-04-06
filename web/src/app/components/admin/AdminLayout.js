@@ -352,7 +352,7 @@ const AdminSidebar = ({
               <Sprout size={24} />
             </div>
             <span className="text-xl font-bold text-slate-800 tracking-tight">
-              PaddySmart
+              Smart Paddy
             </span>
           </a>
           <button

@@ -78,7 +78,7 @@ export default function PumpManagementPage() {
           p.pump_ID === id ? { ...p, status: newStatus } : p
         ));
       } else {
-        console.error('Failed to update pump status');
+        console.error('Failed to update pump status', res);
       }
     }).catch(console.error);
   };

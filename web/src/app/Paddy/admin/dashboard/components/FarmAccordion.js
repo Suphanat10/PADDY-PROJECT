@@ -1,5 +1,5 @@
 "use client";
-import { Sprout, MapPin, ChevronDown, Clock, Calendar, AlertCircle, CheckCircle, Loader, ImageUp } from "lucide-react";
+import { Sprout, MapPin, ChevronDown, Clock, Calendar, AlertCircle, CheckCircle, Loader, ImageUp, Leaf, TrendingUp } from "lucide-react";
 import { WaterTankCard } from "./WaterTankCard";
 import { NPKGrid } from "./NPKGrid";
 import { DiseaseCard } from "./DiseaseCard";
@@ -116,6 +116,13 @@ function AreaCard({ area }) {
             <NPKGrid sensor={area.sensor} />
             <DiseaseCard area={area} />
           </div>
+
+          {/* Growth Stage Card - Full Width */}
+          {area.latest_growth && (
+            <div className="mt-4">
+              <GrowthStageCard growth={area.latest_growth} />
+            </div>
+          )}
         </>
       )}
     </div>
@@ -255,6 +262,122 @@ function UnregisteredAreaMessage() {
       </div>
       <div className="text-xs text-slate-400 mt-2">
         โปรดลงทะเบียนอุปกรณ์เพื่อรับข้อมูลเรียลไทม์
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Growth Stage Card Component
+ * Displays growth stage with image and advice
+ */
+function GrowthStageCard({ growth }) {
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    
+    try {
+      // Try parsing ISO format first (2026-03-28T01:55:07.000Z)
+      let date = new Date(dateStr);
+      
+      // If it's invalid, try parsing Thai format (28/3/2569 12:33:48)
+      if (isNaN(date.getTime())) {
+        const parts = dateStr.split(/[\s\/:]/);
+        if (parts.length >= 5) {
+          // Format: day/month/year hour:minute:second
+          let day = parseInt(parts[0]);
+          let month = parseInt(parts[1]) - 1; // Month is 0-indexed
+          let year = parseInt(parts[2]);
+          
+          // Convert Thai year (2569) to Christian year (2026)
+          if (year > 2500) {
+            year = year - 543;
+          }
+          
+          let hour = parseInt(parts[3]) || 0;
+          let minute = parseInt(parts[4]) || 0;
+          let second = parseInt(parts[5]) || 0;
+          
+          date = new Date(year, month, day, hour, minute, second);
+        }
+      }
+      
+      // If still invalid, return empty
+      if (isNaN(date.getTime())) {
+        return dateStr; // Return original string as fallback
+      }
+      
+      return date.toLocaleString("th-TH", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      console.error("Date formatting error:", e);
+      return dateStr; // Return original string as fallback
+    }
+  };
+
+  return (
+    <div className="mt-4 bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3">
+        <Leaf size={18} className="text-emerald-500" />
+        <span className="text-xs font-bold text-slate-700">ระยะการเจริญเติบโต</span>
+      </div>
+
+      {/* Content - Responsive Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Image Section - Left Column on Desktop */}
+        {growth.image_url && (
+          <div className="lg:col-span-1">
+            <div className="my-2 rounded-lg overflow-hidden border border-emerald-200 h-full lg:h-auto">
+              <img
+                src={growth.image_url}
+                alt={growth.growth_stage}
+                className="w-full h-40 lg:h-48 object-cover"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Content Section - Right Columns on Desktop */}
+        <div className={growth.image_url ? "lg:col-span-2" : "lg:col-span-3"}>
+          <div className="space-y-3">
+            {/* Stage & Meta Info */}
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+              <div className="text-lg font-black text-emerald-900 mb-2">
+                {growth.growth_stage || "ไม่ระบุ"}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {growth.confidence != null && (
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
+                    ความมั่นใจ: {(growth.confidence * 100).toFixed(1)}%
+                  </span>
+                )}
+                {growth.created_at && (
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <Calendar size={11} />
+                    {formatDate(growth.created_at)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Advice Section */}
+            {growth.advice && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp size={14} className="text-emerald-600" />
+                  <span className="text-xs font-bold text-emerald-700">คำแนะนำ</span>
+                </div>
+                <p className="text-xs leading-relaxed text-emerald-900 whitespace-pre-wrap break-words">
+                  {growth.advice}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

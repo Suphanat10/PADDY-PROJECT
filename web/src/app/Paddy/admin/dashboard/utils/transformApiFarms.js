@@ -51,8 +51,8 @@ export function transformApiFarms(apiFarms = []) {
             ? "active"
             : "offline",
         thresholds: {
-          min: latest_setting?.water_level_min ?? 0,
-          max: latest_setting?.water_level_max ?? 100,
+          min: latest_setting?.water_level_min ?? 5,
+          max: latest_setting?.water_level_max ?? 15,
         },
         growth: {
           stage:

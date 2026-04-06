@@ -504,7 +504,6 @@
 //                     .filter((a) => checkHealth(a).isCritical)
 //                     .map((area, idx) => {
 //                       const health = checkHealth(area);
-//                       // ถ้าผลวิเคราะห์โรคข้าวปกติ/สุขภาพดี/ไม่พบโรค ให้แสดงสถานะปกติ (สีเขียว/ข้อความปกติ)
 //                       const isDiseaseNormal = health.isDiseaseNormal;
 //                       return (
 //                         <div
@@ -516,7 +515,9 @@
 //                               <h4 className="font-black text-slate-800 text-xl">
 //                                 {area.area_name}
 //                               </h4>
-//                               <p className={`text-[10px] font-bold uppercase tracking-widest ${isDiseaseNormal ? "text-emerald-600" : "text-rose-400"}`}>
+//                               <p
+//                                 className={`text-[10px] font-bold uppercase tracking-widest ${isDiseaseNormal ? "text-emerald-600" : "text-rose-400"}`}
+//                               >
 //                                 {isDiseaseNormal ? "✔️ ปกติ (ไม่พบโรค)" : "🚨 ภาวะวิกฤต"}
 //                               </p>
 //                             </div>
@@ -526,7 +527,6 @@
 //                                   <Droplet className="w-5 h-5" />
 //                                 </div>
 //                               )}
-//                               {/* แสดง Bug icon เฉพาะถ้าไม่ใช่ปกติ */}
 //                               {health.diseaseIssue && !isDiseaseNormal && (
 //                                 <div className="p-2.5 bg-rose-50 text-rose-500 rounded-2xl border border-rose-100">
 //                                   <Bug className="w-5 h-5" />
@@ -595,9 +595,10 @@
 //                         </p>
 //                         <p className="text-lg font-black text-slate-700">{val}</p>
 //                         {k === "N" && (
-//                           <p className="text-xs text-slate-400 mt-1">ค่าปุ๋ย (OM): {Number(info.om ?? 0).toFixed(2)}</p>
+//                           <p className="text-xs text-slate-400 mt-1">
+//                             ค่าปุ๋ย (OM): {Number(info.om ?? 0).toFixed(2)}
+//                           </p>
 //                         )}
-//                         {/* level removed as requested */}
 //                       </div>
 //                     );
 //                   })}
@@ -623,7 +624,7 @@
 //                 </div>
 //                 <div className="relative min-w-45">
 //                   <select
-//                     value={activeAreaId || ""}
+//                     value={activeAreaId ?? ""}
 //                     onChange={(e) => setActiveAreaId(Number(e.target.value))}
 //                     className="w-full appearance-none bg-white border border-slate-200 text-[12px] font-bold py-2.5 pl-4 pr-10 rounded-xl outline-none focus:ring-2 focus:ring-rose-500/10 cursor-pointer shadow-sm transition-all"
 //                   >
@@ -913,8 +914,8 @@
 //               <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
 //                 <div className="flex items-center justify-between mb-6">
 //                   <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase tracking-widest">
-//                     <BarChart3 className="w-4 h-4 text-emerald-500" />{" "}
-//                     สัดส่วนธาตุอาหาร (NPK) - แปลง {activeArea?.area_name}
+//                     <BarChart3 className="w-4 h-4 text-emerald-500" /> สัดส่วนธาตุอาหาร
+//                     (NPK) - แปลง {activeArea?.area_name}
 //                   </h3>
 //                   <Link
 //                     href={`/Paddy/agriculture/sensor/${activeArea?.device_code || ''}`}
@@ -1604,6 +1605,7 @@ import {
   ExternalLink,
   X,
   Calendar,
+  Camera,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -1681,6 +1683,11 @@ export default function App() {
   const [activeAreaId, setActiveAreaId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [captureLoading, setCaptureLoading] = useState(false);
+  const [captureStatus, setCaptureStatus] = useState(null);
+  const [timelineData, setTimelineData] = useState([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   // ฟังก์ชันเช็คสุขภาพพืช
   const checkHealth = useCallback((area) => {
@@ -1734,6 +1741,33 @@ export default function App() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTimeline = async (area) => {
+    setTimelineLoading(true);
+    try {
+   
+
+      const res = await apiFetch(`/api/data/Timeline/` ,{
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: {
+          area_id: area.area_id,
+          device_code: area.device_code,
+        },
+      });
+        
+      if (res?.ok && res?.data?.success && Array.isArray(res?.data?.data)) {
+        setTimelineData(res.data.data);
+      } else {
+        setTimelineData([]);
+      }
+    } catch (err) {
+      console.error("Error loading timeline:", err);
+      setTimelineData([]);
+    } finally {
+      setTimelineLoading(false);
     }
   };
 
@@ -1792,6 +1826,37 @@ export default function App() {
     onStatus: handleStatusChange,
   });
 
+  const normalizeImageUrl = useCallback((url) => {
+    if (!url || typeof url !== "string") return "/no-image.png";
+    return url.replace(/^http:\/\//i, "https://");
+  }, []);
+
+  const normalizeReferenceUrl = useCallback((url) => {
+    if (!url || typeof url !== "string") return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed.replace(/^http:\/\//i, "https://");
+    }
+    return `https://${trimmed}`;
+  }, []);
+
+  const getApiReferenceLink = useCallback(
+    (item) => normalizeReferenceUrl(item?.link || item?.Link || item?.LInk),
+    [normalizeReferenceUrl],
+  );
+
+  const openImagePreview = useCallback(
+    (item) => {
+      setPreviewImage({
+        src: normalizeImageUrl(item?.image),
+        title: item?.title || "รูปภาพ",
+        source: item?.type_uplode || "ไม่ระบุ",
+      });
+    },
+    [normalizeImageUrl],
+  );
+
   const selectedFarm = useMemo(
     () => farmData.find((f) => f.farm_id.toString() === selectedFarmId),
     [farmData, selectedFarmId],
@@ -1837,14 +1902,33 @@ export default function App() {
   const getNPKLevel = (k, val) => {
     const v = Number(val ?? 0);
     if (k === "N") {
-      const om = v / 500;
+      const nPercent = v / 10000;
       return {
-        level: om < 1.0 ? "ต่ำ" : om <= 2.0 ? "ปานกลาง" : "สูง",
-        om: om,
+        level:
+          nPercent < 0.05
+            ? "ต่ำมาก"
+            : nPercent <= 0.09
+              ? "ต่ำ"
+              : nPercent <= 0.14
+                ? "ปานกลาง"
+                : "สูง",
+        nPercent,
       };
     }
-    if (k === "P") return { level: v < 5 ? "ต่ำ" : v <= 10 ? "ปานกลาง" : "สูง" };
-    if (k === "K") return { level: v < 60 ? "ต่ำ" : v <= 80 ? "ปานกลาง" : "สูง" };
+    if (k === "P") {
+      if (v < 3) return { level: "ต่ำมาก" };
+      if (v <= 10) return { level: "ต่ำ" };
+      if (v <= 25) return { level: "ปานกลาง" };
+      if (v <= 45) return { level: "สูง" };
+      return { level: "สูงมาก" };
+    }
+    if (k === "K") {
+      if (v < 31) return { level: "ต่ำมาก" };
+      if (v <= 60) return { level: "ต่ำ" };
+      if (v <= 90) return { level: "ปานกลาง" };
+      if (v <= 120) return { level: "สูง" };
+      return { level: "สูงมาก" };
+    }
     return { level: "", om: 0 };
   };
 
@@ -1968,6 +2052,36 @@ export default function App() {
     return { data, events, thresholds };
   }, [activeArea]);
 
+  // Handle early photo capture command
+  const handleCapturePhoto = useCallback(async () => {
+    if (!activeArea?.device_code) {
+      setCaptureStatus("error");
+      setTimeout(() => setCaptureStatus(null), 3000);
+      return;
+    }
+    setCaptureLoading(true);
+    setCaptureStatus(null);
+    try {
+      const response = await apiFetch("/api/admin/devices/capture", {
+        method: "POST",
+        body: { device_code: activeArea.device_code },
+      });
+      if (response?.ok) {
+        setCaptureStatus("success");
+        console.log("Photo capture command sent successfully");
+      } else {
+        setCaptureStatus("error");
+        console.error("Failed to send capture command:", response?.message);
+      }
+    } catch (error) {
+      setCaptureStatus("error");
+      console.error("Error sending capture command:", error);
+    } finally {
+      setCaptureLoading(false);
+      setTimeout(() => setCaptureStatus(null), 3000);
+    }
+  }, [activeArea?.device_code]);
+
   // FIX #4: เมื่อเปลี่ยน selectedFarm ให้ reset activeAreaId เป็น area_id (number) ของแปลงแรก
   useEffect(() => {
     if (selectedFarm?.areas.length > 0) {
@@ -2048,6 +2162,98 @@ export default function App() {
           </div>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-500">
+            {/* 1. URGENT WARNINGS - Water & Disease Alerts */}
+            <div className="space-y-3">
+              {selectedFarm.areas.map((area) => {
+                const alerts = [];
+                
+                // Check water level alerts
+                if (area.sensor && area.status === "online") {
+                  const waterLevel = area.sensor.water_level;
+                  const minThreshold = area.setting?.Water_level_min ?? area.thresholds?.min ?? 5;
+                  const maxThreshold = area.setting?.Water_level_max ?? area.thresholds?.max ?? 30;
+                  
+                  if (waterLevel < minThreshold) {
+                    alerts.push({
+                      type: "low_water",
+                      title: `เเจ้งเตือนน้ำต่า ⚠️`,
+                      message: `${area.area_name} - ระดับน้ำ ${waterLevel} ซม. (ต่ำกว่า ${minThreshold} ซม.)`,
+                      color: "blue",
+                      severity: "warning"
+                    });
+                  } else if (waterLevel > maxThreshold) {
+                    alerts.push({
+                      type: "high_water",
+                      title: `เเจ้งเตือนน้ำสูง ⚠️`,
+                      message: `${area.area_name} - ระดับน้ำ ${waterLevel} ซม. (สูงกว่า ${maxThreshold} ซม. )`,
+                      color: "amber",
+                      severity: "warning"
+                    });
+                  }
+                }
+                
+                // Check disease alerts
+                if (area.latest_disease && area.latest_disease.disease_name && area.latest_disease.disease_name.toLowerCase() !== "healthy leaf") {
+                  alerts.push({
+                    type: "disease",
+                    title: `เเจ้งเตือนข้าวเป็นโรค 🚨`,
+                    message: `${area.area_name} - ${area.latest_disease.disease_name}${area.latest_disease.confidence ? ` (ความมั่นใจ ${Math.round(area.latest_disease.confidence * 100)}%)` : ""}`,
+                    advice: area.latest_disease.advice,
+                    color: "rose",
+                    severity: "critical"
+                  });
+                }
+                
+                return alerts.map((alert) => (
+                  <div
+                    key={`${area.area_id}-${alert.type}`}
+                    className={`border-l-4 rounded-lg p-4 ${
+                      alert.color === "blue"
+                        ? "bg-blue-50 border-blue-300"
+                        : alert.color === "amber"
+                          ? "bg-amber-50 border-amber-300"
+                          : "bg-rose-50 border-rose-300"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`flex-shrink-0 text-lg ${
+                        alert.color === "blue" ? "text-blue-600" :
+                        alert.color === "amber" ? "text-amber-600" :
+                        "text-rose-600"
+                      }`}>
+                        {alert.color === "blue" ? "💧" : alert.color === "amber" ? "⚠️" : "🚨"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`font-bold text-sm ${
+                          alert.color === "blue" ? "text-blue-900" :
+                          alert.color === "amber" ? "text-amber-900" :
+                          "text-rose-900"
+                        }`}>
+                          {alert.title}
+                        </h3>
+                        <p className={`text-sm mt-1 ${
+                          alert.color === "blue" ? "text-blue-800" :
+                          alert.color === "amber" ? "text-amber-800" :
+                          "text-rose-800"
+                        }`}>
+                          {alert.message}
+                        </p>
+                        {alert.advice && (
+                          <p className={`text-xs italic mt-2 ${
+                            alert.color === "blue" ? "text-blue-700" :
+                            alert.color === "amber" ? "text-amber-700" :
+                            "text-rose-700"
+                          }`}>
+                            💡 {alert.advice}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ));
+              }).flat().filter((item) => item !== undefined)}
+            </div>
+
             {/* 2. ACTION REQUIRED (ALERTS) */}
             {selectedFarm.areas.some((a) => checkHealth(a).isCritical) && (
               <div className="space-y-4">
@@ -2154,7 +2360,7 @@ export default function App() {
                         <p className="text-lg font-black text-slate-700">{val}</p>
                         {k === "N" && (
                           <p className="text-xs text-slate-400 mt-1">
-                            ค่าปุ๋ย (OM): {Number(info.om ?? 0).toFixed(2)}
+                            ค่า N (%): {Number(info.nPercent ?? 0).toFixed(4)}
                           </p>
                         )}
                       </div>
@@ -2204,12 +2410,34 @@ export default function App() {
                   const n_mgkg = Number(area.sensor?.n ?? 0);
                   const p_mgkg = Number(area.sensor?.p ?? 0);
                   const k_mgkg = Number(area.sensor?.k ?? 0);
-                  const calculatedOM = n_mgkg / 500;
-                  const omLevel =
-                    calculatedOM < 1.0 ? "ต่ำ" : calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
-                  const pLevel = p_mgkg < 5 ? "ต่ำ" : p_mgkg <= 10 ? "ปานกลาง" : "สูง";
-                  const kLevel = k_mgkg < 60 ? "ต่ำ" : k_mgkg <= 80 ? "ปานกลาง" : "สูง";
-                  const nLevel = n_mgkg < 10 ? "ต่ำ" : n_mgkg <= 20 ? "ปานกลาง" : "สูง";
+                  const nPercent = (n_mgkg) / 10000;
+
+                  const getNLevel = (value) => {
+                    if (value < 0.05) return "ต่ำมาก";
+                    if (value <= 0.09) return "ต่ำ";
+                    if (value <= 0.14) return "ปานกลาง";
+                    return "สูง";
+                  };
+
+                  const getPLevel = (value) => {
+                    if (value < 3) return "ต่ำมาก";
+                    if (value <= 10) return "ต่ำ";
+                    if (value <= 25) return "ปานกลาง";
+                    if (value <= 45) return "สูง";
+                    return "สูงมาก";
+                  };
+
+                  const getKLevel = (value) => {
+                    if (value < 31) return "ต่ำมาก";
+                    if (value <= 60) return "ต่ำ";
+                    if (value <= 90) return "ปานกลาง";
+                    if (value <= 120) return "สูง";
+                    return "สูงมาก";
+                  };
+
+                  const nLevel = getNLevel(nPercent);
+                  const pLevel = getPLevel(p_mgkg);
+                  const kLevel = getKLevel(k_mgkg);
 
                   const hasNoSensorData =
                     !area.sensor ||
@@ -2412,16 +2640,17 @@ export default function App() {
                                 ไนโตรเจน (N)
                               </p>
                               <p className="text-[10px] text-slate-400 font-bold">
-                                ค่าปัจจุบัน
+                                ค่าปัจจุบัน (N %)
                               </p>
                             </div>
                           </div>
                         </div>
                         <div className="p-8 text-center">
                           <p className="text-3xl font-black text-emerald-500">
-                            {area.sensor?.n}{" "}
-                            <span className="text-sm text-slate-400 ml-1">mg/kg</span>
+                            {nPercent.toFixed(2)}
+                            <span className="text-sm text-slate-400 ml-1">%</span>
                           </p>
+                          <p className="text-[10px] mt-1 text-slate-400">ค่าเซนเซอร์ N: {n_mgkg} mg/kg</p>
                           <p className="text-xs mt-2 font-bold text-emerald-600">
                             ระดับ: {nLevel}
                           </p>
@@ -2624,19 +2853,33 @@ export default function App() {
                             border: "none",
                             boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
                           }}
-                          cursor={{ stroke: "#3b82f6", strokeWidth: 1, strokeDasharray: "4 4" }}
+                          cursor={{
+                            stroke: "#3b82f6",
+                            strokeWidth: 1,
+                            strokeDasharray: "4 4",
+                          }}
                         />
                         <ReferenceLine
                           y={waterChartData.thresholds.max}
                           stroke="#f59e0b"
                           strokeDasharray="3 3"
-                          label={{ position: "right", value: "Max", fill: "#f59e0b", fontSize: 10 }}
+                          label={{
+                            position: "right",
+                            value: "Max",
+                            fill: "#f59e0b",
+                            fontSize: 10,
+                          }}
                         />
                         <ReferenceLine
                           y={waterChartData.thresholds.min}
                           stroke="#f43f5e"
                           strokeDasharray="3 3"
-                          label={{ position: "right", value: "Min", fill: "#f43f5e", fontSize: 10 }}
+                          label={{
+                            position: "right",
+                            value: "Min",
+                            fill: "#f43f5e",
+                            fontSize: 10,
+                          }}
                         />
                         <Area
                           type="monotone"
@@ -2671,12 +2914,22 @@ export default function App() {
               </div>
             </div>
 
-            {/* Scheduler Summary */}
+            {/* Scheduler summary (below graphs) */}
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase tracking-widest">
                   <Calendar className="w-4 h-4 text-emerald-500" /> ตารางวิเคราะห์
                 </h3>
+                {activeArea?.device_code && (
+                  <button
+                    onClick={handleCapturePhoto}
+                    disabled={captureLoading}
+                    className={`px-3 py-2 text-[11px] font-bold uppercase rounded-lg transition-all inline-flex items-center gap-2 ${captureLoading ? "bg-slate-400 text-white cursor-not-allowed" : captureStatus === "success" ? "bg-emerald-500 text-white" : captureStatus === "error" ? "bg-red-500 text-white" : "bg-blue-600 text-white hover:bg-blue-700"}`}
+                  >
+                    <Camera className="w-3 h-3" />
+                    {captureLoading ? "กำลังส่ง..." : "ถ่ายรูปก่อนกำหนด"}
+                  </button>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeArea && activeArea.scheduler ? (
@@ -2723,7 +2976,12 @@ export default function App() {
                             {typeof activeArea.scheduler.days_remaining === "number"
                               ? `${activeArea.scheduler.days_remaining} วัน คงเหลือ`
                               : activeArea.scheduler.last_check
-                                ? `${new Date(activeArea.scheduler.last_check).toLocaleString("th-TH", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                                ? `${new Date(activeArea.scheduler.last_check).toLocaleString("th-TH", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}`
                                 : "-"}
                           </span>
                         </div>
@@ -2748,20 +3006,17 @@ export default function App() {
                                 ? "ยังไม่ถึง"
                                 : activeArea.scheduler.status}
                         </div>
-                        <div className="mt-2 text-[11px] text-slate-400">
-                          ล่าสุด:{" "}
-                          {activeArea.scheduler.last_check
-                            ? new Date(activeArea.scheduler.last_check).toLocaleString(
-                                "th-TH",
-                                {
-                                  day: "2-digit",
-                                  month: "short",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )
-                            : "-"}
-                        </div>
+                        {/* <div className="mt-2 text-[11px] text-slate-400">
+                          ล่าสุด:{" "} 
+                           {activeArea.scheduler.last_check && !isNaN(Date.parse(activeArea.scheduler.last_check))
+  ? new Date(activeArea.scheduler.last_check).toLocaleString("th-TH", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  : "ไม่มีข้อมูล"}
+                        </div> */}
                       </div>
                     </div>
                   </div>
@@ -2782,7 +3037,10 @@ export default function App() {
                     แปลง {activeArea?.area_name}
                   </h3>
                   <button
-                    onClick={() => setShowTimelineModal(true)}
+                    onClick={() => {
+                      loadTimeline(activeArea);
+                      setShowTimelineModal(true);
+                    }}
                     className="px-4 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase rounded-xl hover:bg-emerald-600 transition-all inline-flex items-center gap-2"
                   >
                     ดูไทม์ไลน์ทั้งหมด
@@ -2835,6 +3093,17 @@ export default function App() {
                                 <p className="text-xs text-slate-500 bg-slate-50 rounded-xl p-4 leading-relaxed">
                                   {activeArea.growth.advice}
                                 </p>
+                              )}
+                              {getApiReferenceLink(activeArea.growth) && (
+                                <a
+                                  href={getApiReferenceLink(activeArea.growth)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-800"
+                                >
+                                  อ้างอิง: ข้อมูลจากระบบ
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
                               )}
                             </div>
                           </div>
@@ -2922,6 +3191,17 @@ export default function App() {
                                   {activeArea.disease.advice}
                                 </p>
                               )}
+                              {getApiReferenceLink(activeArea.disease) && (
+                                <a
+                                  href={getApiReferenceLink(activeArea.disease)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 hover:text-rose-800"
+                                >
+                                  อ้างอิง: ข้อมูลจากระบบ
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -2981,270 +3261,205 @@ export default function App() {
                   </div>
 
                   <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Growth Timeline */}
-                      <div className="bg-emerald-50/50 rounded-2xl p-5 border border-emerald-100">
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-                            <Sprout className="w-4 h-4 text-white" />
-                          </div>
-                          <h3 className="font-bold text-slate-800">
-                            ไทม์ไลน์ระยะการเจริญเติบโต
-                          </h3>
-                        </div>
-                        <div className="space-y-4 relative pl-6">
-                          <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-emerald-200"></div>
-                          {activeArea?.growth_timeline &&
-                          activeArea.growth_timeline.length > 0 ? (
-                            activeArea.growth_timeline.map((item, idx) => (
-                              <div key={idx} className="relative">
-                                <div className="absolute -left-6 top-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow"></div>
-                                <div className="bg-white rounded-xl p-4 shadow-sm border border-emerald-100">
-                                  <div className="flex gap-4">
-                                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                                      <img
-                                        src={item.image_url || "/no-image.png"}
-                                        alt={item.stage}
-                                        className="object-cover w-full h-full"
-                                        onError={(e) => {
-                                          e.target.onerror = null;
-                                          e.target.src = "/no-image.png";
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 text-[10px] text-emerald-500 font-bold mb-1">
-                                        <Calendar className="w-3 h-3" />
-                                        {item.date}
-                                      </div>
-                                      <h4 className="text-sm font-bold text-slate-800 mb-1">
-                                        {item.stage}
-                                      </h4>
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-xs text-emerald-600 font-bold">
-                                          {item.confidence}%
-                                        </span>
-                                        <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                          <div
-                                            className="h-full bg-emerald-500 rounded-full"
-                                            style={{ width: `${item.confidence}%` }}
-                                          ></div>
-                                        </div>
-                                      </div>
-                                      {item.advice && (
-                                        <p className="text-[10px] text-slate-500 line-clamp-2">
-                                          {item.advice}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : activeArea?.growth?.stage ? (
-                            <div className="relative">
-                              <div className="absolute -left-6 top-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow"></div>
-                              <div className="bg-white rounded-xl p-4 shadow-sm border border-emerald-100">
-                                <div className="flex gap-4">
-                                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                                    <img
-                                      src={activeArea.growth?.image_url || "/no-image.png"}
-                                      alt={activeArea.growth?.stage}
-                                      className="object-cover w-full h-full"
-                                      onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.src = "/no-image.png";
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 text-[10px] text-emerald-500 font-bold mb-1">
-                                      <Calendar className="w-3 h-3" />
-                                      ปัจจุบัน
-                                    </div>
-                                    <h4 className="text-sm font-bold text-slate-800 mb-1">
-                                      {activeArea.growth?.stage}
-                                    </h4>
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-xs text-emerald-600 font-bold">
-                                        {activeArea.growth?.progress ?? 0}%
-                                      </span>
-                                      <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                        <div
-                                          className="h-full bg-emerald-500 rounded-full"
-                                          style={{
-                                            width: `${activeArea.growth?.progress ?? 0}%`,
-                                          }}
-                                        ></div>
-                                      </div>
-                                    </div>
-                                    {activeArea.growth?.advice && (
-                                      <p className="text-[10px] text-slate-500 line-clamp-2">
-                                        {activeArea.growth.advice}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <Sprout className="w-12 h-12 mx-auto mb-3 text-slate-200" />
-                              <p className="text-sm text-slate-400 font-bold">
-                                ยังไม่มีข้อมูลระยะการเจริญเติบโต
-                              </p>
-                            </div>
-                          )}
+                    {timelineLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                          <Loader2 className="w-12 h-12 mx-auto mb-4 text-slate-400 animate-spin" />
+                          <p className="text-sm text-slate-500 font-bold">
+                            กำลังโหลดข้อมูลไทม์ไลน์...
+                          </p>
                         </div>
                       </div>
-
-                      {/* Disease Timeline */}
-                      <div className="bg-rose-50/50 rounded-2xl p-5 border border-rose-100">
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-8 h-8 bg-rose-500 rounded-lg flex items-center justify-center">
-                            <Bug className="w-4 h-4 text-white" />
+                    ) : timelineData && timelineData.length > 0 ? (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Growth Timeline */}
+                        <div className="bg-emerald-50/50 rounded-2xl p-5 border border-emerald-100">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                              <Sprout className="w-4 h-4 text-white" />
+                            </div>
+                            <h3 className="font-bold text-slate-800">ไทม์ไลน์ระยะการเจริญเติบโต</h3>
                           </div>
-                          <h3 className="font-bold text-slate-800">
-                            ไทม์ไลน์สถานะโรคข้าว
-                          </h3>
-                        </div>
-                        <div className="space-y-4 relative pl-6">
-                          <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-rose-200"></div>
-                          {activeArea?.disease_timeline &&
-                          activeArea.disease_timeline.length > 0 ? (
-                            activeArea.disease_timeline.map((item, idx) => (
-                              <div key={idx} className="relative">
-                                <div
-                                  className={`absolute -left-6 top-1 w-4 h-4 rounded-full border-2 border-white shadow ${item.status === "safe" ? "bg-emerald-500" : "bg-rose-500"}`}
-                                ></div>
-                                <div
-                                  className={`rounded-xl p-4 shadow-sm border ${item.status === "safe" ? "bg-white border-emerald-100" : "bg-white border-rose-100"}`}
-                                >
-                                  <div className="flex gap-4">
-                                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                                      <img
-                                        src={item.image_url || "/no-image.png"}
-                                        alt={item.name || "โรคข้าว"}
-                                        className="object-cover w-full h-full"
-                                        onError={(e) => {
-                                          e.target.onerror = null;
-                                          e.target.src = "/no-image.png";
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div
-                                        className={`flex items-center gap-2 text-[10px] font-bold mb-1 ${item.status === "safe" ? "text-emerald-500" : "text-rose-500"}`}
-                                      >
-                                        <Calendar className="w-3 h-3" />
-                                        {item.date}
-                                      </div>
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <div
-                                          className={`w-6 h-6 rounded-md flex items-center justify-center ${item.status === "safe" ? "bg-emerald-50" : "bg-rose-50"}`}
-                                        >
-                                          {item.status === "safe" ? (
-                                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                                          ) : (
-                                            <Bug className="w-3.5 h-3.5 text-rose-500" />
+                          <div className="space-y-4 relative pl-6">
+                            <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-emerald-200"></div>
+                            {timelineData.filter(item => item.type === 'growth').length > 0 ? (
+                              timelineData
+                                .filter(item => item.type === 'growth')
+                                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                                .map((item) => (
+                                  <div key={`${item.type}-${item.id}-${item.created_at}`} className="relative">
+                                    <div className="absolute -left-6 top-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow"></div>
+                                    <div className="bg-white rounded-xl p-4 shadow-sm border border-emerald-100">
+                                      <div className="flex gap-4">
+                                        {item.image && (
+                                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                                            <img
+                                              src={normalizeImageUrl(item.image)}
+                                              alt={item.title}
+                                              className="object-cover w-full h-full cursor-zoom-in"
+                                              onClick={() => openImagePreview(item)}
+                                              onError={(e) => {
+                                                e.target.onerror = null;
+                                                e.target.src = "/no-image.png";
+                                              }}
+                                            />
+                                          </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 text-[10px] text-emerald-500 font-bold mb-1">
+                                            <Calendar className="w-3 h-3" />
+                                            {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric'
+                                            })}
+                                          </div>
+                                          <h4 className="text-sm font-bold text-slate-800 mb-1">{item.title}</h4>
+                                          <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                            <Server className="h-3 w-3" />
+                                            ที่มารูปภาพ: {item.type_uplode || "ไม่ระบุ"}
+                                          </div>
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-xs text-emerald-600 font-bold">
+                                              {Math.round(Number(item.confidence) <= 1 ? Number(item.confidence) * 100 : Number(item.confidence))}%
+                                            </span>
+                                            <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                              <div
+                                                className="h-full bg-emerald-500 rounded-full"
+                                                style={{
+                                                  width: `${Math.round(Number(item.confidence) <= 1 ? Number(item.confidence) * 100 : Number(item.confidence))}%`,
+                                                }}
+                                              ></div>
+                                            </div>
+                                          </div>
+                                          {item.description && (
+                                            <p className="text-[10px] text-slate-500 line-clamp-2">{item.description}</p>
+                                          )}
+                                          {getApiReferenceLink(item) && (
+                                            <a
+                                              href={getApiReferenceLink(item)}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-800"
+                                            >
+                                              อ้างอิง: ข้อมูลจากระบบ
+                                              <ExternalLink className="w-3 h-3" />
+                                            </a>
                                           )}
                                         </div>
-                                        <h4
-                                          className={`text-sm font-bold ${item.status === "safe" ? "text-emerald-700" : "text-rose-700"}`}
-                                        >
-                                          {item.name || "ไม่พบโรค"}
-                                        </h4>
                                       </div>
-                                      {item.confidence && (
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <span
-                                            className={`text-xs font-bold ${item.status === "safe" ? "text-emerald-600" : "text-rose-600"}`}
-                                          >
-                                            {item.confidence}%
-                                          </span>
-                                          <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                            <div
-                                              className={`h-full rounded-full ${item.status === "safe" ? "bg-emerald-500" : "bg-rose-500"}`}
-                                              style={{ width: `${item.confidence}%` }}
-                                            ></div>
+                                    </div>
+                                  </div>
+                                ))
+                            ) : (
+                              <div className="text-center py-8">
+                                <Sprout className="w-12 h-12 mx-auto mb-3 text-slate-200" />
+                                <p className="text-sm text-slate-400 font-bold">ยังไม่มีข้อมูลระยะการเจริญเติบโต</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Disease Timeline */}
+                        <div className="bg-rose-50/50 rounded-2xl p-5 border border-rose-100">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 bg-rose-500 rounded-lg flex items-center justify-center">
+                              <Bug className="w-4 h-4 text-white" />
+                            </div>
+                            <h3 className="font-bold text-slate-800">ไทม์ไลน์สถานะโรคข้าว</h3>
+                          </div>
+                          <div className="space-y-4 relative pl-6">
+                            <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-rose-200"></div>
+                            {timelineData.filter(item => item.type === 'disease').length > 0 ? (
+                              timelineData
+                                .filter(item => item.type === 'disease')
+                                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                                .map((item) => {
+                                  const isHealthyLeaf =
+                                    (item.title || "").trim() === "ใบข้าวที่ดี";
+
+                                  return (
+                                  <div key={`${item.type}-${item.id}-${item.created_at}`} className="relative">
+                                    <div className={`absolute -left-6 top-1 w-4 h-4 rounded-full border-2 border-white shadow ${isHealthyLeaf ? "bg-emerald-500" : "bg-rose-500"}`}></div>
+                                    <div className={`bg-white rounded-xl p-4 shadow-sm border ${isHealthyLeaf ? "border-emerald-100" : "border-rose-100"}`}>
+                                      <div className="flex gap-4">
+                                        {item.image && (
+                                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                                            <img
+                                              src={normalizeImageUrl(item.image)}
+                                              alt={item.title}
+                                              className="object-cover w-full h-full cursor-zoom-in"
+                                              onClick={() => openImagePreview(item)}
+                                              onError={(e) => {
+                                                e.target.onerror = null;
+                                                e.target.src = "/no-image.png";
+                                              }}
+                                            />
                                           </div>
-                                        </div>
-                                      )}
-                                      <p
-                                        className={`text-[10px] ${item.status === "safe" ? "text-emerald-400" : "text-rose-400"}`}
-                                      >
-                                        {item.status === "safe" ? "ปลอดภัย" : "ต้องดูแลเป็นพิเศษ"}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : activeArea?.disease?.status ? (
-                            <div className="relative">
-                              <div
-                                className={`absolute -left-6 top-1 w-4 h-4 rounded-full border-2 border-white shadow ${activeArea.disease?.status === "safe" ? "bg-emerald-500" : "bg-rose-500"}`}
-                              ></div>
-                              <div
-                                className={`rounded-xl p-4 shadow-sm border ${activeArea.disease?.status === "safe" ? "bg-white border-emerald-100" : "bg-white border-rose-100"}`}
-                              >
-                                <div className="flex gap-4">
-                                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                                    <img
-                                      src={activeArea.disease?.image_url || "/no-image.png"}
-                                      alt={activeArea.disease?.name || "โรคข้าว"}
-                                      className="object-cover w-full h-full"
-                                      onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.src = "/no-image.png";
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div
-                                      className={`flex items-center gap-2 text-[10px] font-bold mb-1 ${activeArea.disease?.status === "safe" ? "text-emerald-500" : "text-rose-500"}`}
-                                    >
-                                      <Calendar className="w-3 h-3" />
-                                      ปัจจุบัน
-                                    </div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <div
-                                        className={`w-6 h-6 rounded-md flex items-center justify-center ${activeArea.disease?.status === "safe" ? "bg-emerald-50" : "bg-rose-50"}`}
-                                      >
-                                        {activeArea.disease?.status === "safe" ? (
-                                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                                        ) : (
-                                          <Bug className="w-3.5 h-3.5 text-rose-500" />
                                         )}
+                                        <div className="flex-1 min-w-0">
+                                          <div className={`flex items-center gap-2 text-[10px] font-bold mb-1 ${isHealthyLeaf ? "text-emerald-500" : "text-rose-500"}`}>
+                                            <Calendar className="w-3 h-3" />
+                                            {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric'
+                                            })}
+                                          </div>
+                                          <h4 className="text-sm font-bold text-slate-800 mb-1">{item.title}</h4>
+                                          <div className={`mb-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${isHealthyLeaf ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                                            <Server className="h-3 w-3" />
+                                            ที่มารูปภาพ: {item.type_uplode || "ไม่ระบุ"}
+                                          </div>
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <span className={`text-xs font-bold ${isHealthyLeaf ? "text-emerald-600" : "text-rose-600"}`}>
+                                              {Math.round(Number(item.confidence) <= 1 ? Number(item.confidence) * 100 : Number(item.confidence))}%
+                                            </span>
+                                            <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                              <div
+                                                className={`h-full rounded-full ${isHealthyLeaf ? "bg-emerald-500" : "bg-rose-500"}`}
+                                                style={{
+                                                  width: `${Math.round(Number(item.confidence) <= 1 ? Number(item.confidence) * 100 : Number(item.confidence))}%`,
+                                                }}
+                                              ></div>
+                                            </div>
+                                          </div>
+                                          {item.description && (
+                                            <p className="text-[10px] text-slate-500 line-clamp-2">{item.description}</p>
+                                          )}
+                                          {getApiReferenceLink(item) && (
+                                            <a
+                                              href={getApiReferenceLink(item)}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className={`mt-2 inline-flex items-center gap-1 text-[10px] font-bold ${isHealthyLeaf ? "text-emerald-700 hover:text-emerald-800" : "text-rose-700 hover:text-rose-800"}`}
+                                            >
+                                              อ้างอิง: ข้อมูลจากระบบ
+                                              <ExternalLink className="w-3 h-3" />
+                                            </a>
+                                          )}
+                                        </div>
                                       </div>
-                                      <h4
-                                        className={`text-sm font-bold ${activeArea.disease?.status === "safe" ? "text-emerald-700" : "text-rose-700"}`}
-                                      >
-                                        {activeArea.disease?.name || "ไม่พบโรค"}
-                                      </h4>
                                     </div>
-                                    <p
-                                      className={`text-[10px] ${activeArea.disease?.status === "safe" ? "text-emerald-400" : "text-rose-400"}`}
-                                    >
-                                      {activeArea.disease?.status === "safe"
-                                        ? "ปลอดภัย"
-                                        : "ต้องดูแลเป็นพิเศษ"}
-                                    </p>
                                   </div>
-                                </div>
+                                );
+                                })
+                            ) : (
+                              <div className="text-center py-8">
+                                <Bug className="w-12 h-12 mx-auto mb-3 text-slate-200" />
+                                <p className="text-sm text-slate-400 font-bold">ยังไม่มีข้อมูลสถานะโรคข้าว</p>
                               </div>
-                            </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <Bug className="w-12 h-12 mx-auto mb-3 text-slate-200" />
-                              <p className="text-sm text-slate-400 font-bold">
-                                ยังไม่มีข้อมูลสถานะโรคข้าว
-                              </p>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <Calendar className="w-16 h-16 mx-auto mb-4 text-slate-200" />
+                        <p className="text-sm text-slate-400 font-bold mb-1">ไม่มีข้อมูลไทม์ไลน์</p>
+                        <p className="text-xs text-slate-300">กรุณารอสักครู่หรือลองใหม่อีกครั้ง</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-4 border-t border-slate-100 flex justify-end gap-3">
@@ -3254,13 +3469,44 @@ export default function App() {
                     >
                       ปิด
                     </button>
-                    <Link
+                    {/* <Link
                       href={`/Paddy/agriculture/sensor/${activeArea?.device_code || ""}`}
                       className="px-6 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase rounded-xl hover:bg-emerald-600 transition-colors inline-flex items-center gap-2"
                     >
                       ดูรายละเอียดเซนเซอร์
                       <ExternalLink className="w-3 h-3" />
-                    </Link>
+                    </Link> */}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {previewImage && (
+              <div
+                className="fixed inset-0 z-60 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                onClick={() => setPreviewImage(null)}
+              >
+                <div
+                  className="relative w-full max-w-5xl max-h-[92vh]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => setPreviewImage(null)}
+                    className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-white text-slate-600 flex items-center justify-center shadow-lg hover:bg-slate-100"
+                    aria-label="ปิดรูปภาพขยาย"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <img
+                    src={previewImage.src}
+                    alt={previewImage.title}
+                    className="w-full max-h-[82vh] object-contain rounded-2xl bg-slate-900"
+                  />
+                  <div className="mt-3 rounded-xl bg-white/95 p-3 text-center">
+                    <p className="text-sm font-bold text-slate-800">{previewImage.title}</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      ที่มารูปภาพ: {previewImage.source}
+                    </p>
                   </div>
                 </div>
               </div>

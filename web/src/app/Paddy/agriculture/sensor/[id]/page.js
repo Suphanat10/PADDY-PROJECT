@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import {
   Thermometer,
@@ -52,6 +52,38 @@ const { id } = useParams();
   const { historicalData, isLoading } = useSensorHistory(id);
   const { currentData, isSocketConnected ,  } = useSensorWebSocket(id);
   const [sensorInfo, setSensorInfo] = useState(null);
+  const [historyRangeMonths, setHistoryRangeMonths] = useState(1);
+  const [useCustomDateRange, setUseCustomDateRange] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+
+  const filteredHistoricalData = useMemo(() => {
+    if (!Array.isArray(historicalData) || historicalData.length === 0) return [];
+
+    let startTs;
+
+    if (useCustomDateRange && customStartDate) {
+      const customStart = new Date(customStartDate);
+      customStart.setHours(0, 0, 0, 0);
+      startTs = customStart.getTime();
+    } else {
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - historyRangeMonths);
+      startTs = startDate.getTime();
+    }
+
+    let endTs = Infinity;
+    if (useCustomDateRange && customEndDate) {
+      const customEnd = new Date(customEndDate);
+      customEnd.setHours(23, 59, 59, 999);
+      endTs = customEnd.getTime();
+    }
+
+    return historicalData.filter((item) => {
+      const ts = item?.timestamp ? new Date(item.timestamp).getTime() : NaN;
+      return Number.isFinite(ts) && ts >= startTs && ts <= endTs;
+    });
+  }, [historicalData, historyRangeMonths, useCustomDateRange, customStartDate, customEndDate]);
 
   
 
@@ -67,6 +99,84 @@ const { id } = useParams();
       default:
         return <Minus className="w-4 h-4 text-gray-500" />;
     }
+  };
+
+  const buildExportRows = (fields) => {
+    const allRows = filteredHistoricalData.map((item) => ({
+      timestamp: item?.timestamp ?? "",
+      time: item?.time ?? "",
+      nitrogen: Number(item?.nitrogen ?? 0),
+      phosphorus: Number(item?.phosphorus ?? 0),
+      potassium: Number(item?.potassium ?? 0),
+      waterLevel: Number(item?.waterLevel ?? 0),
+      temperature: Number(item?.temperature ?? 0),
+      humidity: Number(item?.humidity ?? 0),
+      soilMoisture: Number(item?.soilMoisture ?? 0),
+    }));
+
+    if (!Array.isArray(fields) || fields.length === 0) {
+      return allRows;
+    }
+
+    return allRows.map((row) =>
+      fields.reduce((acc, key) => {
+        acc[key] = row[key];
+        return acc;
+      }, {}),
+    );
+  };
+
+  const downloadFile = (content, fileName, mimeType, addBom = false) => {
+    const fileContent = addBom ? `\uFEFF${content}` : content;
+    const blob = new Blob([fileContent], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportJson = (fileLabel = "historical", fields = []) => {
+    const rows = buildExportRows(fields);
+    if (rows.length === 0) {
+      window.alert("ไม่มีข้อมูลย้อนหลังสำหรับส่งออก");
+      return;
+    }
+
+    const dateSuffix = new Date().toISOString().slice(0, 10);
+    const fileName = `sensor-${id ?? "unknown"}-${fileLabel}-${historyRangeMonths}m-${dateSuffix}.json`;
+    const json = JSON.stringify(rows, null, 2);
+    downloadFile(json, fileName, "application/json;charset=utf-8");
+  };
+
+  const handleExportCsv = (fileLabel = "historical", fields = []) => {
+    const rows = buildExportRows(fields);
+    if (rows.length === 0) {
+      window.alert("ไม่มีข้อมูลย้อนหลังสำหรับส่งออก");
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+    const escapeCsvValue = (value) => {
+      const str = value === null || value === undefined ? "" : String(value);
+      if (/[",\n]/.test(str)) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const lines = [
+      headers.join(","),
+      ...rows.map((row) => headers.map((header) => escapeCsvValue(row[header])).join(",")),
+    ];
+
+    const dateSuffix = new Date().toISOString().slice(0, 10);
+    const fileName = `sensor-${id ?? "unknown"}-${fileLabel}-${historyRangeMonths}m-${dateSuffix}.csv`;
+    const csv = lines.join("\n");
+    downloadFile(csv, fileName, "text/csv;charset=utf-8", true);
   };
 
 
@@ -156,6 +266,9 @@ const { id } = useParams();
             {/* แสดงระดับปุ๋ย/คำอธิบาย หากถูกส่งมาใน data.levelLabel */}
             {data.levelLabel && (
               <p className={`${color} text-xs mt-2 font-bold`}>ระดับ: {data.levelLabel}</p>
+            )}
+            {data.nPercentLabel && (
+              <p className={`${color} text-[11px] mt-1 font-semibold`}>N%: {data.nPercentLabel}</p>
             )}
           </div>
         </div>
@@ -257,12 +370,41 @@ const { id } = useParams();
                     const n_mgkg = Number(currentData.nitrogen?.value ?? 0);
                     const p_mgkg = Number(currentData.phosphorus?.value ?? 0);
                     const k_mgkg = Number(currentData.potassium?.value ?? 0);
-                    const calculatedOM = n_mgkg / 500;
-                    const omLevel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
-                    const pLevel = p_mgkg < 5 ? "ต่ำ" : p_mgkg <= 10 ? "ปานกลาง" : "สูง";
-                    const kLevel = k_mgkg < 60 ? "ต่ำ" : k_mgkg <= 80 ? "ปานกลาง" : "สูง";
+                    const nPercent = n_mgkg / 10000;
+                    const nLevel =
+                      nPercent < 0.05
+                        ? "ต่ำมาก"
+                        : nPercent <= 0.09
+                          ? "ต่ำ"
+                          : nPercent <= 0.14
+                            ? "ปานกลาง"
+                            : "สูง";
+                    const pLevel =
+                      p_mgkg < 3
+                        ? "ต่ำมาก"
+                        : p_mgkg <= 10
+                          ? "ต่ำ"
+                          : p_mgkg <= 25
+                            ? "ปานกลาง"
+                            : p_mgkg <= 45
+                              ? "สูง"
+                              : "สูงมาก";
+                    const kLevel =
+                      k_mgkg < 31
+                        ? "ต่ำมาก"
+                        : k_mgkg <= 60
+                          ? "ต่ำ"
+                          : k_mgkg <= 90
+                            ? "ปานกลาง"
+                            : k_mgkg <= 120
+                              ? "สูง"
+                              : "สูงมาก";
 
-                    const nitrogenData = { ...currentData.nitrogen, levelLabel: `OM: ${omLevel}` };
+                    const nitrogenData = {
+                      ...currentData.nitrogen,
+                      levelLabel: nLevel,
+                      nPercentLabel: nPercent.toFixed(4),
+                    };
                     const phosphorusData = { ...currentData.phosphorus, levelLabel: pLevel };
                     const potassiumData = { ...currentData.potassium, levelLabel: kLevel };
 
@@ -315,22 +457,96 @@ const { id } = useParams();
             SECTION 2: HISTORICAL DATA (API)
            ================================================================================= */}
         <section className="pt-4 border-t border-gray-200">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
             <div className="p-2 bg-blue-100 rounded-lg">
               <History className="w-5 h-5 text-blue-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-xl font-bold text-gray-800">
                 ข้อมูลย้อนหลัง (Historical Analysis)
               </h2>
               <p className="text-sm text-gray-500">
-                กราฟแสดงแนวโน้มข้อมูล 24 ชั่วโมงย้อนหลัง (จาก API)
+                {useCustomDateRange && customStartDate
+                  ? `กราฟแสดงข้อมูลจาก ${customStartDate} ถึง ${customEndDate || "ปัจจุบัน"}`
+                  : `กราฟแสดงแนวโน้มข้อมูลย้อนหลัง ${historyRangeMonths} เดือน (จาก API)`}
               </p>
+            </div>
+            <div className="ml-auto w-full sm:w-auto">
+              <div className="flex flex-col gap-3">
+                {/* Month Quick Selection */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">ช่วง:</span>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4].map((month) => (
+                      <button
+                        key={month}
+                        onClick={() => {
+                          setUseCustomDateRange(false);
+                          setHistoryRangeMonths(month);
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          !useCustomDateRange && historyRangeMonths === month
+                            ? "bg-blue-600 text-white shadow-md"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+                        }`}
+                      >
+                        {month}ด
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Date Range Section */}
+                {useCustomDateRange ? (
+                  <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-300 shadow-md">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-bold text-blue-900">ระบุช่วงวันที่</span>
+                      <button
+                        onClick={() => {
+                          setUseCustomDateRange(false);
+                          setCustomStartDate("");
+                          setCustomEndDate("");
+                        }}
+                        className="text-gray-500 hover:text-gray-700 text-lg font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <label className="text-xs font-semibold text-blue-900 block mb-1">วันเริ่มต้น</label>
+                        <input
+                          type="date"
+                          value={customStartDate}
+                          onChange={(e) => setCustomStartDate(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-blue-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-xs font-semibold text-blue-900 block mb-1">วันสิ้นสุด</label>
+                        <input
+                          type="date"
+                          value={customEndDate}
+                          onChange={(e) => setCustomEndDate(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-blue-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setUseCustomDateRange(true)}
+                    className="px-3 py-1.5 text-xs font-semibold bg-gradient-to-r from-blue-100 to-blue-50 hover:from-blue-200 hover:to-blue-100 text-blue-700 rounded-lg border border-blue-300 transition-all"
+                  >
+                    📅 เลือกช่วงวันที่
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
           {/* ถ้ามีข้อมูลย้อนหลัง ให้แสดงกราฟ ถ้าไม่มีให้แสดงข้อความแจ้งเตือน */}
-          {historicalData && historicalData.length > 0 ? (
+          {filteredHistoricalData && filteredHistoricalData.length > 0 ? (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 xl:col-span-2">
                 <div className="flex items-center justify-between mb-6">
@@ -338,11 +554,45 @@ const { id } = useParams();
                     <PieChart className="w-5 h-5 mr-2 text-emerald-600" />
                     กราฟรวม NPK + ความชื้น + ระดับน้ำ (Stacked Area)
                   </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        handleExportCsv("stacked-area", [
+                          "timestamp",
+                          "time",
+                          "nitrogen",
+                          "phosphorus",
+                          "potassium",
+                          "waterLevel",
+                        ])
+                      }
+                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4 inline mr-1" />
+                      CSV
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleExportJson("stacked-area", [
+                          "timestamp",
+                          "time",
+                          "nitrogen",
+                          "phosphorus",
+                          "potassium",
+                          "waterLevel",
+                        ])
+                      }
+                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4 inline mr-1" />
+                      JSON
+                    </button>
+                  </div>
                 </div>
 
                 <div className="h-96">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={historicalData}>
+                    <AreaChart data={filteredHistoricalData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="time" stroke="#6b7280" />
                       <YAxis stroke="#6b7280" />
@@ -382,8 +632,7 @@ const { id } = useParams();
                       />
 
                       {/* ความชื้น (ฟ้า) */}
-                      {/* humidity removed from stacked chart */}
-
+                     
                       {/* ระดับน้ำ (น้ำเงินอมเขียว) */}
                       <Area
                         type="monotone"
@@ -398,16 +647,32 @@ const { id } = useParams();
                   </ResponsiveContainer>
                 </div>
               </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 xl:col-span-2">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                     <BarChart3 className="w-5 h-5 mr-2 text-cyan-600" />
                     สภาพแวดล้อม (ระดับน้ำ )
                   </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleExportCsv("water-level", ["timestamp", "time", "waterLevel"])}
+                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4 inline mr-1" />
+                      CSV
+                    </button>
+                    <button
+                      onClick={() => handleExportJson("water-level", ["timestamp", "time", "waterLevel"])}
+                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4 inline mr-1" />
+                      JSON
+                    </button>
+                  </div>
                 </div>
-                <div className="h-80">
+                <div className="h-96">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={historicalData}>
+                    <AreaChart data={filteredHistoricalData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="time" stroke="#6b7280" />
                       <YAxis stroke="#6b7280" />
@@ -442,14 +707,42 @@ const { id } = useParams();
                     <LineChart className="w-5 h-5 mr-2 text-blue-600" />
                     แนวโน้มค่า NPK
                   </h3>
-                  <button className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                    <Download className="w-4 h-4 inline mr-1" />
-                    ส่งออก
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        handleExportCsv("npk", [
+                          "timestamp",
+                          "time",
+                          "nitrogen",
+                          "phosphorus",
+                          "potassium",
+                        ])
+                      }
+                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4 inline mr-1" />
+                      CSV
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleExportJson("npk", [
+                          "timestamp",
+                          "time",
+                          "nitrogen",
+                          "phosphorus",
+                          "potassium",
+                        ])
+                      }
+                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4 inline mr-1" />
+                      JSON
+                    </button>
+                  </div>
                 </div>
-                <div className="h-80">
+                <div className="h-96">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RechartsLineChart data={historicalData}>
+                    <RechartsLineChart data={filteredHistoricalData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="time" stroke="#6b7280" />
                       <YAxis stroke="#6b7280" />

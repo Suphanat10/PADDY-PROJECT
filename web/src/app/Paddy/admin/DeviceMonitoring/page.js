@@ -142,22 +142,17 @@ const MiniStat = ({ icon: Icon, label, value, trend, color = "slate" }) => {
 // Device Card - การ์ดอุปกรณ์แบบใหม่
 const DeviceCard = ({ device }) => {
   const isOnline = device.status === "online";
-  const isSending = device.is_sending;
 
   return (
     <div className={`group relative bg-white rounded-2xl border-2 transition-all duration-300 overflow-hidden hover:-translate-y-1 ${
       isOnline 
-        ? isSending 
-          ? "border-amber-300 shadow-xl shadow-amber-100/60 hover:shadow-amber-200/80" 
-          : "border-emerald-300 shadow-lg shadow-emerald-100/50 hover:shadow-emerald-200/70"
+        ? "border-emerald-300 shadow-lg shadow-emerald-100/50 hover:shadow-emerald-200/70"
         : "border-slate-200 shadow-md hover:border-slate-300 hover:shadow-lg"
     }`}>
       {/* Status Bar */}
       <div className={`h-2 ${
         isOnline 
-          ? isSending 
-            ? 'bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 animate-pulse' 
-            : 'bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-400'
+          ? 'bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-400'
           : 'bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200'
       }`} />
       
@@ -167,20 +162,18 @@ const DeviceCard = ({ device }) => {
           <div className="flex items-center gap-3">
             <div className={`relative p-3.5 rounded-xl shadow-inner ${
               isOnline 
-                ? isSending 
-                  ? "bg-gradient-to-br from-amber-100 to-orange-100" 
-                  : "bg-gradient-to-br from-emerald-100 to-green-100"
+                ? "bg-gradient-to-br from-emerald-100 to-green-100"
                 : "bg-gradient-to-br from-slate-100 to-slate-200"
             }`}>
               <Server size={24} className={
                 isOnline 
-                  ? isSending ? "text-amber-600" : "text-emerald-600"
+                  ? "text-emerald-600"
                   : "text-slate-400"
               } />
               {isOnline && (
                 <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isSending ? 'bg-amber-400' : 'bg-emerald-400'}`}></span>
-                  <span className={`relative inline-flex rounded-full h-3.5 w-3.5 border-2 border-white ${isSending ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-emerald-400"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 border-2 border-white bg-emerald-500"></span>
                 </span>
               )}
             </div>
@@ -188,13 +181,9 @@ const DeviceCard = ({ device }) => {
               <h4 className="font-black text-slate-800 text-lg tracking-tight">{device.device_code}</h4>
               <div className="flex items-center gap-1.5 mt-1">
                 {isOnline ? (
-                  <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
-                    isSending 
-                      ? 'bg-amber-100 text-amber-700' 
-                      : 'bg-emerald-100 text-emerald-700'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isSending ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></span>
-                    {isSending ? 'กำลังส่งข้อมูล' : 'พร้อมใช้งาน'}
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    ออนไลน์
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
@@ -228,17 +217,11 @@ const DeviceCard = ({ device }) => {
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+        <div className="pt-3 border-t border-slate-100">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
             <Clock size={12} />
             <span>{isOnline ? 'เชื่อมต่ออยู่' : 'ขาดการเชื่อมต่อ'}</span>
           </div>
-          {isSending && (
-            <div className="flex items-center gap-1.5 text-xs font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-full animate-pulse">
-              <Zap size={12} fill="currentColor" />
-              <span>LIVE</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -250,7 +233,7 @@ const DeviceCard = ({ device }) => {
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all"); // all, online, offline, sending
+  const [statusFilter, setStatusFilter] = useState("all"); // all, online, offline
   const [devices, setDevices] = useState([]);
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
@@ -276,11 +259,16 @@ export default function DashboardPage() {
 
   useDeviceWebSocket({
     deviceIds: deviceCodes,
-    onStatus: (deviceCode, status) => {
+    onStatus: (deviceCode, status, reason, timestamp) => {
       setDevices((prev) =>
         prev.map((d) =>
           d.device_code === deviceCode
-            ? { ...d, status, is_sending: status === "online" ? d.is_sending : false }
+            ? { 
+                ...d, 
+                status,
+                statusReason: reason,      
+                statusTimestamp: timestamp  
+              }
             : d
         )
       );
@@ -292,7 +280,6 @@ export default function DashboardPage() {
     total: devices.length,
     online: devices.filter((d) => d.status === "online").length,
     offline: devices.filter((d) => d.status !== "online").length,
-    sending: devices.filter((d) => d.status === "online" && d.is_sending).length,
   }), [devices]);
 
   // Filtered devices
@@ -303,7 +290,6 @@ export default function DashboardPage() {
         if (statusFilter === "all") return true;
         if (statusFilter === "online") return d.status === "online";
         if (statusFilter === "offline") return d.status !== "online";
-        if (statusFilter === "sending") return d.status === "online" && d.is_sending;
         return true;
       });
   }, [devices, searchTerm, statusFilter]);
@@ -374,13 +360,6 @@ export default function DashboardPage() {
                 color="emerald"
               />
               <HeroStat
-                icon={Zap}
-                label="กำลังส่งข้อมูล"
-                value={stats.sending}
-                subLabel="Active streaming"
-                color="amber"
-              />
-              <HeroStat
                 icon={Users}
                 label="ผู้ใช้งานระบบ"
                 value={summary.agriculture_users}
@@ -420,7 +399,6 @@ export default function DashboardPage() {
                       {[
                         { key: "all", label: "ทั้งหมด", count: devices.length },
                         { key: "online", label: "ออนไลน์", count: stats.online },
-                        { key: "sending", label: "กำลังส่ง", count: stats.sending },
                         { key: "offline", label: "ออฟไลน์", count: stats.offline },
                       ].map(({ key, label, count }) => (
                         <button

@@ -32,8 +32,9 @@ export default function Header() {
 
   const NAV_ITEMS = [
     { name: "หน้าหลัก", href: "/Paddy/agriculture/dashboard", icon: LayoutDashboard },
-    { name: "ลงทะเบียนอุปกรณ์", href: "/Paddy/agriculture/registerdevice", icon: PlusCircle },
     { name: "จัดการพื้นที่", href: "/Paddy/agriculture/FarmManagement", icon: Map },
+    { name: "ลงทะเบียนอุปกรณ์", href: "/Paddy/agriculture/registerdevice", icon: PlusCircle },
+    
     { name: "ข้อมูลอุปกรณ์", href: "/Paddy/agriculture/devicelist", icon: Database },
     { name: "จัดการปั๊มน้ำ", href: "/Paddy/agriculture/PumpManagement", icon: Droplets },
     { name: "AI", href: "/Paddy/agriculture/AI", icon: BarChart3 },
@@ -155,7 +156,7 @@ export default function Header() {
               <Sprout className="text-white w-6 h-6" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-gray-900 font-bold text-lg leading-tight">Paddy Smart</h1>
+              <h1 className="text-gray-900 font-bold text-lg leading-tight">Smart Paddy </h1>
               <p className="text-[10px] text-gray-500 font-medium uppercase tracking-widest">IoT Agriculture</p>
             </div>
           </Link>
