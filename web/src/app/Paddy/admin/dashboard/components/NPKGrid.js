@@ -98,7 +98,7 @@ function NPKCard({ label, value, color, icon }) {
 function sensorLevelLabel(value, type) {
   const v = Number(value ?? 0);
   if (type === "N") {
-    const nPercent = v / 10000;
+    const nPercent = (v/0.1) / 10000;
     if (nPercent < 0.05) return "ต่ำมาก";
     if (nPercent <= 0.09) return "ต่ำ";
     if (nPercent <= 0.14) return "ปานกลาง";
@@ -123,5 +123,5 @@ function sensorLevelLabel(value, type) {
 
 function formatNPercent(value) {
   const v = Number(value ?? 0);
-  return (v / 10000).toFixed(4);
+  return ((v / 0.1) / 10000).toFixed(4);
 }

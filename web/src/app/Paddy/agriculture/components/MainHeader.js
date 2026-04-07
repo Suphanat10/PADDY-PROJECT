@@ -1657,14 +1657,41 @@ function useDeviceWebSocket({ deviceIds = [], onSensor, onStatus }) {
       emitJoinEvents();
     });
 
-    socket.on("sensorData", (payload) => {
-      if (payload?.device_code && payload?.data)
-        onSensor(payload.device_code, payload.data);
+    const normalizePacket = (packet, expectedEvent) => {
+      if (Array.isArray(packet)) {
+        if (packet[0] === expectedEvent && packet[1] && typeof packet[1] === "object") {
+          return packet[1];
+        }
+        return null;
+      }
+      if (packet && typeof packet === "object") return packet;
+      return null;
+    };
+
+    socket.on("sensorData", (packet) => {
+      const payload = normalizePacket(packet, "sensorData");
+      const deviceCode =
+        typeof payload?.device_code === "string"
+          ? payload.device_code.trim()
+          : payload?.device_code;
+      const sensorData = payload?.data && typeof payload.data === "object"
+        ? payload.data
+        : payload;
+
+      if (deviceCode && sensorData) {
+        onSensor(deviceCode, sensorData, payload?.measured_at);
+      }
     });
 
-    socket.on("deviceStatus", (payload) => {
-      if (payload?.device_code && payload?.status)
-        onStatus(payload.device_code, payload.status);
+    socket.on("deviceStatus", (packet) => {
+      const payload = normalizePacket(packet, "deviceStatus");
+      const deviceCode =
+        typeof payload?.device_code === "string"
+          ? payload.device_code.trim()
+          : payload?.device_code;
+
+      if (deviceCode && payload?.status)
+        onStatus(deviceCode, payload.status);
     });
 
     return () => {
@@ -1777,15 +1804,17 @@ export default function App() {
 
   // FIX #2: useCallback สำหรับ handleSensorData และ handleStatusChange
   // ใช้ functional updater เพื่อไม่ต้อง depend on farmData
-  const handleSensorData = useCallback((deviceId, incoming) => {
+  const handleSensorData = useCallback((deviceId, incoming, measuredAt) => {
+    const normalizedDeviceId = String(deviceId ?? "").trim().toUpperCase();
     setFarmData((prev) =>
       prev.map((farm) => ({
         ...farm,
         areas: farm.areas.map((area) =>
-          area.device_code === deviceId
+          String(area.device_code ?? "").trim().toUpperCase() === normalizedDeviceId
             ? {
                 ...area,
                 status: "online",
+                measured_at: measuredAt ?? area.measured_at,
                 sensor: {
                   ...area.sensor,
                   n: incoming.N ?? incoming.n ?? area.sensor?.n,
@@ -1805,11 +1834,14 @@ export default function App() {
   }, []);
 
   const handleStatusChange = useCallback((deviceId, status) => {
+    const normalizedDeviceId = String(deviceId ?? "").trim().toUpperCase();
     setFarmData((prev) =>
       prev.map((farm) => ({
         ...farm,
         areas: farm.areas.map((area) =>
-          area.device_code === deviceId ? { ...area, status } : area,
+          String(area.device_code ?? "").trim().toUpperCase() === normalizedDeviceId
+            ? { ...area, status }
+            : area,
         ),
       })),
     );
@@ -1902,10 +1934,10 @@ export default function App() {
   const getNPKLevel = (k, val) => {
     const v = Number(val ?? 0);
     if (k === "N") {
-      const nPercent = v / 10000;
+      const nPercent = (v/0.1) / 10000;
       return {
         level:
-          nPercent < 0.05
+          nPercent <= 0.05
             ? "ต่ำมาก"
             : nPercent <= 0.09
               ? "ต่ำ"
@@ -1968,28 +2000,28 @@ export default function App() {
   const farmInsights = useMemo(() => {
     if (!selectedFarm)
       return { avgN: 0, avgP: 0, avgK: 0, avgWater: 0, activeCount: 0 };
-    const activeAreas = selectedFarm.areas.filter((a) => a.sensor);
+    const deviceCount = selectedFarm.areas.length;
     const onlineCount = selectedFarm.areas.filter(
       (a) => a.status === "online" || a.status === "active",
     ).length;
-    if (activeAreas.length === 0)
+    if (deviceCount === 0)
       return { avgN: 0, avgP: 0, avgK: 0, avgWater: 0, activeCount: onlineCount };
 
-    const total = activeAreas.reduce(
+    const total = selectedFarm.areas.reduce(
       (acc, curr) => ({
-        n: acc.n + (Number(curr.sensor.n) || 0),
-        p: acc.p + (Number(curr.sensor.p) || 0),
-        k: acc.k + (Number(curr.sensor.k) || 0),
-        water: acc.water + (Number(curr.sensor.water_level) || 0),
+        n: acc.n + (Number(curr.sensor?.n) || 0),
+        p: acc.p + (Number(curr.sensor?.p) || 0),
+        k: acc.k + (Number(curr.sensor?.k) || 0),
+        water: acc.water + (Number(curr.sensor?.water_level) || 0),
       }),
       { n: 0, p: 0, k: 0, water: 0 },
     );
 
     return {
-      avgN: Math.round(total.n / activeAreas.length),
-      avgP: Math.round(total.p / activeAreas.length),
-      avgK: Math.round(total.k / activeAreas.length),
-      avgWater: Math.round(total.water / activeAreas.length),
+      avgN: Math.round(total.n / deviceCount),
+      avgP: Math.round(total.p / deviceCount),
+      avgK: Math.round(total.k / deviceCount),
+      avgWater: Math.round(total.water / deviceCount),
       activeCount: onlineCount,
     };
   }, [selectedFarm]);
@@ -2410,10 +2442,10 @@ export default function App() {
                   const n_mgkg = Number(area.sensor?.n ?? 0);
                   const p_mgkg = Number(area.sensor?.p ?? 0);
                   const k_mgkg = Number(area.sensor?.k ?? 0);
-                  const nPercent = (n_mgkg) / 10000;
+                  const nPercent = (n_mgkg / 0.1) / 10000;
 
                   const getNLevel = (value) => {
-                    if (value < 0.05) return "ต่ำมาก";
+                    if (value <= 0.05) return "ต่ำมาก";
                     if (value <= 0.09) return "ต่ำ";
                     if (value <= 0.14) return "ปานกลาง";
                     return "สูง";
@@ -2442,14 +2474,19 @@ export default function App() {
                   const hasNoSensorData =
                     !area.sensor ||
                     (area.sensor.water_level == null && area.sensor.n == null);
-                  const isOffline = area.status === "offline";
+                  const hasRecentSensorPayload =
+                    area?.measured_at != null ||
+                    area?.sensor?.water_level != null ||
+                    area?.sensor?.n != null ||
+                    area?.sensor?.p != null ||
+                    area?.sensor?.k != null;
+                  const shouldShowSocketLoading =
+                    hasNoSensorData &&
+                    !hasRecentSensorPayload &&
+                    area.status !== "online" &&
+                    area.status !== "active";
 
-                  if (
-                    isOffline ||
-                    (hasNoSensorData &&
-                      area.status !== "online" &&
-                      area.status !== "active")
-                  ) {
+                  if (shouldShowSocketLoading) {
                     return (
                       <div
                         key={area.area_id}

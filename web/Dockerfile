@@ -12,7 +12,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json package-lock.json* ./
 
-RUN --mount=type=cache,id=npm-cache,target=/root/.npm npm ci --omit=optional --no-audit --no-fund --prefer-offline --progress=false
+RUN --mount=type=cache,id=npm-cache,target=/root/.npm npm ci --no-audit --no-fund --prefer-offline --progress=false
 
 # -------------------------
 # Build
@@ -37,8 +37,8 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV NODE_OPTIONS="--max-old-space-size=1024"
 
-RUN addgroup -S nodejs -g 1001 \
-  && adduser -S nextjs -u 1001 -G nodejs
+RUN groupadd -g 1001 nodejs \
+  && useradd -u 1001 -g nodejs -m -s /usr/sbin/nologin nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static

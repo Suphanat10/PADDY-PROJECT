@@ -119,7 +119,7 @@ const SensorDisplayCard = ({ label, value, unit, icon: Icon, gradientFrom, gradi
   const n_mgkg = Number(value ?? 0);
   const p_mgkg = Number(value ?? 0);
   const k_mgkg = Number(value ?? 0);
-  const nPercent = n_mgkg / 10000;
+  const nPercent = (n_mgkg /0.1) / 10000;
 
   const getNLevel = (val) => {
     if (val < 0.05) return "ต่ำมาก";
