@@ -260,9 +260,10 @@ export default function DashboardPage() {
   useDeviceWebSocket({
     deviceIds: deviceCodes,
     onStatus: (deviceCode, status, reason, timestamp) => {
+      const normalizedIncoming = String(deviceCode || "").trim().toUpperCase();
       setDevices((prev) =>
         prev.map((d) =>
-          d.device_code === deviceCode
+          String(d.device_code || "").trim().toUpperCase() === normalizedIncoming
             ? { 
                 ...d, 
                 status,

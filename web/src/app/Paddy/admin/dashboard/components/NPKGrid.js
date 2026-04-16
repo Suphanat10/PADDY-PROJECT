@@ -8,19 +8,22 @@ import { Sprout, Droplets, Zap, Thermometer, Loader2 } from "lucide-react";
 export function NPKGrid({ sensor }) {
   const items = [
     {
-      label: "ไนโตรเจน (N)",
+      label: "อินทรียวัตถุ (N)",
+      type: "N",
       value: sensor.n,
       color: "emerald",
       icon: <Sprout size={16} />,
     },
     {
       label: "ฟอสฟอรัส (P)",
+      type: "P",
       value: sensor.p,
       color: "orange",
       icon: <Droplets size={16} />,
     },
     {
       label: "โพแทสเซียม (K)",
+      type: "K",
       value: sensor.k,
       color: "purple",
       icon: <Zap size={16} />,
@@ -39,7 +42,7 @@ export function NPKGrid({ sensor }) {
 /**
  * Individual NPK Card
  */
-function NPKCard({ label, value, color, icon }) {
+function NPKCard({ label, type, value, color, icon }) {
   const colorClasses = {
     emerald: "text-emerald-500",
     orange: "text-orange-500",
@@ -72,22 +75,24 @@ function NPKCard({ label, value, color, icon }) {
         )}
       </div>
       {/* แสดงระดับปุ๋ย หากมี */}
-      {hasData && label.includes("ไนโตรเจน") && (
+      {hasData && (
         <div className="mt-2 text-right">
-          <span className="text-xs font-bold text-emerald-600">ระดับ: {sensorLevelLabel(value, 'N')}</span>
-          <div>
-            <span className="text-[11px] font-semibold text-emerald-500">N%: {formatNPercent(value)}</span>
-          </div>
-        </div>
-      )}
-      {hasData && label.includes("ฟอสฟอรัส") && (
-        <div className="mt-2 text-right">
-          <span className="text-xs font-bold text-orange-600">ระดับ: {sensorLevelLabel(value, 'P')}</span>
-        </div>
-      )}
-      {hasData && label.includes("โพแทสเซียม") && (
-        <div className="mt-2 text-right">
-          <span className="text-xs font-bold text-purple-600">ระดับ: {sensorLevelLabel(value, 'K')}</span>
+          <span className={`text-xs font-bold ${
+            type === "N"
+              ? "text-emerald-600"
+              : type === "P"
+                ? "text-orange-600"
+                : "text-purple-600"
+          }`}>
+            ระดับ: {sensorLevelLabel(value, type)}
+          </span>
+          {type === "N" && (
+            <div>
+              <span className="text-[11px] font-semibold text-emerald-500">
+              อินทรียวัตถุ (N): {formatNBy500(value)}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -98,30 +103,25 @@ function NPKCard({ label, value, color, icon }) {
 function sensorLevelLabel(value, type) {
   const v = Number(value ?? 0);
   if (type === "N") {
-    const nPercent = (v/0.1) / 10000;
-    if (nPercent < 0.05) return "ต่ำมาก";
-    if (nPercent <= 0.09) return "ต่ำ";
-    if (nPercent <= 0.14) return "ปานกลาง";
-    return "สูง";
+    const n_mgkg = v;
+    const calculatedOM = n_mgkg / 500;
+    const omLevel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM >= 1.0 && calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
+    return omLevel;
   }
   if (type === "P") {
-    if (v < 3) return "ต่ำมาก";
-    if (v <= 10) return "ต่ำ";
-    if (v <= 25) return "ปานกลาง";
-    if (v <= 45) return "สูง";
-    return "สูงมาก";
+    const p_mgkg = v;
+    const pLevel = p_mgkg < 5 ? "ต่ำ" : p_mgkg >= 5 && p_mgkg <= 10 ? "ปานกลาง" : "สูง";
+    return pLevel;
   }
   if (type === "K") {
-    if (v < 31) return "ต่ำมาก";
-    if (v <= 60) return "ต่ำ";
-    if (v <= 90) return "ปานกลาง";
-    if (v <= 120) return "สูง";
-    return "สูงมาก";
+    const k_mgkg = v;
+    const kLevel = k_mgkg < 60 ? "ต่ำ" : k_mgkg >= 60 && k_mgkg <= 80 ? "ปานกลาง" : "สูง";
+    return kLevel;
   }
   return "";
 }
 
-function formatNPercent(value) {
+function formatNBy500(value) {
   const v = Number(value ?? 0);
-  return ((v / 0.1) / 10000).toFixed(4);
+  return (v / 500).toFixed(2);
 }

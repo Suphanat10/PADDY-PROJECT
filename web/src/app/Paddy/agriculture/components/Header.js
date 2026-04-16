@@ -7,7 +7,7 @@ import {
   Bell, Settings, User, ChevronDown, Menu, X, Sprout,
   LogOut, Shield, Activity, FileText, LayoutDashboard,
   PlusCircle, Database, BarChart3, Map, ChevronRight,
-  Clock, Droplets
+  Clock, Droplets, ExternalLink
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import Swal from "sweetalert2";
@@ -65,6 +65,38 @@ export default function Header() {
     });
   };
 
+  const formatNotificationLines = (message) => {
+    if (!message) return [];
+
+    const normalized = message
+      .replace(/\r\n/g, "\n")
+      .replace(/\s*[-]{6,}\s*/g, "\n----------------------\n")
+      .replace(/\s*([•-])\s+/g, "\n$1 ")
+      .replace(/\s*(คำแนะนำรายธาตุ:|ระยะการเจริญเติบโต:|คำแนะนำตามระยะ:|สถานะธาตุอาหาร:|💊 คำแนะนำการใส่ปุ๋ย:)/g, "\n$1")
+      .trim();
+
+    return normalized
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+  };
+
+  const getNotificationLineStyle = (line, index) => {
+    if (index === 0) return "text-sm font-bold text-gray-900";
+    if (line === "----------------------") return "text-[10px] text-gray-300 tracking-wider";
+    if (/^(คำแนะนำรายธาตุ:|ระยะการเจริญเติบโต:|คำแนะนำตามระยะ:|สถานะธาตุอาหาร:|💊 คำแนะนำการใส่ปุ๋ย:)/.test(line)) {
+      return "text-[12px] font-semibold text-emerald-700 mt-2";
+    }
+    if (/^[•-]\s/.test(line)) return "text-[12px] leading-relaxed text-gray-700 pl-2";
+    return "text-[12px] leading-relaxed text-gray-700";
+  };
+
+  const isThreePartType = (type) => {
+    if (typeof type !== "string") return false;
+    const parts = type.split("-").map((p) => p.trim()).filter(Boolean);
+    return parts.length === 3;
+  };
+
   const handleMarkAsRead = (id) => {
     setNotifications(prev =>
       prev.map(notif => notif.id === id ? { ...notif, unread: false } : notif)
@@ -103,6 +135,7 @@ export default function Header() {
           (device.logs_alert || []).map(log => ({
             id: log.logs_alert_ID,
             title: log.alert_message,
+            type: log.type || log.alert_type || "",
             subTitle: `อุปกรณ์ ID: ${device.device_ID}`,
             time: formatTimeAgo(log.created_at),
             unread: true,
@@ -218,8 +251,32 @@ export default function Header() {
                           <div className="flex items-start">
                             <div className={`w-2 h-2 mt-1.5 rounded-full ${notif.unread ? 'bg-emerald-500' : 'bg-transparent'}`}></div>
                             <div className="ml-3 flex-1">
-                              <p className={`text-sm leading-tight ${notif.unread ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{notif.title}</p>
+                              <div className="bg-white/80 rounded-lg border border-gray-100 p-3">
+                                {formatNotificationLines(notif.title).map((line, index) => (
+                                  <p
+                                    key={`${notif.id}-${index}`}
+                                    className={getNotificationLineStyle(line, index)}
+                                  >
+                                    {line}
+                                  </p>
+                                ))}
+                              </div>
                               <p className="text-[11px] text-gray-500 mt-1">{notif.subTitle}</p>
+                              {isThreePartType(notif.type) && (
+                                <div className="mt-2 flex items-center justify-between gap-2">
+                                  <p className="text-[10px] text-emerald-700 font-medium">ประเภทค่าวิเคราะห์: {notif.type}</p>
+                                  <a
+                                    href="https://ppsf.doae.go.th/wp-content/uploads/2024/11/%E0%B8%84%E0%B8%B3%E0%B9%81%E0%B8%99%E0%B8%B0%E0%B8%99%E0%B8%B3%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%9B%E0%B8%B8%E0%B9%8B%E0%B8%A2%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%84%E0%B9%88%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B9%80%E0%B8%84%E0%B8%A3%E0%B8%B2%E0%B8%B0%E0%B8%AB%E0%B9%8C%E0%B8%94%E0%B8%B4%E0%B8%99.pdf"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                   อ้างอิงข้อมูลเพิ่มเติม
+                                  </a>
+                                </div>
+                              )}
                               <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {notif.time} ({formatFullDateTime(notif.created_at)})

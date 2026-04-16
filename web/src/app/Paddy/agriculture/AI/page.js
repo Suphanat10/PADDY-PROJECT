@@ -429,17 +429,11 @@ import {
   Cpu,
   UserCircle,
   XCircle,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
-  Check,
-  X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
 import Header from "../components/Header";
 import Footer from "@/app/components/Footer";
-import ImagePreviewEditor from "./ImagePreviewEditor";
 import { loadGrowthAnalysis } from "@/lib/growthAnalysis/loadGrowthAnalysis";
 import { fetchGrowthAnalysisApi } from "@/lib/growthAnalysis/fetchGrowthAnalysisApi";
 import Swal from "sweetalert2";
@@ -462,16 +456,7 @@ export default function SmartRiceMonitoring() {
 
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
-  const [selectedImageView, setSelectedImageView] = useState(null);
   const [selectedAnalysisView, setSelectedAnalysisView] = useState(null);
-  
-  // Preview and Cropper states
-  const [previewImage, setPreviewImage] = useState(null);
-  const [showCropper, setShowCropper] = useState(false);
-  const cropperInstanceRef = useRef(null);
-  const cropperElementsReadyRef = useRef(false);
-  const imageRef = useRef(null);
-  const [pendingFile, setPendingFile] = useState(null);
 
   useEffect(() => {
     const init = async () => {
@@ -509,198 +494,15 @@ export default function SmartRiceMonitoring() {
       return;
     }
 
-    // Use crop editor only for disease analysis mode.
-    if (activeTab === "disease") {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setPreviewImage(event.target.result);
-        setPendingFile(file);
-        setShowCropper(true);
-      };
-      reader.readAsDataURL(file);
-      return;
-    }
-
-    // Growth mode uploads directly without crop editor.
-    await handleCropAndUpload(file);
+    await handleUpload(file);
     if (e.target) e.target.value = null;
   };
-
-  // Initialize cropper after image loads
-  useEffect(() => {
-    if (showCropper && imageRef.current && !cropperInstanceRef.current) {
-      // On-demand: register only required Cropper custom elements before creating instance
-      Promise.all([
-        import("cropperjs"),
-        import("@cropper/element-canvas"),
-        import("@cropper/element-image"),
-        import("@cropper/element-handle"),
-      ]).then(([cropperModule, canvasModule, imageModule, handleModule]) => {
-        const CropperLib = cropperModule.default || cropperModule;
-        const CropperCanvas = canvasModule.default || canvasModule;
-        const CropperImage = imageModule.default || imageModule;
-        const CropperHandle = handleModule.default || handleModule;
-
-        if (!cropperElementsReadyRef.current) {
-          CropperCanvas.$define?.();
-          CropperImage.$define?.();
-          CropperHandle.$define?.();
-          cropperElementsReadyRef.current = true;
-        }
-
-        cropperInstanceRef.current = new CropperLib(imageRef.current, {
-          aspectRatio: NaN,
-          viewMode: 1,
-          autoCropArea: 1,
-          responsive: true,
-          minContainerHeight: 420,
-          guides: true,
-          highlight: true,
-          cropBoxMovable: true,
-          cropBoxResizable: true,
-          toggleDragModeOnDblclick: true,
-        });
-
-        const ratio = imageRef.current?.naturalWidth / Math.max(1, imageRef.current?.naturalHeight || 1);
-        const applyInitialFit = () => {
-          const cropperImage = cropperInstanceRef.current?.getCropperImage?.();
-          if (!cropperImage) return;
-
-          cropperImage.$center?.("cover");
-          if (typeof cropperImage.$zoom === "function") {
-            const initialZoom = ratio > 2.2 ? 2.8 : ratio > 1.7 ? 2.0 : 1.4;
-            cropperImage.$zoom(initialZoom);
-          }
-        };
-
-        // Wait for custom elements to render, then force fit/zoom.
-        setTimeout(applyInitialFit, 30);
-      });
-    }
-
-    return () => {
-      // Cleanup cropper when modal closes
-      if (!showCropper && cropperInstanceRef.current) {
-        cropperInstanceRef.current.destroy();
-        cropperInstanceRef.current = null;
-      }
-    };
-  }, [showCropper]);
-
-  // Handle zoom in
-  const handleZoomIn = () => {
-    if (cropperInstanceRef.current) {
-      if (typeof cropperInstanceRef.current.zoom === "function") {
-        cropperInstanceRef.current.zoom(0.1);
-        return;
-      }
-      const cropperImage = cropperInstanceRef.current.getCropperImage?.();
-      if (cropperImage && typeof cropperImage.$zoom === "function") {
-        cropperImage.$zoom(0.1);
-        return;
-      }
-      const selection = cropperInstanceRef.current.getCropperSelection?.();
-      if (selection && typeof selection.$zoom === "function") {
-        selection.$zoom(0.1);
-      }
-    }
-  };
-
-  // Handle zoom out
-  const handleZoomOut = () => {
-    if (cropperInstanceRef.current) {
-      if (typeof cropperInstanceRef.current.zoom === "function") {
-        cropperInstanceRef.current.zoom(-0.1);
-        return;
-      }
-      const cropperImage = cropperInstanceRef.current.getCropperImage?.();
-      if (cropperImage && typeof cropperImage.$zoom === "function") {
-        cropperImage.$zoom(-0.1);
-        return;
-      }
-      const selection = cropperInstanceRef.current.getCropperSelection?.();
-      if (selection && typeof selection.$zoom === "function") {
-        selection.$zoom(-0.1);
-      }
-    }
-  };
-
-  // Handle reset
-  const handleReset = () => {
-    if (cropperInstanceRef.current) {
-      if (typeof cropperInstanceRef.current.reset === "function") {
-        cropperInstanceRef.current.reset();
-        return;
-      }
-      const cropperImage = cropperInstanceRef.current.getCropperImage?.();
-      if (cropperImage && typeof cropperImage.$resetTransform === "function") {
-        cropperImage.$resetTransform();
-        cropperImage.$center?.("cover");
-        if (typeof cropperImage.$zoom === "function") {
-          const ratio = imageRef.current?.naturalWidth / Math.max(1, imageRef.current?.naturalHeight || 1);
-          const initialZoom = ratio > 2.2 ? 2.8 : ratio > 1.7 ? 2.0 : 1.4;
-          cropperImage.$zoom(initialZoom);
-        }
-      }
-      const selection = cropperInstanceRef.current.getCropperSelection?.();
-      if (selection && typeof selection.$reset === "function") {
-        selection.$reset();
-      }
-    }
-  };
-
-  const getCanvasFromCropper = async () => {
-    const cropper = cropperInstanceRef.current;
-
-    if (!cropper) {
-      throw new Error("ไม่พบตัวแก้ไขภาพ");
-    }
-
-    // Cropper.js v1 API
-    if (typeof cropper.getCroppedCanvas === "function") {
-      const canvas = cropper.getCroppedCanvas();
-      if (canvas) return canvas;
-    }
-
-    // Cropper.js v2 API (selection first)
-    const selection = cropper.getCropperSelection?.();
-    if (selection && typeof selection.$toCanvas === "function") {
-      return await selection.$toCanvas();
-    }
-
-    // Fallback to full cropper canvas in v2
-    const cropperCanvas = cropper.getCropperCanvas?.();
-    if (cropperCanvas && typeof cropperCanvas.$toCanvas === "function") {
-      return await cropperCanvas.$toCanvas();
-    }
-
-    throw new Error("ไม่สามารถครอปรูปภาพได้");
-  };
-
-  // Handle crop and upload
-  const handleCropAndUpload = async (fileFromEditor) => {
-    if (!pendingFile && !fileFromEditor) return;
+  // Handle direct upload
+  const handleUpload = async (uploadFile) => {
+    if (!uploadFile) return;
 
     try {
       setIsUploading(true);
-      let uploadFile = fileFromEditor;
-
-      if (!uploadFile) {
-        if (!cropperInstanceRef.current) return;
-        const canvas = await getCanvasFromCropper();
-
-        const blob = await new Promise((resolve, reject) => {
-          canvas.toBlob((result) => {
-            if (result) {
-              resolve(result);
-            } else {
-              reject(new Error("ไม่สามารถแปลงรูปภาพได้"));
-            }
-          }, "image/jpeg", 0.95);
-        });
-
-        uploadFile = new File([blob], pendingFile.name, { type: "image/jpeg" });
-      }
 
       const selectedDevice = devicesList.find((dev) => dev.reg_id === parseInt(selectedDeviceRegId));
       const deviceCode = selectedDevice ? selectedDevice.device_code : "Unknown";
@@ -721,10 +523,6 @@ export default function SmartRiceMonitoring() {
           icon: "success",
           confirmButtonColor: "#10b981"
         });
-        // Close modal and reset
-        setShowCropper(false);
-        setPreviewImage(null);
-        setPendingFile(null);
         if (fileInputRef.current) fileInputRef.current.value = null;
         window.location.reload();
       } else if (res && (res.status === 422 || res.error === "Validation Error" || res.message)) {
@@ -741,21 +539,13 @@ export default function SmartRiceMonitoring() {
       console.error("Upload error:", error);
       Swal.fire({ 
         title: "ตรวจสอบข้อมูล",
-        text: error?.message || "เกิดข้อผิดพลาดขณะครอปหรืออัปโหลด",
+        text: error?.message || "เกิดข้อผิดพลาดขณะอัปโหลด",
         icon: "error", 
         confirmButtonColor: "#ef4444" 
       });
     } finally {
       setIsUploading(false);
     }
-  };
-
-  // Handle close cropper
-  const handleCloseCropper = () => {
-    setShowCropper(false);
-    setPreviewImage(null);
-    setPendingFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = null;
   };
 
   // ---- group data into 3 buckets ----
@@ -790,9 +580,9 @@ export default function SmartRiceMonitoring() {
   const UploadSection = () => (
     <div className="space-y-4">
       <div
-        onClick={!isUploading && !showCropper ? triggerFileInput : undefined}
+        onClick={!isUploading ? triggerFileInput : undefined}
         className={`bg-white rounded-3xl p-8 border-2 border-dashed transition-all text-center ${
-          isUploading || showCropper ? "border-gray-200 cursor-not-allowed" : "border-emerald-200 hover:border-emerald-400 cursor-pointer group"
+          isUploading ? "border-gray-200 cursor-not-allowed" : "border-emerald-200 hover:border-emerald-400 cursor-pointer group"
         }`}
       >
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
@@ -811,9 +601,7 @@ export default function SmartRiceMonitoring() {
               {activeTab === "growth" ? "วิเคราะห์การเติบโตใหม่" : "วิเคราะห์สุขภาพข้าวใหม่"}
             </h3>
             <p className="text-xs text-gray-500 mb-6 px-4">
-              {activeTab === "disease"
-                ? "อัปโหลดรูปภาพใบข้าวและครอปเฉพาะจุดที่เป็นโรค ก่อนส่งให้ AI วิเคราะห์"
-                : "อัปโหลดรูปภาพใบข้าวเพื่อให้ AI วิเคราะห์การเจริญเติบโตทันที"}
+              อัปโหลดรูปภาพใบข้าวเพื่อให้ AI วิเคราะห์ทันที
             </p>
             <button className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all">
               เลือกจากคลังภาพ / ถ่ายรูป
@@ -830,67 +618,13 @@ export default function SmartRiceMonitoring() {
             <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">
               {activeTab === "growth"
                 ? "ควรถ่ายภาพจากด้านข้างให้เห็นความสูงของต้นข้าวเมื่อเทียบกับวัตถุอ้างอิง"
-                : "ควรซูมภาพให้เห็นรอยโรคบนใบข้าวอย่างชัดเจนและมีแสงสว่างเพียงพอ"}
+                : "ควรถ่ายภาพให้เห็นรอยโรคบนใบข้าวอย่างชัดเจนและมีแสงสว่างเพียงพอ"}
             </p>
           </div>
         </div>
       </div>
     </div>
   );
-
-  // Image Preview Modal with Cropper
-  const ImagePreviewModal = () => {
-    if (!showCropper || !previewImage) return null;
-
-    return (
-      <ImagePreviewEditor
-        imageUrl={previewImage}
-        aspectRatio={1.6}
-        onCancel={handleCloseCropper}
-        onCropComplete={async ({ file }) => {
-          setShowCropper(false);
-          setPreviewImage(null);
-          setPendingFile(null);
-          await handleCropAndUpload(file);
-        }}
-      />
-    );
-  };
-
-  const FullImageModal = () => {
-    if (!selectedImageView?.url) return null;
-
-    return (
-      <div
-        className="fixed inset-0 z-70 bg-black/70 flex items-center justify-center p-4"
-        onClick={() => setSelectedImageView(null)}
-      >
-        <div
-          className="relative w-full max-w-5xl bg-white rounded-2xl overflow-hidden shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={() => setSelectedImageView(null)}
-            className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-black/60 text-white hover:bg-black/80 flex items-center justify-center"
-            aria-label="ปิดรูปภาพ"
-          >
-            ×
-          </button>
-          <div className="bg-black/90 max-h-[78vh] overflow-auto">
-            <img
-              src={selectedImageView.url}
-              alt={selectedImageView.alt || "ภาพวิเคราะห์"}
-              className="w-full h-auto object-contain"
-            />
-          </div>
-          <div className="px-4 py-3 border-t border-gray-100 bg-white">
-            <p className="text-xs text-gray-600">แตะนอกกรอบเพื่อปิดภาพ</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const AnalysisDetailModal = () => {
     if (!selectedAnalysisView) return null;
@@ -924,13 +658,9 @@ export default function SmartRiceMonitoring() {
 
           <div className="p-5 space-y-4">
             {selectedAnalysisView.image_url && (
-              <button
-                type="button"
-                onClick={() => setSelectedImageView({ url: selectedAnalysisView.image_url, alt: name })}
-                className="w-full h-56 md:h-72 rounded-xl overflow-hidden bg-gray-100"
-              >
+              <div className="w-full h-56 md:h-72 rounded-xl overflow-hidden bg-gray-100">
                 <img src={selectedAnalysisView.image_url} alt={name} className="w-full h-full object-cover" />
-              </button>
+              </div>
             )}
 
             <div className="flex flex-wrap items-center gap-2">
@@ -1005,30 +735,13 @@ export default function SmartRiceMonitoring() {
       >
         <div className="flex flex-col md:flex-row gap-4">
           {/* thumbnail */}
-          <button
-            type="button"
-            className="w-full md:w-28 h-28 rounded-xl overflow-hidden bg-gray-50 shrink-0 flex items-center justify-center group relative"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (item.image_url) {
-                setSelectedImageView({ url: item.image_url, alt: name });
-              }
-            }}
-            aria-label="ดูภาพขนาดใหญ่"
-          >
+          <div className="w-full md:w-28 h-28 rounded-xl overflow-hidden bg-gray-50 shrink-0 flex items-center justify-center relative">
             {item.image_url ? (
-              <>
-                <img src={item.image_url} className="w-full h-full object-cover" alt="Rice" />
-                <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] px-2 py-1 rounded-full bg-white/90 text-gray-700 font-semibold">
-                    ดูรูปใหญ่
-                  </span>
-                </span>
-              </>
+              <img src={item.image_url} className="w-full h-full object-cover" alt="Rice" />
             ) : (
               <span className="text-3xl">🌾</span>
             )}
-          </button>
+          </div>
 
           <div className="flex-1 min-w-0">
             {/* top row: stage badge + date */}
@@ -1049,7 +762,7 @@ export default function SmartRiceMonitoring() {
             {/* confidence */}
             {item.confidence !== undefined && item.confidence !== null && (
               <p className="text-[11px] text-gray-400 mb-1">
-                ความแม่นยำ <span className="font-bold text-emerald-600">{(item.confidence * 100).toFixed(1)}%</span>
+                ค่าความเชื่อมัน <span className="font-bold text-emerald-600">{(item.confidence * 100).toFixed(1)}%</span>
               </p>
             )}
 
@@ -1135,8 +848,6 @@ export default function SmartRiceMonitoring() {
   return (
     <div className="min-h-screen bg-gray-50/50">
       <Header />
-      <ImagePreviewModal />
-      <FullImageModal />
       <AnalysisDetailModal />
       <div className="p-4 md:p-8">
         <div className="max-w-6xl mx-auto">

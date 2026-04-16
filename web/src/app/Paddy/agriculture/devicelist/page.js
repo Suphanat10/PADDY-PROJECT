@@ -756,9 +756,10 @@ export default function DeviceListPage() {
         setLoading(false);
       },
       onStatusUpdate: (deviceId, status, reason, timestamp) => {
+        const normalizedIncoming = String(deviceId || "").trim().toUpperCase();
         setSensorDevices((prev) =>
           prev.map((dev) =>
-            dev.device_code === deviceId
+            String(dev.device_code || "").trim().toUpperCase() === normalizedIncoming
               ? {
                   ...dev,
                   status: status === "online" ? "connected" : "disconnected",

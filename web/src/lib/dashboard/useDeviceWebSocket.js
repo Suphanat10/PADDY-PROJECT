@@ -1,10 +1,24 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { io } from "socket.io-client";
 
 export function useDeviceWebSocket({ deviceIds, onStatus }) {
   const socketRef = useRef(null);
+  const onStatusRef = useRef(onStatus);
+
+  useEffect(() => {
+    onStatusRef.current = onStatus;
+  }, [onStatus]);
+
+  const idsKey = useMemo(() => {
+    if (!Array.isArray(deviceIds)) return "";
+    return deviceIds
+      .map((id) => String(id || "").trim().toUpperCase())
+      .filter(Boolean)
+      .sort()
+      .join("|");
+  }, [deviceIds]);
 
   useEffect(() => {
     // 1. ตรวจสอบว่ามี ID อุปกรณ์ส่งมาหรือไม่
@@ -28,9 +42,19 @@ export function useDeviceWebSocket({ deviceIds, onStatus }) {
     });
 
     socket.on("deviceStatus", (msg) => {
-      if (msg && msg.device_code) {
-        // ✅ ส่ง device_code, status, reason, และ timestamp ไปที่ callback
-        onStatus?.(msg.device_code, msg.status, msg.reason, msg.timestamp);
+      const body = Array.isArray(msg) ? msg[1] : msg;
+      if (body && body.device_code) {
+        // Support both object and wrapped array payload formats.
+        onStatusRef.current?.(body.device_code, body.status, body.reason, body.timestamp);
+      }
+    });
+
+    socket.onAny((eventName, payload) => {
+      if (!Array.isArray(payload)) return;
+      if (payload[0] !== "deviceStatus") return;
+      const body = payload[1];
+      if (body && body.device_code) {
+        onStatusRef.current?.(body.device_code, body.status, body.reason, body.timestamp);
       }
     });
 
@@ -47,10 +71,11 @@ export function useDeviceWebSocket({ deviceIds, onStatus }) {
       if (socket) {
         socket.off("connect");
         socket.off("deviceStatus");
+        socket.offAny();
         socket.off("disconnect");
         socket.off("connect_error");
         socket.disconnect();
       }
     };
-  }, [deviceIds]); 
+  }, [idsKey]); 
 }

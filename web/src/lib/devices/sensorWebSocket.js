@@ -66,6 +66,57 @@ export function createSensorWebSocket({
   }
 });
 
+  socket.on("deviceStatus", (payload) => {
+    try {
+      // Support both formats:
+      // 1) { device_code, status, timestamp, reason }
+      // 2) ["deviceStatus", { device_code, status, timestamp, reason }]
+      const body = Array.isArray(payload)
+        ? payload[1]
+        : payload;
+
+      const deviceId = body?.device_code;
+      const status = body?.status;
+      const timestamp = body?.timestamp || new Date().toISOString();
+      const reason = body?.reason;
+
+      if (!deviceId || !status) return;
+
+      resetDeviceTimer(deviceId, onStatusUpdate);
+      onStatusUpdate?.(deviceId, status, reason, timestamp);
+    } catch (err) {
+      console.error("❌ deviceStatus parse error:", err);
+      onError?.(err);
+    }
+  });
+
+  socket.onAny((eventName, payload) => {
+    try {
+      // Some backends may wrap as: ["deviceStatus", {...}] under generic events.
+      const isWrappedStatusPacket =
+        Array.isArray(payload) &&
+        payload[0] === "deviceStatus" &&
+        payload[1] &&
+        typeof payload[1] === "object";
+
+      if (!isWrappedStatusPacket) return;
+
+      const body = payload[1];
+      const deviceId = body?.device_code;
+      const status = body?.status;
+      const timestamp = body?.timestamp || new Date().toISOString();
+      const reason = body?.reason;
+
+      if (!deviceId || !status) return;
+
+      resetDeviceTimer(deviceId, onStatusUpdate);
+      onStatusUpdate?.(deviceId, status, reason, timestamp);
+    } catch (err) {
+      console.error("❌ onAny status parse error:", err, eventName);
+      onError?.(err);
+    }
+  });
+
   socket.on("disconnect", (reason) => {
     console.log("⚠️ Socket.IO Disconnected:", reason);
     onDisconnected?.();

@@ -1934,32 +1934,28 @@ export default function App() {
   const getNPKLevel = (k, val) => {
     const v = Number(val ?? 0);
     if (k === "N") {
-      const nPercent = (v/0.1) / 10000;
+      const calculatedOM = v / 500;
       return {
         level:
-          nPercent <= 0.05
-            ? "ต่ำมาก"
-            : nPercent <= 0.09
-              ? "ต่ำ"
-              : nPercent <= 0.14
-                ? "ปานกลาง"
-                : "สูง",
-        nPercent,
+          calculatedOM < 1.0
+            ? "ต่ำ"
+            : calculatedOM >= 1.0 && calculatedOM <= 2.0
+              ? "ปานกลาง"
+              : "สูง",
+        nBy500: calculatedOM,
       };
     }
     if (k === "P") {
-      if (v < 3) return { level: "ต่ำมาก" };
-      if (v <= 10) return { level: "ต่ำ" };
-      if (v <= 25) return { level: "ปานกลาง" };
-      if (v <= 45) return { level: "สูง" };
-      return { level: "สูงมาก" };
+      return {
+        level:
+          v < 5 ? "ต่ำ" : v >= 5 && v <= 10 ? "ปานกลาง" : "สูง",
+      };
     }
     if (k === "K") {
-      if (v < 31) return { level: "ต่ำมาก" };
-      if (v <= 60) return { level: "ต่ำ" };
-      if (v <= 90) return { level: "ปานกลาง" };
-      if (v <= 120) return { level: "สูง" };
-      return { level: "สูงมาก" };
+      return {
+        level:
+          v < 60 ? "ต่ำ" : v >= 60 && v <= 80 ? "ปานกลาง" : "สูง",
+      };
     }
     return { level: "", om: 0 };
   };
@@ -2392,7 +2388,7 @@ export default function App() {
                         <p className="text-lg font-black text-slate-700">{val}</p>
                         {k === "N" && (
                           <p className="text-xs text-slate-400 mt-1">
-                            ค่า N (%): {Number(info.nPercent ?? 0).toFixed(4)}
+                            ค่าอินทรียวัตถุ (N/500): {Number(info.nBy500 ?? 0).toFixed(2)}
                           </p>
                         )}
                       </div>
@@ -2442,34 +2438,10 @@ export default function App() {
                   const n_mgkg = Number(area.sensor?.n ?? 0);
                   const p_mgkg = Number(area.sensor?.p ?? 0);
                   const k_mgkg = Number(area.sensor?.k ?? 0);
-                  const nPercent = (n_mgkg / 0.1) / 10000;
-
-                  const getNLevel = (value) => {
-                    if (value <= 0.05) return "ต่ำมาก";
-                    if (value <= 0.09) return "ต่ำ";
-                    if (value <= 0.14) return "ปานกลาง";
-                    return "สูง";
-                  };
-
-                  const getPLevel = (value) => {
-                    if (value < 3) return "ต่ำมาก";
-                    if (value <= 10) return "ต่ำ";
-                    if (value <= 25) return "ปานกลาง";
-                    if (value <= 45) return "สูง";
-                    return "สูงมาก";
-                  };
-
-                  const getKLevel = (value) => {
-                    if (value < 31) return "ต่ำมาก";
-                    if (value <= 60) return "ต่ำ";
-                    if (value <= 90) return "ปานกลาง";
-                    if (value <= 120) return "สูง";
-                    return "สูงมาก";
-                  };
-
-                  const nLevel = getNLevel(nPercent);
-                  const pLevel = getPLevel(p_mgkg);
-                  const kLevel = getKLevel(k_mgkg);
+                  const calculatedOM = n_mgkg / 500;
+                  const omLevel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM >= 1.0 && calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
+                  const pLevel = p_mgkg < 5 ? "ต่ำ" : p_mgkg >= 5 && p_mgkg <= 10 ? "ปานกลาง" : "สูง";
+                  const kLevel = k_mgkg < 60 ? "ต่ำ" : k_mgkg >= 60 && k_mgkg <= 80 ? "ปานกลาง" : "สูง";
 
                   const hasNoSensorData =
                     !area.sensor ||
@@ -2677,19 +2649,18 @@ export default function App() {
                                 ไนโตรเจน (N)
                               </p>
                               <p className="text-[10px] text-slate-400 font-bold">
-                                ค่าปัจจุบัน (N %)
+                                อินทรียวัตถุ (N/500)
                               </p>
                             </div>
                           </div>
                         </div>
                         <div className="p-8 text-center">
                           <p className="text-3xl font-black text-emerald-500">
-                            {nPercent.toFixed(2)}
-                            <span className="text-sm text-slate-400 ml-1">%</span>
+                            {calculatedOM.toFixed(2)}
                           </p>
                           <p className="text-[10px] mt-1 text-slate-400">ค่าเซนเซอร์ N: {n_mgkg} mg/kg</p>
                           <p className="text-xs mt-2 font-bold text-emerald-600">
-                            ระดับ: {nLevel}
+                            ระดับ: {omLevel}
                           </p>
                         </div>
                       </div>
@@ -3123,7 +3094,7 @@ export default function App() {
                                   ></div>
                                 </div>
                                 <span className="text-sm font-bold text-emerald-600">
-                                  {activeArea.growth?.progress ?? 0}%
+                                  ความเชื่อมัน {activeArea.growth?.progress ?? 0}%
                                 </span>
                               </div>
                               {activeArea.growth?.advice && (
@@ -3358,7 +3329,7 @@ export default function App() {
                                           </div>
                                           <div className="flex items-center gap-2 mb-2">
                                             <span className="text-xs text-emerald-600 font-bold">
-                                              {Math.round(Number(item.confidence) <= 1 ? Number(item.confidence) * 100 : Number(item.confidence))}%
+                                              ความเชื่อมัน {Math.round(Number(item.confidence) <= 1 ? Number(item.confidence) * 100 : Number(item.confidence))}%
                                             </span>
                                             <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
                                               <div
@@ -3450,7 +3421,7 @@ export default function App() {
                                           </div>
                                           <div className="flex items-center gap-2 mb-2">
                                             <span className={`text-xs font-bold ${isHealthyLeaf ? "text-emerald-600" : "text-rose-600"}`}>
-                                              {Math.round(Number(item.confidence) <= 1 ? Number(item.confidence) * 100 : Number(item.confidence))}%
+                                              ความเชื่อมัน {Math.round(Number(item.confidence) <= 1 ? Number(item.confidence) * 100 : Number(item.confidence))}%
                                             </span>
                                             <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
                                               <div

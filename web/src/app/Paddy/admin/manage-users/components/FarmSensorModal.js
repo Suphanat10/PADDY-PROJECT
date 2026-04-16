@@ -115,46 +115,26 @@ const WaterLevelCard = ({ value, minLevel , maxLevel , tankHeight = 30, isLive =
 };
 
 // NPK & Humidity Sensor Card
-const SensorDisplayCard = ({ label, value, unit, icon: Icon, gradientFrom, gradientTo }) => {
+const SensorDisplayCard = ({ label, nutrientType, value, unit, icon: Icon, gradientFrom, gradientTo }) => {
   const n_mgkg = Number(value ?? 0);
   const p_mgkg = Number(value ?? 0);
   const k_mgkg = Number(value ?? 0);
-  const nPercent = (n_mgkg /0.1) / 10000;
+  const calculatedOM = n_mgkg / 500;
+  const omLevel = calculatedOM < 1.0 ? "ต่ำ" : calculatedOM >= 1.0 && calculatedOM <= 2.0 ? "ปานกลาง" : "สูง";
+  const pLevel = p_mgkg < 5 ? "ต่ำ" : p_mgkg >= 5 && p_mgkg <= 10 ? "ปานกลาง" : "สูง";
+  const kLevel = k_mgkg < 60 ? "ต่ำ" : k_mgkg >= 60 && k_mgkg <= 80 ? "ปานกลาง" : "สูง";
 
-  const getNLevel = (val) => {
-    if (val < 0.05) return "ต่ำมาก";
-    if (val <= 0.09) return "ต่ำ";
-    if (val <= 0.14) return "ปานกลาง";
-    return "สูง";
-  };
-
-  const getPLevel = (val) => {
-    if (val < 3) return "ต่ำมาก";
-    if (val <= 10) return "ต่ำ";
-    if (val <= 25) return "ปานกลาง";
-    if (val <= 45) return "สูง";
-    return "สูงมาก";
-  };
-
-  const getKLevel = (val) => {
-    if (val < 31) return "ต่ำมาก";
-    if (val <= 60) return "ต่ำ";
-    if (val <= 90) return "ปานกลาง";
-    if (val <= 120) return "สูง";
-    return "สูงมาก";
-  };
-
-  const isNitrogen = label.includes("ไนโตรเจน") || label.includes("N");
-  const nPercentLabel = isNitrogen ? nPercent.toFixed(4) : null;
+  const isNitrogen = nutrientType === "N";
+  const nBy500Label = isNitrogen ? calculatedOM.toFixed(2) : null;
 
   // Compute level label for N/P/K
   let levelLabel = null;
   if (isNitrogen) {
-    levelLabel = `ระดับ: ${getNLevel(nPercent)}`;
-  } else if (label.includes("ฟอสฟอรัส") || label.includes("P")) {
-    levelLabel = `ระดับ: ${getPLevel(p_mgkg)}`;
-  } else if (label.includes("โพแทสเซียม") || label.includes("K")) {
-    levelLabel = `ระดับ: ${getKLevel(k_mgkg)}`;
+    levelLabel = `ระดับ: ${omLevel}`;
+  } else if (nutrientType === "P") {
+    levelLabel = `ระดับ: ${pLevel}`;
+  } else if (nutrientType === "K") {
+    levelLabel = `ระดับ: ${kLevel}`;
   }
 
   return (
@@ -174,11 +154,11 @@ const SensorDisplayCard = ({ label, value, unit, icon: Icon, gradientFrom, gradi
         </div>
         {levelLabel && (
           <div className="mt-2">
-            <span className={`text-xs font-bold ${label.includes("ไนโตรเจน") ? "text-emerald-600" : label.includes("ฟอสฟอรัส") ? "text-orange-600" : label.includes("โพแทสเซียม") ? "text-purple-600" : "text-slate-500"}`}>
+            <span className={`text-xs font-bold ${nutrientType === "N" ? "text-emerald-600" : nutrientType === "P" ? "text-orange-600" : nutrientType === "K" ? "text-purple-600" : "text-slate-500"}`}>
               {levelLabel}
             </span>
-            {nPercentLabel && (
-              <div className="text-[11px] font-semibold text-emerald-500 mt-1">N%: {nPercentLabel}</div>
+            {nBy500Label && (
+              <div className="text-[11px] font-semibold text-emerald-500 mt-1">อินทรียวัตถ: {nBy500Label}</div>
             )}
           </div>
         )}
@@ -580,7 +560,8 @@ export const FarmSensorModal = ({
                       
                       {/* NPK & Humidity Cards */}
                       <SensorDisplayCard
-                        label="ไนโตรเจน (N)"
+                        label="อินทรียวัตถุ (N)"
+                        nutrientType="N"
                         value={sensorData.N ?? sensorData.n}
                         unit="mg/kg"
                         icon={Leaf}
@@ -588,7 +569,8 @@ export const FarmSensorModal = ({
                         gradientTo="to-teal-500"
                       />
                       <SensorDisplayCard
-                        label="ฟอสฟอรัส (P)"
+                        label="ฟอสฟอรัสที่เป็นประโยชน์ (P)"
+                        nutrientType="P"
                         value={sensorData.P ?? sensorData.p}
                         unit="mg/kg"
                         icon={Flame}
@@ -596,7 +578,8 @@ export const FarmSensorModal = ({
                         gradientTo="to-rose-500"
                       />
                       <SensorDisplayCard
-                        label="โพแทสเซียม (K)"
+                        label="โพแทสเซียมที่แลกเปลี่ยนได้ (K)"
+                        nutrientType="K"
                         value={sensorData.K ?? sensorData.k}
                         unit="mg/kg"
                         icon={Zap}
