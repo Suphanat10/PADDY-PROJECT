@@ -56,10 +56,13 @@ export default function PumpManagementPage() {
   // --- การกรองข้อมูล ---
   const filteredPumps = pumps.filter(pump => {
     const searchLower = searchQuery.toLowerCase();
+    const pumpName = (pump.pump_name || "").toLowerCase();
+    const areaName = (pump.Area?.area_name || "").toLowerCase();
+    const ownerName = `${pump.Account?.first_name || ""} ${pump.Account?.last_name || ""}`.toLowerCase();
     return (
-      pump.pump_name.toLowerCase().includes(searchLower) ||
-      pump.Area.area_name.toLowerCase().includes(searchLower) ||
-      `${pump.Account.first_name} ${pump.Account.last_name}`.toLowerCase().includes(searchLower)
+      pumpName.includes(searchLower) ||
+      areaName.includes(searchLower) ||
+      ownerName.includes(searchLower)
     );
   });
 
@@ -176,13 +179,13 @@ export default function PumpManagementPage() {
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2 text-sm">
                               <MapPin className="w-3.5 h-3.5 text-indigo-500" />
-                              {pump.Area.area_name}
+                              {pump.Area?.area_name || "รอการลงทะเบียน"}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm">
                             <div className="flex items-center gap-2">
                               <User className="w-3.5 h-3.5 text-slate-400" />
-                              {pump.Account.first_name} {pump.Account.last_name}
+                              {(pump.Account?.first_name || "") + " " + (pump.Account?.last_name || "")} 
                             </div>
                           </td>
                           <td className="px-6 py-4">
@@ -257,8 +260,8 @@ function PumpCard({ pump, onToggle }) {
         </div>
         <h3 className="text-lg font-bold text-slate-800 mb-1">{pump.pump_name}</h3>
         <div className="space-y-3 pt-2 border-t border-slate-50">
-          <div className="flex items-center gap-3 text-sm font-semibold"><MapPin className="w-4 h-4 text-indigo-500" />{pump.Area.area_name}</div>
-          <div className="flex items-center gap-3 text-sm text-slate-600"><User className="w-4 h-4 text-slate-400" />{pump.Account.first_name} {pump.Account.last_name}</div>
+          <div className="flex items-center gap-3 text-sm font-semibold"><MapPin className="w-4 h-4 text-indigo-500" />{pump.Area?.area_name || "รอการลงทะเบียน"}</div>
+          <div className="flex items-center gap-3 text-sm text-slate-600"><User className="w-4 h-4 text-slate-400" />{(pump.Account?.first_name || "") + " " + (pump.Account?.last_name || "")}</div>
         </div>
       </div>
       <div className={`px-5 py-3 text-xs font-black uppercase flex items-center justify-between ${

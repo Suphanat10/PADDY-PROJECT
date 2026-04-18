@@ -83,8 +83,8 @@ export async function  createDevice (device_code, setDevices) {
 }
 
 
-export async function  deleteDevice (device_id, setDevices) {
-  if (!device_id) {
+export async function deleteDevice(device_code, setDevices) {
+  if (!device_code) {
     Swal.fire({
       icon: "warning",
       title: "ไม่พบรหัสอุปกรณ์",
@@ -92,7 +92,7 @@ export async function  deleteDevice (device_id, setDevices) {
     });
     return;
   }
-   const confirm = await Swal.fire({
+  const confirm = await Swal.fire({
       title: "คุณแน่ใจหรือไม่?",
       text: "การลบอุปกรณ์นี้จะไม่สามารถกู้คืนได้!",
       icon: "warning",
@@ -107,8 +107,8 @@ export async function  deleteDevice (device_id, setDevices) {
    }
    try {
       const result = await apiFetch("/api/admin/device/delete", {
-         method: "POST",   
-         body: { device_id },
+         method: "POST",
+         body: { device_code },
       });
       if (!result.ok) {
          Swal.fire({
@@ -125,7 +125,7 @@ export async function  deleteDevice (device_id, setDevices) {
          text: result.message || "อุปกรณ์ถูกลบแล้ว",
 
       });
-      setDevices((prev) => prev.filter((d) => d.device_ID !== device_id));
+      setDevices((prev) => prev.filter((d) => d.device_code !== device_code));
    } catch (err) {
       console.error("Delete error:", err);
       Swal.fire({

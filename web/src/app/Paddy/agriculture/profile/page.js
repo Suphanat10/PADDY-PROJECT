@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import {
   Pencil, Phone, Mail, Save, X, Eye, EyeOff, Lock,
-  MessageCircle, CheckCircle, Loader2, Calendar, User as UserIcon
+  CheckCircle, Loader2, Calendar, User as UserIcon
 } from "lucide-react";
 import AlertBox from "@/app/components/AlertBox";
 import Header from "../components/Header";
@@ -10,16 +10,13 @@ import Footer from "@/app/components/Footer";
 import { changePassword } from "@/lib/user/changePassword";
 import { updateProfile } from "@/lib/user/updateProfile";
 import { fetchUser } from "@/lib/user/fetchUser";
-import { toggleLine } from "@/lib/user/toggleLine";
 import Swal from "sweetalert2";
-import { apiFetch } from "@/lib/api";
 
 
 
 export default function UserProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [isLineConnected, setIsLineConnected] = useState(true);
   const [isLoading, setIsLoading] = useState(true); // สำหรับโหลดหน้าแรก
   const [isSubmitting, setIsSubmitting] = useState(false); // สำหรับตอนบันทึกข้อมูล
   const [alertData, setAlertData] = useState(null);
@@ -39,7 +36,7 @@ export default function UserProfile() {
     async function loadProfile() {
       setIsLoading(true);
       try {
-        await fetchUser(setIsLoading, setFormData, setIsLineConnected);
+        await fetchUser(setIsLoading, setFormData, () => {});
       } finally {
         setTimeout(() => setIsLoading(false), 500);
       }
@@ -86,7 +83,6 @@ export default function UserProfile() {
     setIsSubmitting(false);
   };
 
-
   function showAlert(title, message, type) {
     setAlertData({ title, message, type });
     setTimeout(() => setAlertData(null), 3000);
@@ -101,7 +97,7 @@ export default function UserProfile() {
     return (
       <div className="flex flex-col items-center mb-8">
         <div className="relative group">
-          <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-emerald-500 to-emerald-600 text-white border-4 border-white shadow-xl flex items-center justify-center overflow-hidden transition-transform duration-300 group-hover:scale-105">
+          <div className="w-32 h-32 rounded-full bg-linear-to-tr from-emerald-500 to-emerald-600 text-white border-4 border-white shadow-xl flex items-center justify-center overflow-hidden transition-transform duration-300 group-hover:scale-105">
             <span className="text-5xl font-bold select-none tracking-tighter">
               {getInitials()}
             </span>

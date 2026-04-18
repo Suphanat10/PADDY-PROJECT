@@ -349,7 +349,7 @@ export default function AdminDashboardPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDelete(device.device_ID)}
+                              onClick={() => handleDelete(device.device_code)}
                               className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                             >
                               <Trash2 size={18} />

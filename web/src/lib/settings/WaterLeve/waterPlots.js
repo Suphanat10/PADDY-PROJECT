@@ -46,10 +46,18 @@ export default async function waterPlots(
 
       // ตั้งค่า Settings เริ่มต้นจากอุปกรณ์ตัวแรก (ถ้ามี)
       if (firstDevice.setting) {
+        const mode =
+          firstDevice.setting.control_mode === "AUTOMATIC"
+            ? "AUTO"
+            : (firstDevice.setting.control_mode ?? "MANUAL");
+
         setSettings({
           minLevel: firstDevice.setting.Water_level_min ?? 0,
           maxLevel: firstDevice.setting.Water_level_mxm ?? 0,
+          controlMode: mode,
           dataSendInterval: parseInt(firstDevice.setting.data_send_interval_days) || 1,
+          data_send_interval_days: parseInt(firstDevice.setting.data_send_interval_days) || 1,
+          growth_analysis_period: parseInt(firstDevice.setting.growth_analysis_period) || 7,
           notifyLine: true,
           notifyApp: true,
         });

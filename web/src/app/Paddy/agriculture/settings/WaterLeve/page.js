@@ -31,11 +31,13 @@ export default function WaterLevelSettings() {
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [activeControlModeFromApi, setActiveControlModeFromApi] = useState("MANUAL");
 
   // Settings State
   const [settings, setSettings] = useState({
     minLevel: 5,
     maxLevel: 15,
+    controlMode: "MANUAL",
     dataSendInterval: 1,
     notifyLine: true,
     notifyApp: true,
@@ -61,10 +63,17 @@ export default function WaterLevelSettings() {
     const safeWaterValue = currentDevice?.latest_water_level?.value ?? 0;
 
     if (currentDevice.setting) {
+      const mode =
+        currentDevice.setting.control_mode === "AUTOMATIC"
+          ? "AUTO"
+          : (currentDevice.setting.control_mode ?? "MANUAL");
+      setActiveControlModeFromApi(mode);
+
       setSettings((prev) => ({
         ...prev,
         minLevel: currentDevice.setting.Water_level_min ?? 5,
         maxLevel: currentDevice.setting.Water_level_mxm ?? 15,
+        controlMode: mode,
         growth_analysis_period :
           parseInt(currentDevice.setting.growth_analysis_period) ,
         data_send_interval_days :
@@ -82,6 +91,10 @@ export default function WaterLevelSettings() {
       )
     : null;
 
+  const activeModeLabel = activeControlModeFromApi === "AUTO" ? "อัตโนมัติ" : "กำหนดเอง";
+  const selectedModeLabel = settings.controlMode === "AUTO" ? "อัตโนมัติ" : "กำหนดเอง";
+  const isModeChanged = settings.controlMode !== activeControlModeFromApi;
+
   const handleLevelChange = (type, value) => {
     const val = parseInt(value) || 0;
     setSettings((prev) => ({
@@ -90,9 +103,23 @@ export default function WaterLevelSettings() {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setLoading(true);
-    waterSettings( settings.minLevel, settings.maxLevel,  settings.data_send_interval_days, settings.growth_analysis_period  , selectedDeviceId, setLoading, setSaveStatus , setSettings  );
+    const saved = await waterSettings(
+      settings.minLevel,
+      settings.maxLevel,
+      settings.controlMode,
+      settings.data_send_interval_days,
+      settings.growth_analysis_period,
+      selectedDeviceId,
+      setLoading,
+      setSaveStatus,
+      setSettings
+    );
+
+    if (saved) {
+      await waterPlots(setDevices, setSettings, setSelectedDeviceId, setLoading);
+    }
 
   };
 
@@ -176,7 +203,7 @@ export default function WaterLevelSettings() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* LEFT: Plot Selection & Settings Form */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className={`${settings.controlMode === "AUTO" ? "lg:col-span-3" : "lg:col-span-2"} space-y-6`}>
             {/* 1. Select Plot Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -200,6 +227,63 @@ export default function WaterLevelSettings() {
               </div>
             </div>
 
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <Settings size={20} className="text-emerald-600" /> โหมดการควบคุม
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                เลือกรูปแบบการทำงานของระบบสำหรับแปลงที่เลือก
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev) => ({ ...prev, controlMode: "MANUAL" }))
+                  }
+                  aria-pressed={settings.controlMode === "MANUAL"}
+                  className={`rounded-lg border px-4 py-3 text-left transition-all ${
+                    settings.controlMode === "MANUAL"
+                      ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                      : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <p className="font-semibold">กำหนดเอง (Manual)</p>
+                  <p className="text-sm text-gray-500">ตั้งค่าเกณฑ์ระดับน้ำต่ำสุดและสูงสุดเอง</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((prev) => ({ ...prev, controlMode: "AUTO" }))
+                  }
+                  aria-pressed={settings.controlMode === "AUTO"}
+                  className={`rounded-lg border px-4 py-3 text-left transition-all ${
+                    settings.controlMode === "AUTO"
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
+                      : "border-gray-200 hover:border-emerald-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <p className="font-semibold">อัตโนมัติ (Automatic)</p>
+                  <p className="text-sm text-gray-500">ระบบจัดการการควบคุมระดับน้ำให้อัตโนมัติ</p>
+                </button>
+              </div>
+
+              <div
+                className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
+                  settings.controlMode === "AUTO"
+                    ? "bg-emerald-50 border-emerald-100 text-emerald-700"
+                    : "bg-blue-50 border-blue-100 text-blue-700"
+                }`}
+              >
+                <p className="font-semibold">โหมดที่ใช้งานจริง: {activeModeLabel}</p>
+                <p className="mt-1">โหมดที่กำลังเลือก: {selectedModeLabel}</p>
+                {isModeChanged && (
+                  <p className="mt-1">โหมดเดิมก่อนเปลี่ยน: {activeModeLabel}</p>
+                )}
+                <p className="mt-1 text-xs opacity-80">กดปุ่มบันทึกเพื่อเปลี่ยนโหมดให้มีผลกับอุปกรณ์</p>
+              </div>
+            </div>
+
             {/* 3. Water Level Settings */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative overflow-hidden">
               <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
@@ -207,14 +291,23 @@ export default function WaterLevelSettings() {
                   <Droplets size={20} className="text-blue-500" />{" "}
                   กำหนดช่วงระดับน้ำ (ซม.)
                 </h3>
-                <button
-                  onClick={handleReset}
-                  className="text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
-                >
-                  <RotateCcw size={14} /> คืนค่าแนะนำ
-                </button>
+                {settings.controlMode !== "AUTO" && (
+                  <button
+                    onClick={handleReset}
+                    className="text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
+                  >
+                    <RotateCcw size={14} /> คืนค่าแนะนำ
+                  </button>
+                )}
               </div>
 
+              {settings.controlMode === "AUTO" ? (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4 text-emerald-800 text-sm">
+                  โหมดอัตโนมัติถูกเลือกอยู่ ระบบจะควบคุมการตั้งค่าน้ำให้อัตโนมัติ
+                  จึงไม่จำเป็นต้องกำหนดค่าน้ำต่ำสุดและสูงสุด
+                </div>
+              ) : (
+                <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 {/* Min Level Input */}
                 <div className="relative group">
@@ -270,7 +363,7 @@ export default function WaterLevelSettings() {
               {/* Alert Logic Explanation */}
               <div className="mt-8 bg-blue-50 rounded-lg p-4 border border-blue-100 flex gap-3 items-start">
                 <Info
-                  className="text-blue-500 flex-shrink-0 mt-0.5"
+                  className="text-blue-500 shrink-0 mt-0.5"
                   size={18}
                 />
                 <div className="text-sm text-blue-800">
@@ -293,6 +386,8 @@ export default function WaterLevelSettings() {
                   </ul>
                 </div>
               </div>
+                </>
+              )}
               <div className="flex justify-start mt-6">
                 <button
                   onClick={handleSave}
@@ -343,6 +438,7 @@ export default function WaterLevelSettings() {
           </div>
 
           {/* RIGHT: Visual Guide */}
+          {settings.controlMode !== "AUTO" && (
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24">
               <h3 className="text-lg font-bold text-gray-800 mb-6 text-center">
@@ -378,36 +474,42 @@ export default function WaterLevelSettings() {
                 </div>
 
                 {/* Alert Lines */}
-                <div
-                  className="absolute w-full border-t-2 border-dashed border-red-500 z-20 transition-all duration-500"
-                  style={{ bottom: `${(settings.maxLevel / 30) * 100}%` }}
-                >
-                  <span className="absolute right-0 -top-6 bg-red-100 text-red-600 text-[10px] px-1 py-0.5 rounded font-bold">
-                    MAX
-                  </span>
-                </div>
-                <div
-                  className="absolute w-full border-t-2 border-dashed border-red-500 z-20 transition-all duration-500"
-                  style={{ bottom: `${(settings.minLevel / 30) * 100}%` }}
-                >
-                  <span className="absolute right-0 top-1 bg-red-100 text-red-600 text-[10px] px-1 py-0.5 rounded font-bold">
-                    MIN
-                  </span>
-                </div>
+                {settings.controlMode !== "AUTO" && (
+                  <>
+                    <div
+                      className="absolute w-full border-t-2 border-dashed border-red-500 z-20 transition-all duration-500"
+                      style={{ bottom: `${(settings.maxLevel / 30) * 100}%` }}
+                    >
+                      <span className="absolute right-0 -top-6 bg-red-100 text-red-600 text-[10px] px-1 py-0.5 rounded font-bold">
+                        MAX
+                      </span>
+                    </div>
+                    <div
+                      className="absolute w-full border-t-2 border-dashed border-red-500 z-20 transition-all duration-500"
+                      style={{ bottom: `${(settings.minLevel / 30) * 100}%` }}
+                    >
+                      <span className="absolute right-0 top-1 bg-red-100 text-red-600 text-[10px] px-1 py-0.5 rounded font-bold">
+                        MIN
+                      </span>
+                    </div>
+                  </>
+                )}
 
                 {/* Safe Zone */}
-                <div
-                  className="absolute left-0 w-1 h-full bg-gradient-to-t from-red-400 via-green-400 to-red-400 z-30 opacity-70"
-                  style={{
-                    background: `linear-gradient(to top, #ef4444 0%, #ef4444 ${
-                      (settings.minLevel / 30) * 100
-                    }%, #22c55e ${(settings.minLevel / 30) * 100}%, #22c55e ${
-                      (settings.maxLevel / 30) * 100
-                    }%, #ef4444 ${
-                      (settings.maxLevel / 30) * 100
-                    }%, #ef4444 100%)`,
-                  }}
-                ></div>
+                {settings.controlMode !== "AUTO" && (
+                  <div
+                    className="absolute left-0 w-1 h-full bg-linear-to-t from-red-400 via-green-400 to-red-400 z-30 opacity-70"
+                    style={{
+                      background: `linear-gradient(to top, #ef4444 0%, #ef4444 ${
+                        (settings.minLevel / 30) * 100
+                      }%, #22c55e ${(settings.minLevel / 30) * 100}%, #22c55e ${
+                        (settings.maxLevel / 30) * 100
+                      }%, #ef4444 ${
+                        (settings.maxLevel / 30) * 100
+                      }%, #ef4444 100%)`,
+                    }}
+                  ></div>
+                )}
               </div>
 
               {/* Legend */}
@@ -429,36 +531,45 @@ export default function WaterLevelSettings() {
               </div>
 
               {/* Status Message */}
-              <div
-                className={`mt-6 p-3 rounded-lg border text-center ${
-                  (currentDevice?.latest_water_level?.value ?? 0) <
-                    settings.minLevel ||
-                  (currentDevice?.latest_water_level?.value ?? 0) >
-                    settings.maxLevel
-                    ? "bg-red-50 border-red-200 text-red-600"
-                    : "bg-green-50 border-green-200 text-green-600"
-                }`}
-              >
-                <p className="text-sm font-bold flex items-center justify-center gap-1">
-                  {currentDevice?.latest_water_level?.value <
-                  settings.minLevel ? (
-                    <>
-                      <AlertTriangle size={16} /> น้ำน้อยเกินไป
-                    </>
-                  ) : currentDevice?.latest_water_level?.value >
-                    settings.maxLevel ? (
-                    <>
-                      <AlertTriangle size={16} /> น้ำมากเกินไป
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle size={16} /> ระดับปกติ
-                    </>
-                  )}
-                </p>
-              </div>
+              {settings.controlMode === "AUTO" ? (
+                <div className="mt-6 p-3 rounded-lg border text-center bg-emerald-50 border-emerald-200 text-emerald-700">
+                  <p className="text-sm font-bold flex items-center justify-center gap-1">
+                    <CheckCircle size={16} /> โหมดอัตโนมัติเปิดใช้งานอยู่
+                  </p>
+                </div>
+              ) : (
+                <div
+                  className={`mt-6 p-3 rounded-lg border text-center ${
+                    (currentDevice?.latest_water_level?.value ?? 0) <
+                      settings.minLevel ||
+                    (currentDevice?.latest_water_level?.value ?? 0) >
+                      settings.maxLevel
+                      ? "bg-red-50 border-red-200 text-red-600"
+                      : "bg-green-50 border-green-200 text-green-600"
+                  }`}
+                >
+                  <p className="text-sm font-bold flex items-center justify-center gap-1">
+                    {currentDevice?.latest_water_level?.value <
+                    settings.minLevel ? (
+                      <>
+                        <AlertTriangle size={16} /> น้ำน้อยเกินไป
+                      </>
+                    ) : currentDevice?.latest_water_level?.value >
+                      settings.maxLevel ? (
+                      <>
+                        <AlertTriangle size={16} /> น้ำมากเกินไป
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={16} /> ระดับปกติ
+                      </>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
+          )}
         </div>
         <Footer />
       </main>

@@ -87,6 +87,8 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import liff from "@line/liff";
+import Swal from "sweetalert2";
+import { apiFetch } from "@/lib/api";
 
 const LIFF_ID = "2009328904-ZbEQcmyX";
 
@@ -99,13 +101,33 @@ export default function LineLoginPage() {
     onceRef.current = true;
 
     const run = async () => {
+      const resolveReturnPath = () => {
+        const params = new URLSearchParams(window.location.search);
+        const stateFromQuery = params.get("state");
+
+        if (stateFromQuery && stateFromQuery.startsWith("/")) return stateFromQuery;
+
+        if (document.referrer) {
+          try {
+            const ref = new URL(document.referrer);
+            if (ref.origin === window.location.origin) {
+              const sameOriginPath = `${ref.pathname}${ref.search}${ref.hash}`;
+              if (sameOriginPath !== "/login/line") return sameOriginPath;
+            }
+          } catch {
+            // ignore invalid referrer
+          }
+        }
+
+        return "/Paddy/agriculture/dashboard";
+      };
+
       await liff.init({
         liffId: LIFF_ID,
         withLoginOnExternalBrowser: true,
       });
 
-      const params = new URLSearchParams(window.location.search);
-      const state = params.get("state") || "/Paddy/agriculture/dashboard";
+      const state = resolveReturnPath();
 
       if (!liff.isLoggedIn()) {
         liff.login({ redirectUri: window.location.href });
@@ -113,20 +135,31 @@ export default function LineLoginPage() {
       }
 
       const accessToken = liff.getAccessToken();
+      const profile = await liff.getProfile();
 
-      // 🔑 เรียก backend เพื่อ set cookie
-      const res = await fetch(
-        "https://smart-paddy.space/api/auth/line-oa-login",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ accessToken }),
-        }
-      );
+      if (!accessToken) {
+        Swal.fire({
+          icon: "error",
+          title: "ไม่พบ LINE Access Token",
+          text: "กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง",
+        });
+        return;
+      }
+
+      const res = await apiFetch("/api/auth/line-oa-login", {
+        method: "POST",
+        body: {
+          accessToken,
+          userId: profile?.userId,
+        },
+      });
 
       if (!res.ok) {
-        console.error("LINE backend login failed");
+        Swal.fire({
+          icon: "error",
+          title: "เข้าสู่ระบบด้วย LINE ไม่สำเร็จ",
+          text: res.message || "กรุณาลองใหม่อีกครั้ง",
+        });
         return;
       }
 
