@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo , useEffect } from "react";
+import Swal from "sweetalert2";
 import {
   Droplets,
   Power,
@@ -25,16 +26,30 @@ export default function PumpManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("table"); 
   const [pumps, setPumps] = useState([]);
+  const [loadingPumps, setLoadingPumps] = useState(new Set());
 
         useEffect(() => {
             const fetchPumps = async () => {
                 try {
-                    const res = await apiFetch('/api/admin/getdata_Pump');
-                    if (!res || !res.data || res.data.length === 0) {
+                    const res = await apiFetch('/api/admin/data/PumpSystem');
+                    if (!res.ok || !res.data || res.data.length === 0) {
                       setPumps([]);
                       return;
                     }
-                    setPumps(res.data);
+                    // Flatten pump data from areas structure
+                    const flatPumps = [];
+                    res.data.forEach(area => {
+                      if (area.pumps && Array.isArray(area.pumps)) {
+                        area.pumps.forEach(pump => {
+                          flatPumps.push({
+                            ...pump,
+                            Area: { area_id: area.area_id, area_name: area.area_name },
+                            owner: area.owner || {}
+                          });
+                        });
+                      }
+                    });
+                    setPumps(flatPumps);
                 } catch (error) {
                     setPumps([]);
                     console.error('Error fetching pumps:', error);
@@ -48,8 +63,8 @@ export default function PumpManagementPage() {
   const stats = useMemo(() => {
     return {
       total: pumps.length,
-      on: pumps.filter(p => p.status === "ON").length,
-      off: pumps.filter(p => p.status === "OFF").length,
+      on: pumps.filter(p => p.pump_status === "ON").length,
+      off: pumps.filter(p => p.pump_status === "OFF").length,
     };
   }, [pumps]);
 
@@ -58,7 +73,7 @@ export default function PumpManagementPage() {
     const searchLower = searchQuery.toLowerCase();
     const pumpName = (pump.pump_name || "").toLowerCase();
     const areaName = (pump.Area?.area_name || "").toLowerCase();
-    const ownerName = `${pump.Account?.first_name || ""} ${pump.Account?.last_name || ""}`.toLowerCase();
+    const ownerName = `${pump.owner?.first_name || ""} ${pump.owner?.last_name || ""}`.toLowerCase();
     return (
       pumpName.includes(searchLower) ||
       areaName.includes(searchLower) ||
@@ -66,24 +81,59 @@ export default function PumpManagementPage() {
     );
   });
 
-  const handleTogglePump = (id, currentStatus) => {
+  const handleTogglePump = async (id, currentStatus) => {
     const newStatus = currentStatus === "ON" ? "OFF" : "ON";
+    const previousPumps = pumps;
+    
+    // Optimistic update
+    setLoadingPumps(prev => new Set(prev).add(id));
+    setPumps(prev => prev.map(p =>
+      p.pump_id === id ? { ...p, pump_status: newStatus } : p
+    ));
 
-    apiFetch('/api/admin/on_off_pump', {
-      method: 'POST',
-      body: {
-        pump_ID: id,
-        command: newStatus
-      }
-    }).then(res => {
+    try {
+      const res = await apiFetch('/api/admin/on_off_pump', {
+        method: 'POST',
+        body: {
+          pump_ID: id,
+          command: newStatus
+        }
+      });
+
       if (res.ok) {
-        setPumps(prev => prev.map(p =>
-          p.pump_ID === id ? { ...p, status: newStatus } : p
-        ));
+        Swal.fire({
+          icon: 'success',
+          title: 'สำเร็จ',
+          text: `ปั๊ม ${newStatus === "ON" ? "เปิด" : "ปิด"} สำเร็จ`,
+          timer: 2000,
+          showConfirmButton: false
+        });
       } else {
-        console.error('Failed to update pump status', res);
+        // Revert optimistic update on error
+        setPumps(previousPumps);
+        Swal.fire({
+          icon: 'error',
+          title: 'ผิดพลาด',
+          text: 'ไม่สามารถเปลี่ยนสถานะปั๊มได้ กรุณาลองใหม่'
+        });
+        console.error('Failed to update pump status:', res);
       }
-    }).catch(console.error);
+    } catch (error) {
+      // Revert optimistic update on error
+      setPumps(previousPumps);
+      Swal.fire({
+        icon: 'error',
+        title: 'ข้อผิดพลาด',
+        text: 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+      });
+      console.error('Error toggling pump:', error);
+    } finally {
+      setLoadingPumps(prev => {
+        const updated = new Set(prev);
+        updated.delete(id);
+        return updated;
+      });
+    }
   };
 
   return (
@@ -144,7 +194,7 @@ export default function PumpManagementPage() {
             viewMode === "grid" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredPumps.map((pump) => (
-                  <PumpCard key={pump.pump_ID} pump={pump} onToggle={handleTogglePump} />
+                  <PumpCard key={pump.pump_id} pump={pump} onToggle={handleTogglePump} isLoading={loadingPumps.has(pump.pump_id)} />
                 ))}
               </div>
             ) : (
@@ -164,13 +214,13 @@ export default function PumpManagementPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {filteredPumps.map((pump) => (
-                        <tr key={pump.pump_ID} className="hover:bg-slate-50 transition-colors">
+                        <tr key={pump.pump_id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-4">
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                              pump.status === "ON" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
+                              pump.pump_status === "ON" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
                             }`}>
-                              <span className={`w-2 h-2 rounded-full ${pump.status === "ON" ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}></span>
-                              {pump.status}
+                              <span className={`w-2 h-2 rounded-full ${pump.pump_status === "ON" ? "bg-green-500 animate-pulse" : "bg-slate-400"}`}></span>
+                              {pump.pump_status}
                             </span>
                           </td>
                           <td className="px-6 py-4">
@@ -185,19 +235,20 @@ export default function PumpManagementPage() {
                           <td className="px-6 py-4 text-sm">
                             <div className="flex items-center gap-2">
                               <User className="w-3.5 h-3.5 text-slate-400" />
-                              {(pump.Account?.first_name || "") + " " + (pump.Account?.last_name || "")} 
+                              {((pump.owner?.first_name || "").trim() + " " + (pump.owner?.last_name || "").trim()).trim()} 
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex justify-center">
                               <button
-                                onClick={() => handleTogglePump(pump.pump_ID, pump.status)}
+                                onClick={() => handleTogglePump(pump.pump_id, pump.pump_status)}
+                                disabled={loadingPumps.has(pump.pump_id)}
                                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                                  pump.status === "ON" ? "bg-green-500" : "bg-slate-300"
-                                }`}
+                                  pump.pump_status === "ON" ? "bg-green-500" : "bg-slate-300"
+                                } ${loadingPumps.has(pump.pump_id) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                               >
                                 <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                                  pump.status === "ON" ? "translate-x-6" : "translate-x-1"
+                                  pump.pump_status === "ON" ? "translate-x-6" : "translate-x-1"
                                 }`} />
                               </button>
                             </div>
@@ -237,38 +288,39 @@ function SummaryCard({ title, value, icon, color }) {
   );
 }
 
-function PumpCard({ pump, onToggle }) {
+function PumpCard({ pump, onToggle, isLoading }) {
   return (
     <div className={`bg-white rounded-2xl border-2 transition-all duration-300 shadow-sm overflow-hidden ${
-      pump.status === "ON" ? "border-green-500 ring-4 ring-green-50" : "border-slate-100 hover:border-slate-300"
+      pump.pump_status === "ON" ? "border-green-500 ring-4 ring-green-50" : "border-slate-100 hover:border-slate-300"
     }`}>
       <div className="p-5">
         <div className="flex justify-between items-start mb-4">
-          <div className={`p-3 rounded-xl ${pump.status === "ON" ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"}`}>
+          <div className={`p-3 rounded-xl ${pump.pump_status === "ON" ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"}`}>
             <Power className="w-6 h-6" />
           </div>
           <button
-            onClick={() => onToggle(pump.pump_ID)}
+            onClick={() => onToggle(pump.pump_id, pump.pump_status)}
+            disabled={isLoading}
             className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-              pump.status === "ON" ? "bg-green-500" : "bg-slate-300"
-            }`}
+              pump.pump_status === "ON" ? "bg-green-500" : "bg-slate-300"
+            } ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
           >
             <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-              pump.status === "ON" ? "translate-x-7" : "translate-x-1"
+              pump.pump_status === "ON" ? "translate-x-7" : "translate-x-1"
             }`} />
           </button>
         </div>
         <h3 className="text-lg font-bold text-slate-800 mb-1">{pump.pump_name}</h3>
         <div className="space-y-3 pt-2 border-t border-slate-50">
           <div className="flex items-center gap-3 text-sm font-semibold"><MapPin className="w-4 h-4 text-indigo-500" />{pump.Area?.area_name || "รอการลงทะเบียน"}</div>
-          <div className="flex items-center gap-3 text-sm text-slate-600"><User className="w-4 h-4 text-slate-400" />{(pump.Account?.first_name || "") + " " + (pump.Account?.last_name || "")}</div>
+          <div className="flex items-center gap-3 text-sm text-slate-600"><User className="w-4 h-4 text-slate-400" />{((pump.owner?.first_name || "").trim() + " " + (pump.owner?.last_name || "").trim()).trim()}</div>
         </div>
       </div>
       <div className={`px-5 py-3 text-xs font-black uppercase flex items-center justify-between ${
-        pump.status === "ON" ? "bg-green-50 text-green-700" : "bg-slate-50 text-slate-500"
+        pump.pump_status === "ON" ? "bg-green-50 text-green-700" : "bg-slate-50 text-slate-500"
       }`}>
-        <span>STATUS: {pump.status}</span>
-        {pump.status === "ON" && <Zap className="w-3 h-3 animate-pulse" />}
+        <span>STATUS: {pump.pump_status}</span>
+        {pump.pump_status === "ON" && <Zap className="w-3 h-3 animate-pulse" />}
       </div>
     </div>
   );

@@ -161,7 +161,7 @@ export default function Login() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-500">
-            © 2024 Smart Paddy. All rights reserved.
+            © 2026 Smart Paddy. All rights reserved.
           </p>
         </div>
       </div>
